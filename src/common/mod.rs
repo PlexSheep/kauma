@@ -1,14 +1,23 @@
 //! Implements some helper functions that I might need in multiple challenges
 
-pub fn bit_at_i(num: u128, i: usize) -> bool {
-    let b = (num & (1 << i)) >> i;
-    b == 1
+/// LSB is the first bit
+pub fn byte_to_bits(byte: u8) -> [bool; 8] {
+    let mut buf = [false; 8];
+    for (i, bit) in buf.iter_mut().enumerate() {
+        *bit = bit_at_i(byte as u128, 7 - i);
+    }
+    buf
 }
 
+#[inline]
+pub fn bit_at_i(num: u128, i: usize) -> bool {
+    (num & (1 << i)) >> i == 1
+}
+
+#[inline]
 pub fn bit_at_i_inverted_order(num: u128, i: usize) -> bool {
     let i = 127 - i;
-    let b = (num & (1 << i)) >> i;
-    b == 1
+    bit_at_i(num, i)
 }
 
 #[cfg(test)]
@@ -44,5 +53,13 @@ mod test {
         assert_eq!(bit_at_i_inverted_order(0x01ffffff_ffffffff_ffffffff_ffffffff, 7), true);
         assert_eq!(bit_at_i_inverted_order(0x01ffffff_ffffffff_ffffffff_ffffffff, 0), false);
         assert_eq!(bit_at_i_inverted_order(0xffffffff_ffffffff_ffffffff_ffffffff, 0), true);
+    }
+    #[test]
+    #[allow(clippy::bool_assert_comparison)] // disable the hint to use short form asserts
+    fn test_byte_to_bits() {
+        assert_eq!(
+            byte_to_bits(0b11010110),
+            [true, true, false, true, false, true, true, false]
+        );
     }
 }

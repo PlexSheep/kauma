@@ -6,7 +6,7 @@ use std::fmt::Display;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::common::{bit_at_i, bit_at_i_inverted_order};
+use crate::common::{bit_at_i, bit_at_i_inverted_order, byte_to_bits};
 
 use super::{ChallengeLike, SolutionLike};
 
@@ -79,13 +79,42 @@ impl Field {
         }
     }
     /// Convert the machine representation of a polynomial to the human representation
-    pub fn display_poly(poly: Polynomial) -> String {
-        todo!()
+    pub fn display_poly(&self, poly: Polynomial) -> String {
+        let mut buf = String::new();
+        let mut enabled = Vec::new();
+        for (i, byte) in poly.to_ne_bytes().iter().enumerate() {
+            for (j, bit) in byte_to_bits(*byte).iter().enumerate() {
+                if *bit {
+                    enabled.push(i + (j * 8));
+                }
+            }
+        }
+        enabled.sort();
+        if enabled.len() == 1 {
+            buf = format!("α^{}", enabled[0]);
+        } else {
+            for (i, exp) in enabled.iter().enumerate() {
+                if *exp == 0 {
+                    buf += "1";
+                    break;
+                }
+                if i == enabled.len() - 1 {
+                    if *exp == 1 {
+                        buf += "1"
+                    } else {
+                        buf += &format!("α^{exp}");
+                    }
+                    break;
+                }
+                buf += &format!("α^{exp} + ")
+            }
+        }
+        buf
     }
 
     /// Reduces the given [Polynomial] with the [defining relation](Self::defining_relation)
     pub fn reduce(&self, poly: Polynomial) -> Polynomial {
-        todo!()
+        poly ^ self.defining_relation
     }
     /// Get the sum of two [polynomials](Polynomial)
     ///
@@ -141,7 +170,7 @@ impl Display for Field {
             f,
             "F_2^({}); {}",
             self.n,
-            Self::display_poly(self.defining_relation)
+            self.display_poly(self.defining_relation)
         )
     }
 }
@@ -175,7 +204,7 @@ mod test {
 
     #[test]
     fn test_add_alpha() {
-        const solution: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^5 + α^3 + α^2
+        const SOLUTION: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
         let c = Challenge {
             op: Operation::Add,
             a: 0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -183,6 +212,25 @@ mod test {
             field: F_2_128,
         };
         let sol = c.solve().expect("could not solve the challenge");
-        assert_eq!(sol.res, solution);
+        assert_eq!(
+            sol.res,
+            SOLUTION,
+            "\n0x{:016X} => {}\nshould be\n0x{SOLUTION:016X} => {}",
+            sol.res,
+            c.field.display_poly(sol.res),
+            c.field.display_poly(SOLUTION),
+        );
+    }
+
+    #[test]
+    fn test_dipsplay_poly() {
+        let a: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
+        let b: Polynomial = 0x16000000_00000000_00000000_00000000; // α^4 + α^2 + α
+        let c: Polynomial = 0x02000000_00000000_00000000_00000000; // α
+        assert_eq!(F_2_128.display_poly(1 << 120), "1");
+        assert_eq!(F_2_128.display_poly(1 << 121), "α");
+        assert_eq!(F_2_128.display_poly(a), "α^4 + α^2");
+        assert_eq!(F_2_128.display_poly(b), "α^4 + α^2 + α");
+        assert_eq!(F_2_128.display_poly(c), "α");
     }
 }
