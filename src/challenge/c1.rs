@@ -1,9 +1,12 @@
 //! multiply / add polynomials in a gallois field
 
+use core::panic;
 use std::fmt::Display;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+
+use crate::common::{bit_at_i, bit_at_i_inverted_order};
 
 use super::{ChallengeLike, SolutionLike};
 
@@ -26,6 +29,8 @@ pub const DEFINING_RELATION_F_2_128: Polynomial = 0x87000000_00000000_00000000_0
 /// A finite field over 2^128 with the defining relation [DEFINING_RELATION_F_2_128] as used in
 /// AES.
 pub const F_2_128: Field = Field::new(2, DEFINING_RELATION_F_2_128);
+/// This is a special polynomial used for multiplication in F_2_128
+pub const SPECIAL_ELEMENT_R: Polynomial = 0xE1000000_00000000_00000000_00000080;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 enum Operation {
@@ -37,7 +42,7 @@ enum Operation {
 ///
 /// For the purposes of kauma-analyzer, we will focus on binary finite fields, so those with a base
 /// of 2^n.
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 pub struct Field {
     /// Forms the base as 2^n
     n: u64,
@@ -78,7 +83,7 @@ impl Field {
         todo!()
     }
 
-    /// Reduces the given
+    /// Reduces the given [Polynomial] with the [defining relation](Self::defining_relation)
     pub fn reduce(&self, poly: Polynomial) -> Polynomial {
         todo!()
     }
@@ -87,16 +92,40 @@ impl Field {
     /// Adds poly a and b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular addition of two numbers!
+    ///
+    /// Addition on the finite field with a base of 2^n is the same as xor and then reducing.
     pub fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
-        todo!()
+        self.reduce(poly_a ^ poly_b)
     }
     /// Get the product of two [polynomials](Polynomial)
     ///
     /// Multiplies poly a by poly b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular multiplication of two numbers!
+    ///
+    /// Multiplication in a finite field is rather complicated, so I use an algorithm from
+    /// a research paper.
+    ///
+    /// # Citation
+    /// - The Galois/Counter Mode of Operation (GCM) by McGrew and Viega, Sect. 2.5, Algorithm 1
+    ///     <https://csrc.nist.rip/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf>
     pub fn mul(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
-        todo!()
+        if *self != F_2_128 {
+            panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
+        }
+        let mut z: Polynomial = 0;
+        let mut v: Polynomial = poly_a;
+        for i in 0..128 {
+            if bit_at_i_inverted_order(poly_b, i) {
+                z ^= v;
+            }
+            if bit_at_i_inverted_order(v, 127) {
+                v = (v >> 1) ^ SPECIAL_ELEMENT_R;
+            } else {
+                v >>= 1;
+            }
+        }
+        z
     }
 }
 
