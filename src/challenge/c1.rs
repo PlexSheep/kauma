@@ -128,3 +128,21 @@ impl Display for Solution {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_add_alpha() {
+        const solution: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^5 + α^3 + α^2
+        let c = Challenge {
+            op: Operation::Add,
+            a: 0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
+            b: 0x02000000_00000000_00000000_00000000, // α
+            field: F_2_128,
+        };
+        let sol = c.solve().expect("could not solve the challenge");
+        assert_eq!(sol.res, solution);
+    }
+}
