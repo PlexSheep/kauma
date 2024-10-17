@@ -149,7 +149,16 @@ impl Display for Field {
 impl ChallengeLike<'_> for Challenge {
     type Solution = Solution;
     fn solve(&self) -> Result<Self::Solution> {
-        todo!()
+        Ok(match self.op {
+            Operation::Add => Solution {
+                res: self.field.add(self.a, self.b),
+                field: self.field,
+            },
+            Operation::Mul => Solution {
+                res: self.field.mul(self.a, self.b),
+                field: self.field,
+            },
+        })
     }
 }
 impl SolutionLike<'_> for Solution {}
