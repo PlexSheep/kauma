@@ -19,8 +19,10 @@ pub type Polynomial = u128;
 /// α^128 + α^7 + α^2 + α + 1
 ///
 /// This relation defines the finite field used in AES.
-// FIXME: this is just wrong
-pub const DEFINING_RELATION_F_2_128: Polynomial = 0x01120000_00000000_00000000_00000080;
+// NOTE: this might be just wrong, and I don't know how to get it into a u128. The α^128 would be the
+// 129th bit, no? I could just abstract it away and store α^7 + α^2 + α + 1 while having the α^128
+// implied...
+pub const DEFINING_RELATION_F_2_128: Polynomial = 0x87000000_00000000_00000000_00000080;
 /// A finite field over 2^128 with the defining relation [DEFINING_RELATION_F_2_128] as used in
 /// AES.
 pub const F_2_128: Field = Field::new(2, DEFINING_RELATION_F_2_128);
