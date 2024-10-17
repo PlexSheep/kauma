@@ -7,8 +7,8 @@ authors = ["Christoph J. Scherr <software@cscherr.de>"]
 license = "MIT"
 description = "Solves exams from my professor for cryptoanalysis"
 readme = "README.md"
-homepage = "https://git.cscherr.de/PlexSheep/kauma"
-repository = "https://git.cscherr.de/PlexSheep/kauma"
+homepage = "https://github.com/PlexSheep/kauma"
+repository = "https://github.com/PlexSheep/kauma"
 
 
 [dependencies]
