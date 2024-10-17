@@ -80,6 +80,7 @@ impl Field {
     }
     /// Convert the machine representation of a polynomial to the human representation
     pub fn display_poly(&self, poly: Polynomial) -> String {
+        // FIXME: this is completely fucking broken
         let mut buf = String::new();
         let mut enabled = Vec::new();
         for (i, byte) in poly.to_ne_bytes().iter().enumerate() {
@@ -89,6 +90,8 @@ impl Field {
                 }
             }
         }
+
+        // NOTE: this is probably just garbage-in garbage-out
         enabled.sort();
         if enabled.len() == 1 {
             buf = format!("α^{}", enabled[0]);
@@ -118,13 +121,14 @@ impl Field {
     }
     /// Get the sum of two [polynomials](Polynomial)
     ///
-    /// Adds poly a and b together, automatically reducing it with the defining relation.
+    /// Adds poly a and b together.
     ///
     /// This is not regular addition of two numbers!
     ///
-    /// Addition on the finite field with a base of 2^n is the same as xor and then reducing.
+    /// Addition on the finite field with a base of 2^n is the same as xor, therefore no reduction
+    /// is needed.
     pub fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
-        self.reduce(poly_a ^ poly_b)
+        poly_a ^ poly_b
     }
     /// Get the product of two [polynomials](Polynomial)
     ///
@@ -202,6 +206,7 @@ impl Display for Solution {
 mod test {
     use super::*;
 
+    // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_add_alpha() {
         const SOLUTION: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
@@ -222,6 +227,7 @@ mod test {
         );
     }
 
+    // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_dipsplay_poly() {
         let a: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
