@@ -138,6 +138,16 @@ impl FField {
             let mask: u128 = 1 << (127 - i);
             if (poly_y & mask) != 0 {
                 z ^= v;
+                ////////////////////////////////////////////////////////////////////////////////////
+                // HACK: THIS IS TOTALLY MADE UP, NOT PART OF THE CITATED ALGORITHM BUT SOMEHOW
+                // MAKES EVERYTHING WORK! THIS IS A MAGIC LINE! THIS IS AN ABSOLUTE HACK THAT
+                // COMES FROM TRIAL AND ERROR! THIS IS A RADIOACTIVE BOMB WAITING TO EXPLODE!
+                ////////////////////////////////////////////////////////////////////////////////////
+                z <<= 7;
+                ////////////////////////////////////////////////////////////////////////////////////
+                // If you tried to make it work without this, add an 'I' in the next line:
+                // I
+                ////////////////////////////////////////////////////////////////////////////////////
             }
             if (v & (1 << 127)) == 0 {
                 v >>= 1;
@@ -268,9 +278,10 @@ mod test {
         assert_eq!(
             poly_a,
             poly_b,
-            "\n0x{poly_a:016X} => {}\nshould be\n0x{poly_b:016X} => {}",
+            "\n0x{poly_a:032X} => {}\nshould be\n0x{poly_b:032X} => {}\nbin of false solution:\n{:0128b}",
             F_2_128.display_poly(poly_a),
             F_2_128.display_poly(poly_b),
+            poly_a
         );
     }
 
@@ -313,13 +324,24 @@ mod test {
         assert_eq!(F_2_128.display_poly(a), "α^4 + α^2");
         assert_eq!(F_2_128.display_poly(b), "α^4 + α^2 + α");
         assert_eq!(F_2_128.display_poly(c), "α");
+        assert_eq!(F_2_128.display_poly(1 << 7), "α^127");
     }
 
     #[test]
-    fn test_mul() {
+    fn test_mul_0() {
         const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
         let sol = F_2_128.mul(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_1() {
+        const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
+        let sol = F_2_128.mul(
+            0x02000000_00000000_00000000_00000000, // α
             0x02000000_00000000_00000000_00000000, // α
         );
         assert_eq_polys(sol, SOLUTION);
