@@ -2,13 +2,12 @@
 
 use std::fmt::Display;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::common::{bit_at_i_inverted_order, byte_to_bits};
 
-use super::{Action, ChallengeLike, SolutionLike, Testcase};
+use super::{ChallengeLike, SolutionLike, Testcase};
 
 /// A type alias for the polinomials.
 ///
