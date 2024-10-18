@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::{bit_at_i_inverted_order, byte_to_bits};
 
-use super::{Action, ChallengeLike, SolutionLike, Testcase};
+use super::{Action, Testcase};
 
 /// A type alias for the polinomials.
 ///
@@ -189,7 +189,10 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let coefficients: Vec<usize>;
 
             if let Some(downcast) = testcase.arguments["semantic"].as_str() {
-                semantic = serde_json::from_str(downcast)?;
+                dbg!(downcast);
+                semantic = serde_json::from_str(downcast).inspect_err(|e| {
+                    eprintln!("! something went wrong when serializing the semantinc: {e}")
+                })?;
             } else {
                 return Err(anyhow!("semantic is not a string"));
             }
@@ -202,8 +205,8 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
-
-            serde_json::to_value(F_2_128.coefficients_to_poly(coefficients, semantic))?
+            let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
+            serde_json::to_value(sol)?
         }
         Action::Block2Poly => {
             todo!()

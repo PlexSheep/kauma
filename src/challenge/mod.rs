@@ -6,7 +6,7 @@ use std::fmt::{Debug, Display};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -43,18 +43,22 @@ pub enum Action {
     Block2Poly,
 }
 
-pub trait ChallengeLike<'de>: Serialize + Debug + Sized {
-    type Solution: SolutionLike<'de>;
-    fn solve(&self) -> Result<Self::Solution>;
-}
-pub trait SolutionLike<'de>: Deserialize<'de> + Debug + Display + Sized {}
-
 impl Default for Testcase {
     fn default() -> Self {
         Testcase {
             action: Action::AddNumbers,
             arguments: serde_json::json!({"number1": 1, "number2":2}),
         }
+    }
+}
+
+impl Display for Testcase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            serde_json::to_string(self).expect("could not serialize testcase for printing")
+        )
     }
 }
 
@@ -78,13 +82,16 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
         eprintln!("* starting challenge {uuid}");
         handles.push(thread::spawn(move || {
             let sol = match testcase.action {
-                Action::AddNumbers | Action::SubNumbers => example::run_testcase(&testcase)?,
-                Action::Poly2Block | Action::Block2Poly => ffield::run_testcase(&testcase)?,
+                Action::AddNumbers | Action::SubNumbers => example::run_testcase(&testcase),
+                Action::Poly2Block | Action::Block2Poly => ffield::run_testcase(&testcase),
             };
-            answer_mutex
-                .lock()
-                .unwrap()
-                .insert(uuid, tag_json_value(testcase.action.solution_key(), sol));
+            if let Err(e) = sol {
+                return Err(anyhow!("error while processing a testcase {uuid}: {e}"));
+            }
+            answer_mutex.lock().unwrap().insert(
+                uuid,
+                tag_json_value(testcase.action.solution_key(), sol.unwrap()),
+            );
             eprintln!("* finished challenge {uuid}");
             Ok(())
         }));
@@ -92,8 +99,14 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
 
     for handle in handles {
         match handle.join() {
-            Ok(_) => eprintln!("? joined a thread"),
-            Err(e) => eprintln!("failed to solve a challenge: {e:#?}"),
+            Ok(inner_result) => {
+                eprintln!("? joined a thread");
+                match inner_result {
+                    Ok(_) => (),
+                    Err(e) => eprintln!("! failed to solve a challenge: {e:#?}"),
+                }
+            }
+            Err(e) => eprintln!("! failed to solve a challenge: {e:#?}"),
         }
     }
     let responses = answers.lock().unwrap().clone();
