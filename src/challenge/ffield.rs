@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::common::{bit_at_i_inverted_order, byte_to_bits};
+use crate::common::byte_to_bits;
 
 use super::{Action, Testcase};
 
