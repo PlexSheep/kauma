@@ -141,12 +141,12 @@ impl FField {
                 ////////////////////////////////////////////////////////////////////////////////////
                 // HACK: THIS IS TOTALLY MADE UP, NOT PART OF THE CITATED ALGORITHM BUT SOMEHOW
                 // MAKES EVERYTHING WORK! THIS IS A MAGIC LINE! THIS IS AN ABSOLUTE HACK THAT
-                // COMES FROM TRIAL AND ERROR! THIS IS A RADIOACTIVE BOMB WAITING TO EXPLODE!
+                // COMES FROM TRIAL AND ERROR! THIS IS A RADIOACTIVE BOMB WAITING TO EXPLODE! #1
                 ////////////////////////////////////////////////////////////////////////////////////
                 z <<= 7;
                 ////////////////////////////////////////////////////////////////////////////////////
                 // If you tried to make it work without this, add an 'I' in the next line:
-                // I
+                // II
                 ////////////////////////////////////////////////////////////////////////////////////
             }
             if (v & (1 << 127)) == 0 {
@@ -235,8 +235,11 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
+            eprintln!("? a:\t{a:032X} => {}", F_2_128.display_poly(a));
+            eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
 
             let sol = F_2_128.mul(a, b);
+            eprintln!("? c:\t{sol:032X} => {}", F_2_128.display_poly(sol));
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
