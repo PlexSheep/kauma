@@ -206,7 +206,6 @@ impl Display for Solution {
 mod test {
     use super::*;
 
-    // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_add_alpha() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
@@ -227,7 +226,6 @@ mod test {
         );
     }
 
-    // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_dipsplay_poly() {
         let a: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
