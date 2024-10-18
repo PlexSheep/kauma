@@ -1,0 +1,53 @@
+name: Mock Kauma
+
+on:
+  push:
+    branches:
+      - master
+      - devel
+      - main
+
+jobs:
+  addsub:
+    runs-on: ubuntu-latest
+    name: addsub
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run addsub
+      run: cargo run -r -- ./example_challenges/addsub.json 
+
+  block2poly:
+    runs-on: ubuntu-latest
+    name: block2poly
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run addsub
+      run: cargo run -r -- ./example_challenges/block2poly.json 
+
+  poly2block:
+    runs-on: ubuntu-latest
+    name: poly2block
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run addsub
+      run: cargo run -r -- ./example_challenges/poly2block.json 
+
+  gfmul:
+    runs-on: ubuntu-latest
+    name: gfmul
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run addsub
+      run: cargo run -r -- ./example_challenges/gfmul.json 
