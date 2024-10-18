@@ -195,13 +195,7 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
         Action::Poly2Block => {
             let coefficients: Vec<usize>;
 
-            let semantic: Semantic = if testcase.arguments["semantic"].is_string() {
-                serde_json::from_value(testcase.arguments["semantic"].clone()).inspect_err(|e| {
-                    eprintln!("! something went wrong when serializing the semantinc: {e}")
-                })?
-            } else {
-                return Err(anyhow!("semantic is not a string"));
-            };
+            let semantic: Semantic = get_semantic(&testcase.arguments)?;
 
             if let Some(downcast) = testcase.arguments["coefficients"].as_array() {
                 coefficients = downcast
@@ -211,37 +205,42 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
-            dbg!(&coefficients);
             let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
             eprintln!("* block {:016X}", sol);
-            // NOTE: I'm not sure why we need to reverse the byte order again here. The test case
-            // does not require this.
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
         Action::Block2Poly => {
-            let semantic: Semantic = if testcase.arguments["semantic"].is_string() {
-                serde_json::from_value(testcase.arguments["semantic"].clone()).inspect_err(|e| {
-                    eprintln!("! something went wrong when serializing the semantinc: {e}")
-                })?
-            } else {
-                return Err(anyhow!("semantic is not a string"));
-            };
-
-            let block: Polynomial = if testcase.arguments["block"].is_string() {
-                let v: String = serde_json::from_value(testcase.arguments["block"].clone())
-                    .inspect_err(|e| {
-                        eprintln!("! something went wrong when serializing the semantinc: {e}")
-                    })?;
-                let bytes = BASE64_STANDARD.decode(v)?;
-                crate::common::bytes_to_u128(&bytes)?
-            } else {
-                return Err(anyhow!("block is not a string"));
-            };
+            let semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let block: Polynomial = get_poly(&testcase.arguments, "block")?;
             serde_json::to_value(F_2_128.poly_to_coefficients(block, semantic))?
         }
         _ => unreachable!(),
     })
+}
+
+fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
+    let semantic: Semantic = if args["semantic"].is_string() {
+        serde_json::from_value(args["semantic"].clone()).inspect_err(|e| {
+            eprintln!("! something went wrong when serializing the semantinc: {e}")
+        })?
+    } else {
+        return Err(anyhow!("semantic is not a string"));
+    };
+    Ok(semantic)
+}
+
+fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
+    let block: Polynomial = if args[key].is_string() {
+        let v: String = serde_json::from_value(args[key].clone()).inspect_err(|e| {
+            eprintln!("! something went wrong when serializing the semantinc: {e}")
+        })?;
+        let bytes = BASE64_STANDARD.decode(v)?;
+        crate::common::bytes_to_u128(&bytes)?
+    } else {
+        return Err(anyhow!("block is not a string"));
+    };
+    Ok(block)
 }
 
 #[cfg(test)]
