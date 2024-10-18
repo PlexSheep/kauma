@@ -1,9 +1,27 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
+use kauma_analyzer::challenge::{ManyTestcases, Testcase};
 use serde_json::Value;
+use uuid::Uuid;
 
 fn main() -> Result<()> {
+    #[cfg(debug_assertions)]
+    {
+        eprintln!(
+            "? Example Testcase\n{:#}",
+            serde_json::to_string(&Testcase::default())
+                .expect("could not serialize testcase struct")
+        );
+
+        let mut exhm = ManyTestcases::new();
+        exhm.insert(Uuid::default(), Testcase::default());
+        eprintln!(
+            "? Example ManyTestcases\n{:#}",
+            serde_json::to_string(&exhm).expect("could not serialize testcase struct")
+        )
+    }
+
     let args: Vec<_> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("! No JSON file was provided for the chalenge definition");
@@ -20,7 +38,11 @@ fn main() -> Result<()> {
     })?;
     eprintln!("? challenge definition: {json_value:#}");
 
-    kauma_analyzer::challenge::run_challenge(&json_value)?;
+    // print our response to stdout
+    println!(
+        "{}",
+        kauma_analyzer::challenge::run_challenges(&json_value)?
+    );
 
     Ok(())
 }

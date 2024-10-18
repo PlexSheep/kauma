@@ -5,10 +5,11 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::common::{bit_at_i_inverted_order, byte_to_bits};
 
-use super::{ChallengeLike, SolutionLike};
+use super::{Action, ChallengeLike, SolutionLike, Testcase};
 
 /// A type alias for the polinomials.
 ///
@@ -197,7 +198,7 @@ impl Display for Field {
 
 impl ChallengeLike<'_> for Challenge {
     type Solution = Solution;
-    fn solve(&self) -> Result<Self::Solution> {
+    fn solve(&self, action: Action) -> Result<Self::Solution> {
         Ok(match self.op {
             Operation::Add => Solution {
                 a: self.a,
@@ -230,6 +231,10 @@ impl Display for Solution {
             self.field.display_poly(self.res)
         )
     }
+}
+
+pub fn run_testcase(testcase: &Testcase) -> serde_json::Value {
+    todo!()
 }
 
 #[cfg(test)]
