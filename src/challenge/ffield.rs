@@ -152,7 +152,9 @@ impl FField {
         for coefficient in coefficients {
             poly |= 1u128 << coefficient as u128;
         }
-        poly
+        // PERF: by using swap bytes we can safe a bit of performance, as we dont need to do
+        // (127-coefficient) each time
+        poly.swap_bytes()
     }
 
     pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
@@ -209,8 +211,12 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
+            dbg!(&coefficients);
             let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
-            serde_json::to_value(BASE64_STANDARD.encode(sol.to_ne_bytes()))
+            eprintln!("* block {:016X}", sol);
+            // NOTE: I'm not sure why we need to reverse the byte order again here. The test case
+            // does not require this.
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
         Action::Block2Poly => {
