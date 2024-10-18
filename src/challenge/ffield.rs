@@ -269,7 +269,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_alpha() {
+    fn test_add() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let sol = F_2_128.add(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -307,5 +307,15 @@ mod test {
         assert_eq!(F_2_128.display_poly(a), "α^4 + α^2");
         assert_eq!(F_2_128.display_poly(b), "α^4 + α^2 + α");
         assert_eq!(F_2_128.display_poly(c), "α");
+    }
+
+    #[test]
+    fn test_mul() {
+        const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
+        let sol = F_2_128.mul(
+            0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
     }
 }
