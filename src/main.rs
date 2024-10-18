@@ -6,22 +6,6 @@ use serde_json::Value;
 use uuid::Uuid;
 
 fn main() -> Result<()> {
-    #[cfg(debug_assertions)]
-    {
-        eprintln!(
-            "? Example Testcase\n{:#}",
-            serde_json::to_string(&Testcase::default())
-                .expect("could not serialize testcase struct")
-        );
-
-        let mut exhm = ManyTestcases::new();
-        exhm.insert(Uuid::default(), Testcase::default());
-        eprintln!(
-            "? Example ManyTestcases\n{:#}",
-            serde_json::to_string(&exhm).expect("could not serialize testcase struct")
-        )
-    }
-
     let args: Vec<_> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("! No JSON file was provided for the chalenge definition");
