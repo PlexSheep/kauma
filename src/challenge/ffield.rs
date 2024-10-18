@@ -1,13 +1,15 @@
 //! multiply / add polynomials in a gallois field
 
+use std::default::Default;
 use std::fmt::Display;
+use std::usize;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::common::{bit_at_i_inverted_order, byte_to_bits};
 
-use super::{ChallengeLike, SolutionLike, Testcase};
+use super::{Action, ChallengeLike, SolutionLike, Testcase};
 
 /// A type alias for the polinomials.
 ///
@@ -30,14 +32,16 @@ pub const DEFINING_RELATION_F_2_4: Polynomial = 0x13;
 pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
 /// A finite field over 2^128 with the defining relation [DEFINING_RELATION_F_2_128] as used in
 /// AES.
-pub const F_2_128: Field = Field::new(2, DEFINING_RELATION_F_2_128);
+pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128);
 /// This is a special polynomial used for multiplication in F_2_128
 pub const SPECIAL_ELEMENT_R: Polynomial = 0xE1000000_00000000_00000000_00000080;
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-enum Operation {
-    Add,
-    Mul,
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
+#[serde(rename_all = "snake_case")]
+enum Semantic {
+    /// whatever is used in AES-XEX
+    #[default]
+    Xex,
 }
 
 /// Which finite field to use, e.g. F_(2^(128))
@@ -45,11 +49,9 @@ enum Operation {
 /// For the purposes of kauma-analyzer, we will focus on binary finite fields, so those with a base
 /// of 2^n.
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-pub struct Field {
+pub struct FField {
     /// Forms the base as 2^n
     n: u64,
-    // TODO: I'm not totally sure about the machine representation!
-    //
     /// The defining relation, represented as a number, where the least significant bit
     /// signifies b * α^0, the second least significant bit signifies b * α^1 and so on, where b is
     /// the value of that bit.
@@ -58,37 +60,7 @@ pub struct Field {
     defining_relation: Polynomial,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub struct Challenge {
-    op: Operation,
-    a: Polynomial,
-    b: Polynomial,
-    field: Field,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub struct Solution {
-    op: Operation,
-    a: Polynomial,
-    b: Polynomial,
-    res: Polynomial,
-    field: Field,
-}
-
-impl Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Add => "+",
-                Self::Mul => "*",
-            }
-        )
-    }
-}
-
-impl Field {
+impl FField {
     /// Create a new finite field with a base that is a power of two.
     pub const fn new(n: u64, defining_relation: Polynomial) -> Self {
         Self {
@@ -97,19 +69,13 @@ impl Field {
         }
     }
     /// Convert the machine representation of a polynomial to the human representation
+    /// ```
+    /// assert_eq!(F_2_128.display_poly(1 << 121), "α");
+    /// assert_eq!(F_2_128.display_poly(0b1001 << 55), "α");
+    /// ```
     pub fn display_poly(&self, poly: Polynomial) -> String {
         let mut buf = String::new();
-        let mut enabled = Vec::new();
-        for (i, byte) in poly.to_le_bytes().iter().rev().enumerate() {
-            for (j, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
-                if *bit {
-                    enabled.push(j + (i * 8));
-                }
-            }
-        }
-
-        enabled.sort();
-        enabled.reverse();
+        let enabled = self.poly_to_coefficients(poly, Semantic::default());
         if enabled.is_empty() {
             buf = "0".to_string();
             return buf;
@@ -175,15 +141,37 @@ impl Field {
         }
         z
     }
+
+    pub fn coefficients_to_poly(&self, coefficients: Vec<usize>, semantic: Semantic) -> Polynomial {
+        let mut poly: Polynomial = 0;
+        for coefficient in coefficients {
+            poly |= 1 << coefficient;
+        }
+        poly
+    }
+    pub fn poly_to_coefficients(&self, poly: Polynomial, semantic: Semantic) -> Vec<usize> {
+        let mut enabled = Vec::new();
+        for (byte_idx, byte) in poly.to_le_bytes().iter().rev().enumerate() {
+            for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
+                if *bit {
+                    enabled.push(bit_idx + (byte_idx * 8));
+                }
+            }
+        }
+
+        enabled.sort();
+        enabled.reverse();
+        enabled
+    }
 }
 
-impl Default for Field {
+impl Default for FField {
     fn default() -> Self {
         Self::new(128, DEFINING_RELATION_F_2_128)
     }
 }
 
-impl Display for Field {
+impl Display for FField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -194,45 +182,34 @@ impl Display for Field {
     }
 }
 
-impl ChallengeLike<'_> for Challenge {
-    type Solution = Solution;
-    fn solve(&self) -> Result<Self::Solution> {
-        Ok(match self.op {
-            Operation::Add => Solution {
-                a: self.a,
-                b: self.b,
-                op: self.op,
-                res: self.field.add(self.a, self.b),
-                field: self.field,
-            },
-            Operation::Mul => Solution {
-                a: self.a,
-                b: self.b,
-                op: self.op,
-                res: self.field.mul(self.a, self.b),
-                field: self.field,
-            },
-        })
-    }
-}
-impl SolutionLike<'_> for Solution {}
-
-impl Display for Solution {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} {} {} in {} = {}",
-            self.field.display_poly(self.a),
-            self.op,
-            self.field.display_poly(self.b),
-            self.field,
-            self.field.display_poly(self.res)
-        )
-    }
-}
-
 pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
-    todo!()
+    Ok(match testcase.action {
+        Action::Poly2Block => {
+            let semantic: Semantic;
+            let coefficients: Vec<usize>;
+
+            if let Some(downcast) = testcase.arguments["semantic"].as_str() {
+                semantic = serde_json::from_str(downcast)?;
+            } else {
+                return Err(anyhow!("semantic is not a string"));
+            }
+
+            if let Some(downcast) = testcase.arguments["coefficients"].as_array() {
+                coefficients = downcast
+                    .iter()
+                    .map(|v| serde_json::from_value(v.clone()).expect("thing is not an int"))
+                    .collect();
+            } else {
+                return Err(anyhow!("coefficients is not a list"));
+            }
+
+            serde_json::to_value(F_2_128.coefficients_to_poly(coefficients, semantic))?
+        }
+        Action::Block2Poly => {
+            todo!()
+        }
+        _ => unreachable!(),
+    })
 }
 
 #[cfg(test)]
