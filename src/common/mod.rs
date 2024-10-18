@@ -1,5 +1,18 @@
 //! Implements some helper functions that I might need in multiple challenges
 
+use anyhow::{anyhow, Result};
+
+pub fn bytes_to_u128(bytes: &Vec<u8>) -> Result<u128> {
+    if bytes.len() > u128::BITS as usize {
+        return Err(anyhow!("input bytes are too long!"));
+    }
+    let mut ri: u128 = 0;
+    for (i, e) in bytes.iter().rev().enumerate() {
+        ri += (*e as u128) * 256u128.pow(i as u32);
+    }
+    Ok(ri)
+}
+
 /// Wraps a value in an object with some title
 ///
 /// ```

@@ -154,6 +154,7 @@ impl FField {
         }
         poly
     }
+
     pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
         let mut enabled = Vec::new();
         for (byte_idx, byte) in poly.to_le_bytes().iter().rev().enumerate() {
@@ -213,7 +214,25 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
         Action::Block2Poly => {
-            todo!()
+            let semantic: Semantic = if testcase.arguments["semantic"].is_string() {
+                serde_json::from_value(testcase.arguments["semantic"].clone()).inspect_err(|e| {
+                    eprintln!("! something went wrong when serializing the semantinc: {e}")
+                })?
+            } else {
+                return Err(anyhow!("semantic is not a string"));
+            };
+
+            let block: Polynomial = if testcase.arguments["block"].is_string() {
+                let v: String = serde_json::from_value(testcase.arguments["block"].clone())
+                    .inspect_err(|e| {
+                        eprintln!("! something went wrong when serializing the semantinc: {e}")
+                    })?;
+                let bytes = BASE64_STANDARD.decode(v)?;
+                crate::common::bytes_to_u128(&bytes)?
+            } else {
+                return Err(anyhow!("block is not a string"));
+            };
+            serde_json::to_value(F_2_128.poly_to_coefficients(block, semantic))?
         }
         _ => unreachable!(),
     })
