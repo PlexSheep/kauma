@@ -29,8 +29,10 @@ pub struct Testcase {
 pub enum Action {
     // example items
     /// Add 2 numbers together
+    #[serde(rename = "add_numbers")]
     AddNumbers,
     /// Substract one number from another
+    #[serde(rename = "subtract_numbers")]
     SubNumbers,
 
     // ffield items
@@ -39,6 +41,8 @@ pub enum Action {
     /// given a machine representation of a polynom and a semantic, convert the polynom into just
     /// it's coefficients
     Block2Poly,
+    /// Multiply two polynomials in [F_2_128](ffield::F_2_128)
+    GfMul,
 }
 
 impl Default for Testcase {
@@ -63,10 +67,11 @@ impl Display for Testcase {
 impl Action {
     pub const fn solution_key(self) -> &'static str {
         match self {
-            Self::AddNumbers { .. } => "sum",
-            Self::SubNumbers { .. } => "difference",
-            Self::Poly2Block { .. } => "block",
-            Self::Block2Poly { .. } => "coefficients",
+            Self::AddNumbers => "sum",
+            Self::SubNumbers => "difference",
+            Self::Poly2Block => "block",
+            Self::Block2Poly => "coefficients",
+            Self::GfMul => "product",
         }
     }
 }
@@ -81,7 +86,9 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
         handles.push(thread::spawn(move || {
             let sol = match testcase.action {
                 Action::AddNumbers | Action::SubNumbers => example::run_testcase(&testcase),
-                Action::Poly2Block | Action::Block2Poly => ffield::run_testcase(&testcase),
+                Action::Poly2Block | Action::Block2Poly | Action::GfMul => {
+                    ffield::run_testcase(&testcase)
+                }
             };
             if let Err(e) = sol {
                 return Err(anyhow!("error while processing a testcase {uuid}: {e}"));
@@ -108,7 +115,6 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
         }
     }
     let responses = answers.lock().unwrap().clone();
-    dbg!(&responses);
     Ok(tag_json_value(
         "responses",
         serde_json::to_value(&responses)?,
