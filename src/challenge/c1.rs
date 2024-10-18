@@ -69,8 +69,24 @@ pub struct Challenge {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct Solution {
+    op: Operation,
+    a: Polynomial,
+    b: Polynomial,
     res: Polynomial,
     field: Field,
+}
+
+impl Display for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Add => "+",
+                Self::Mul => "*",
+            }
+        )
+    }
 }
 
 impl Field {
@@ -184,10 +200,16 @@ impl ChallengeLike<'_> for Challenge {
     fn solve(&self) -> Result<Self::Solution> {
         Ok(match self.op {
             Operation::Add => Solution {
+                a: self.a,
+                b: self.b,
+                op: self.op,
                 res: self.field.add(self.a, self.b),
                 field: self.field,
             },
             Operation::Mul => Solution {
+                a: self.a,
+                b: self.b,
+                op: self.op,
                 res: self.field.mul(self.a, self.b),
                 field: self.field,
             },
@@ -198,7 +220,15 @@ impl SolutionLike<'_> for Solution {}
 
 impl Display for Solution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(
+            f,
+            "{} {} {} in {} = {}",
+            self.field.display_poly(self.a),
+            self.op,
+            self.field.display_poly(self.b),
+            self.field,
+            self.field.display_poly(self.res)
+        )
     }
 }
 
