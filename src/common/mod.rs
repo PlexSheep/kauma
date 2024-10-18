@@ -56,11 +56,12 @@ pub fn bit_at_i(num: u128, i: usize) -> bool {
 
 /// Like [bit_at_i] but with reversed order
 /// ```
-/// use kauma_analyzer::common::bit_at_i;
-/// assert_eq!(bit_at_i(0b10000000, 0), true);
-/// assert_eq!(bit_at_i(0b00000000, 0), false);
-/// assert_eq!(bit_at_i(0b01111111, 0), false);
-/// assert_eq!(bit_at_i(0b11111111, 0), false);
+/// use kauma_analyzer::common::bit_at_i_inverted_order;
+/// assert_eq!(bit_at_i_inverted_order(1<<127, 0), true);
+/// assert_eq!(bit_at_i_inverted_order(1<<120, 7), true);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000, 0), false);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000_01111111, 120), false);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000_11111111, 120), true);
 /// ```
 #[inline]
 pub fn bit_at_i_inverted_order(num: u128, i: usize) -> bool {
