@@ -6,7 +6,7 @@ use std::fmt::Display;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::common::{bit_at_i, bit_at_i_inverted_order, byte_to_bits};
+use crate::common::{bit_at_i_inverted_order, byte_to_bits};
 
 use super::{ChallengeLike, SolutionLike};
 
