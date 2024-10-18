@@ -1,4 +1,3 @@
-pub mod c2;
 pub mod ffield;
 
 use std::fmt::{Debug, Display};
