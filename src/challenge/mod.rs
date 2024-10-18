@@ -25,7 +25,7 @@ pub struct Testcase {
 
 /// Describes what we should do
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum Action {
     // example items
     /// Add 2 numbers together
@@ -35,11 +35,9 @@ pub enum Action {
 
     // ffield items
     /// given a list of coefficients and a semantic, convert a polynom to machine representation (a number)
-    #[serde(rename = "poly2block")]
     Poly2Block,
     /// given a machine representation of a polynom and a semantic, convert the polynom into just
     /// it's coefficients
-    #[serde(rename = "block2poly")]
     Block2Poly,
 }
 

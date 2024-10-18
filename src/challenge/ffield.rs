@@ -51,13 +51,13 @@ pub enum Semantic {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 pub struct FField {
     /// Forms the base as 2^n
-    n: u64,
+    pub n: u64,
     /// The defining relation, represented as a number, where the least significant bit
     /// signifies b * α^0, the second least significant bit signifies b * α^1 and so on, where b is
     /// the value of that bit.
     ///
     /// Note that the byte order is from least to highest, unintuitively.
-    defining_relation: Polynomial,
+    pub defining_relation: Polynomial,
 }
 
 impl FField {
