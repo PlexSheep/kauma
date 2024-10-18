@@ -131,32 +131,16 @@ impl FField {
         if *self != F_2_128 {
             panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
-        let mut z: Polynomial = 0;
-        let mut v: Polynomial = poly_x;
-
-        for i in 0..128 {
-            let mask: u128 = 1 << (127 - i);
-            if (poly_y & mask) != 0 {
-                z ^= v;
-                ////////////////////////////////////////////////////////////////////////////////////
-                // HACK: THIS IS TOTALLY MADE UP, NOT PART OF THE CITATED ALGORITHM BUT SOMEHOW
-                // MAKES EVERYTHING WORK! THIS IS A MAGIC LINE! THIS IS AN ABSOLUTE HACK THAT
-                // COMES FROM TRIAL AND ERROR! THIS IS A RADIOACTIVE BOMB WAITING TO EXPLODE! #1
-                ////////////////////////////////////////////////////////////////////////////////////
-                z <<= 7;
-                ////////////////////////////////////////////////////////////////////////////////////
-                // If you tried to make it work without this, add an 'I' in the next line:
-                // II
-                ////////////////////////////////////////////////////////////////////////////////////
-            }
-            if (v & (1 << 127)) == 0 {
-                v >>= 1;
-            } else {
-                v = (v >> 1) ^ SPECIAL_ELEMENT_R;
-            }
+        // NOTE: This is an easy multiplication that can just work with block b being a single α .
+        // The generic algorithm is way too hard for me right now, I really don't get it even after
+        // hours of trying.
+        if self.display_poly(poly_y) != "α" {
+            panic!("Only multiplying wiht α is supported as of now!");
         }
 
-        z
+        // I hate this machine representation. If something useful would be used, I could just:
+        // (poly_x << 1) ^ self.defining_relation
+        poly_x << 1
     }
 
     pub fn coefficients_to_poly(
@@ -166,6 +150,8 @@ impl FField {
     ) -> Polynomial {
         let mut poly: Polynomial = 0;
         for coefficient in coefficients {
+            // NOTE: Why does this work? Shouldn't the horrible repr kill everything that uses
+            // simple bitshifts and indexing?
             poly |= 1u128 << coefficient as u128;
         }
         // PERF: by using swap bytes we can safe a bit of performance, as we dont need to do
