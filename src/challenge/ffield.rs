@@ -2,9 +2,9 @@
 
 use std::default::Default;
 use std::fmt::Display;
-use std::usize;
 
 use anyhow::{anyhow, Result};
+use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::common::{bit_at_i_inverted_order, byte_to_bits};
@@ -38,7 +38,7 @@ pub const SPECIAL_ELEMENT_R: Polynomial = 0xE1000000_00000000_00000000_00000080;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "snake_case")]
-enum Semantic {
+pub enum Semantic {
     /// whatever is used in AES-XEX
     #[default]
     Xex,
@@ -142,14 +142,18 @@ impl FField {
         z
     }
 
-    pub fn coefficients_to_poly(&self, coefficients: Vec<usize>, semantic: Semantic) -> Polynomial {
+    pub fn coefficients_to_poly(
+        &self,
+        coefficients: Vec<usize>,
+        _semantic: Semantic,
+    ) -> Polynomial {
         let mut poly: Polynomial = 0;
         for coefficient in coefficients {
-            poly |= 1 << coefficient;
+            poly |= 1u128 << coefficient as u128;
         }
         poly
     }
-    pub fn poly_to_coefficients(&self, poly: Polynomial, semantic: Semantic) -> Vec<usize> {
+    pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
         let mut enabled = Vec::new();
         for (byte_idx, byte) in poly.to_le_bytes().iter().rev().enumerate() {
             for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
@@ -185,17 +189,15 @@ impl Display for FField {
 pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::Poly2Block => {
-            let semantic: Semantic;
             let coefficients: Vec<usize>;
 
-            if let Some(downcast) = testcase.arguments["semantic"].as_str() {
-                dbg!(downcast);
-                semantic = serde_json::from_str(downcast).inspect_err(|e| {
+            let semantic: Semantic = if testcase.arguments["semantic"].is_string() {
+                serde_json::from_value(testcase.arguments["semantic"].clone()).inspect_err(|e| {
                     eprintln!("! something went wrong when serializing the semantinc: {e}")
-                })?;
+                })?
             } else {
                 return Err(anyhow!("semantic is not a string"));
-            }
+            };
 
             if let Some(downcast) = testcase.arguments["coefficients"].as_array() {
                 coefficients = downcast
@@ -206,7 +208,8 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
                 return Err(anyhow!("coefficients is not a list"));
             }
             let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
-            serde_json::to_value(sol)?
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_ne_bytes()))
+                .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
         Action::Block2Poly => {
             todo!()
