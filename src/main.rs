@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use kauma_analyzer::challenge::{ManyTestcases, Testcase};
 use serde_json::Value;
-use uuid::Uuid;
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
