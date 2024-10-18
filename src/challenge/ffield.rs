@@ -248,6 +248,16 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
 mod test {
     use super::*;
 
+    fn assert_eq_polys(poly_a: Polynomial, poly_b: Polynomial) {
+        assert_eq!(
+            poly_a,
+            poly_b,
+            "\n0x{poly_a:016X} => {}\nshould be\n0x{poly_b:016X} => {}",
+            F_2_128.display_poly(poly_a),
+            F_2_128.display_poly(poly_b),
+        );
+    }
+
     #[test]
     fn test_add_alpha() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
@@ -255,14 +265,14 @@ mod test {
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
         );
-        assert_eq!(
-            sol,
-            SOLUTION,
-            "\n0x{:016X} => {}\nshould be\n0x{SOLUTION:016X} => {}",
-            sol,
-            F_2_128.display_poly(sol),
-            F_2_128.display_poly(SOLUTION),
-        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_poly_from_coefficients() {
+        const SOLUTION: Polynomial = 0x01120000000000000000000000000080;
+        let sol = F_2_128.coefficients_to_poly(vec![0, 9, 12, 127], Semantic::Xex);
+        assert_eq_polys(sol, SOLUTION);
     }
 
     #[test]
