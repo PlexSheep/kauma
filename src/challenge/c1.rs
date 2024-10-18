@@ -209,7 +209,7 @@ mod test {
     // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_add_alpha() {
-        const SOLUTION: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
+        const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let c = Challenge {
             op: Operation::Add,
             a: 0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -230,7 +230,7 @@ mod test {
     // WARN: might be crap because i don't understand polynomials as numbers
     #[test]
     fn test_dipsplay_poly() {
-        let a: Polynomial = 0x2C000000_00000000_00000000_00000000; // α^4 + α^2
+        let a: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let b: Polynomial = 0x16000000_00000000_00000000_00000000; // α^4 + α^2 + α
         let c: Polynomial = 0x02000000_00000000_00000000_00000000; // α
         assert_eq!(F_2_128.display_poly(1 << 120), "1");
