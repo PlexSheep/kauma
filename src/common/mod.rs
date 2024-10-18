@@ -1,6 +1,5 @@
 //! Implements some helper functions that I might need in multiple challenges
 
-/// LSB is the first bit
 /// Wraps a value in an object with some title
 ///
 /// ```
@@ -14,6 +13,9 @@ pub fn tag_json_value(tag: &str, value: serde_json::Value) -> serde_json::Value 
     serde_json::Value::Object(helper_map)
 }
 
+/// Splits a [u8] into a array of bools [bool], where each bool is a bit.
+///
+/// The LSB is the first bit
 pub fn byte_to_bits(byte: u8) -> [bool; 8] {
     let mut buf = [false; 8];
     for (i, bit) in buf.iter_mut().enumerate() {
@@ -22,11 +24,22 @@ pub fn byte_to_bits(byte: u8) -> [bool; 8] {
     buf
 }
 
+/// Get's the bit at position i.
+/// ```
+/// assert_eq!(bit_at_i(0b10000000, 7), true);
+/// assert_eq!(bit_at_i(0b01000000, 7), false);
+/// assert_eq!(bit_at_i(0b11000000, 7), true);
+/// assert_eq!(bit_at_i(0b11111111, 7), true);
+/// assert_eq!(bit_at_i(0x01ffffff_ffffffff_ffffffff_ffffffff, 120), true);
+/// assert_eq!(bit_at_i(0x01ffffff_ffffffff_ffffffff_ffffffff, 127), false);
+/// assert_eq!(bit_at_i(0xffffffff_ffffffff_ffffffff_ffffffff, 127), true);
+/// ```
 #[inline]
 pub fn bit_at_i(num: u128, i: usize) -> bool {
     (num & (1 << i)) >> i == 1
 }
 
+/// Like [bit_at_i] but with reversed order
 #[inline]
 pub fn bit_at_i_inverted_order(num: u128, i: usize) -> bool {
     let i = 127 - i;
