@@ -215,6 +215,15 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let block: Polynomial = get_poly(&testcase.arguments, "block")?;
             serde_json::to_value(F_2_128.poly_to_coefficients(block, semantic))?
         }
+        Action::GfMul => {
+            let _semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let a: Polynomial = get_poly(&testcase.arguments, "a")?;
+            let b: Polynomial = get_poly(&testcase.arguments, "b")?;
+
+            let sol = F_2_128.mul(a, b);
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
+                .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
+        }
         _ => unreachable!(),
     })
 }
