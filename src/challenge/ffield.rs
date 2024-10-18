@@ -246,6 +246,8 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
+
     use super::*;
 
     fn assert_eq_polys(poly_a: Polynomial, poly_b: Polynomial) {
@@ -273,6 +275,18 @@ mod test {
         const SOLUTION: Polynomial = 0x01120000000000000000000000000080;
         let sol = F_2_128.coefficients_to_poly(vec![0, 9, 12, 127], Semantic::Xex);
         assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_coefficients_from_poly() {
+        // we don't care about order, so just put things in a set
+        assert_eq!(
+            F_2_128
+                .poly_to_coefficients(0x01120000000000000000000000000080, Semantic::Xex)
+                .into_iter()
+                .collect::<HashSet<_>>(),
+            HashSet::from([0, 9, 12, 127])
+        )
     }
 
     #[test]
