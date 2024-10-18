@@ -349,4 +349,14 @@ mod test {
         );
         assert_eq_polys(sol, SOLUTION);
     }
+
+    #[test]
+    fn test_mul_2() {
+        const SOLUTION: Polynomial = 0x02240000000000000000000000000000; // α^13 + α^10 + α
+        let sol = F_2_128.mul(
+            0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
 }
