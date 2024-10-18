@@ -70,8 +70,9 @@ impl FField {
     }
     /// Convert the machine representation of a polynomial to the human representation
     /// ```
+    /// use kauma_analyzer::challenge::ffield::F_2_128;
     /// assert_eq!(F_2_128.display_poly(1 << 121), "α");
-    /// assert_eq!(F_2_128.display_poly(0b1001 << 55), "α");
+    /// assert_eq!(F_2_128.display_poly(0b1001 << 55), "α^79 + α^66");
     /// ```
     pub fn display_poly(&self, poly: Polynomial) -> String {
         let mut buf = String::new();
@@ -225,20 +226,17 @@ mod test {
     #[test]
     fn test_add_alpha() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
-        let c = Challenge {
-            op: Operation::Add,
-            a: 0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
-            b: 0x02000000_00000000_00000000_00000000, // α
-            field: F_2_128,
-        };
-        let sol = c.solve().expect("could not solve the challenge");
+        let sol = F_2_128.add(
+            0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
+            0x02000000_00000000_00000000_00000000, // α
+        );
         assert_eq!(
-            sol.res,
+            sol,
             SOLUTION,
             "\n0x{:016X} => {}\nshould be\n0x{SOLUTION:016X} => {}",
-            sol.res,
-            c.field.display_poly(sol.res),
-            c.field.display_poly(SOLUTION),
+            sol,
+            F_2_128.display_poly(sol),
+            F_2_128.display_poly(SOLUTION),
         );
     }
 

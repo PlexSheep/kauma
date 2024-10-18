@@ -3,9 +3,10 @@
 /// Wraps a value in an object with some title
 ///
 /// ```
+/// use kauma_analyzer::common::tag_json_value;
 /// use serde_json::{json};
 /// let v = json!({"foo": 19});
-/// assert_eq!(tag_json_value("title", v), json!("title": {"foo": 19}));
+/// assert_eq!(tag_json_value("title", v), json!({"title": {"foo": 19}}));
 /// ````
 pub fn tag_json_value(tag: &str, value: serde_json::Value) -> serde_json::Value {
     let mut helper_map = serde_json::Map::new();
@@ -26,6 +27,7 @@ pub fn byte_to_bits(byte: u8) -> [bool; 8] {
 
 /// Get's the bit at position i.
 /// ```
+/// use kauma_analyzer::common::bit_at_i;
 /// assert_eq!(bit_at_i(0b10000000, 7), true);
 /// assert_eq!(bit_at_i(0b01000000, 7), false);
 /// assert_eq!(bit_at_i(0b11000000, 7), true);
