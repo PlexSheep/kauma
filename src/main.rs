@@ -40,7 +40,7 @@ fn main() -> Result<()> {
 
     // print our response to stdout
     println!(
-        "{}",
+        "{:#}",
         kauma_analyzer::challenge::run_challenges(&json_value)?
     );
 
