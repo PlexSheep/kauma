@@ -1,6 +1,19 @@
 //! Implements some helper functions that I might need in multiple challenges
 
 /// LSB is the first bit
+/// Wraps a value in an object with some title
+///
+/// ```
+/// use serde_json::{json};
+/// let v = json!({"foo": 19});
+/// assert_eq!(tag_json_value("title", v), json!("title": {"foo": 19}));
+/// ````
+pub fn tag_json_value(tag: &str, value: serde_json::Value) -> serde_json::Value {
+    let mut helper_map = serde_json::Map::new();
+    helper_map.insert(tag.to_owned(), value);
+    serde_json::Value::Object(helper_map)
+}
+
 pub fn byte_to_bits(byte: u8) -> [bool; 8] {
     let mut buf = [false; 8];
     for (i, bit) in buf.iter_mut().enumerate() {
