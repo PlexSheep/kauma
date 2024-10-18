@@ -34,7 +34,7 @@ pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
 /// AES.
 pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128);
 /// This is a special polynomial used for multiplication in F_2_128
-pub const SPECIAL_ELEMENT_R: Polynomial = 0xE1000000_00000000_00000000_00000080;
+pub const SPECIAL_ELEMENT_R: Polynomial = 0b11100001 << 120;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "snake_case")]
@@ -98,7 +98,7 @@ impl FField {
     }
 
     /// Reduces the given [Polynomial] with the [defining relation](Self::defining_relation)
-    pub fn reduce(&self, poly: Polynomial) -> Polynomial {
+    pub const fn reduce(&self, poly: Polynomial) -> Polynomial {
         poly ^ self.defining_relation
     }
     /// Get the sum of two [polynomials](Polynomial)
@@ -109,7 +109,7 @@ impl FField {
     ///
     /// Addition on the finite field with a base of 2^n is the same as xor, therefore no reduction
     /// is needed.
-    pub fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
+    pub const fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
         poly_a ^ poly_b
     }
     /// Get the product of two [polynomials](Polynomial)
@@ -124,22 +124,28 @@ impl FField {
     /// # Citation
     /// - The Galois/Counter Mode of Operation (GCM) by McGrew and Viega, Sect. 2.5, Algorithm 1
     ///     <https://csrc.nist.rip/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf>
-    pub fn mul(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
+    // keep it close to the original algorithm in the cited paper
+    #[allow(clippy::style)]
+    #[allow(clippy::complexity)]
+    pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial) -> Polynomial {
         if *self != F_2_128 {
             panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
         let mut z: Polynomial = 0;
-        let mut v: Polynomial = poly_a;
+        let mut v: Polynomial = poly_x;
+
         for i in 0..128 {
-            if bit_at_i_inverted_order(poly_b, i) {
+            let mask: u128 = 1 << (127 - i);
+            if (poly_y & mask) != 0 {
                 z ^= v;
             }
-            if bit_at_i_inverted_order(v, 127) {
-                v = (v >> 1) ^ SPECIAL_ELEMENT_R;
-            } else {
+            if (v & (1 << 127)) == 0 {
                 v >>= 1;
+            } else {
+                v = (v >> 1) ^ SPECIAL_ELEMENT_R;
             }
         }
+
         z
     }
 
