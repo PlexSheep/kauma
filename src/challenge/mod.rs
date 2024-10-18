@@ -1,14 +1,16 @@
+pub mod example;
 pub mod ffield;
 
 use std::collections::HashMap;
-use std::error::Error;
 use std::fmt::{Debug, Display};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::common::tag_json_value;
 
 pub type ManyTestcases = HashMap<Uuid, Testcase>;
 pub type Response = serde_json::Value;
@@ -31,7 +33,7 @@ pub enum Action {
 
 pub trait ChallengeLike<'de>: Serialize + Debug + Sized {
     type Solution: SolutionLike<'de>;
-    fn solve(&self, action: Action) -> Result<Self::Solution>;
+    fn solve(&self) -> Result<Self::Solution>;
 }
 pub trait SolutionLike<'de>: Deserialize<'de> + Debug + Display + Sized {}
 
@@ -56,23 +58,30 @@ impl Action {
 pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value> {
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
+    let mut handles: Vec<thread::JoinHandle<std::result::Result<(), anyhow::Error>>> = Vec::new();
     for (uuid, testcase) in testcases {
         let answer_mutex = answers.clone();
-        thread::spawn(move || {
-            answer_mutex.lock().unwrap().insert(
-                uuid,
-                match testcase.action {
-                    Action::AddNumbers => ffield::run_testcase(&testcase),
-                    Action::SubNumbers => ffield::run_testcase(&testcase),
-                },
-            )
-        });
+        handles.push(thread::spawn(move || {
+            let sol = match testcase.action {
+                Action::AddNumbers | Action::SubNumbers => example::run_testcase(&testcase)?,
+            };
+            answer_mutex
+                .lock()
+                .unwrap()
+                .insert(uuid, tag_json_value(testcase.action.solution_key(), sol));
+            Ok(())
+        }));
     }
 
-    let mut helper_map = serde_json::Map::new();
-    helper_map.insert(
-        "responses".to_owned(),
-        serde_json::to_value(answers.lock().unwrap().clone())?,
-    );
-    Ok(serde_json::Value::Object(helper_map))
+    for handle in handles {
+        match handle.join() {
+            Ok(_) => (),
+            Err(e) => eprintln!("failed to solve a challenge: {e:#?}"),
+        }
+    }
+    let responses = answers.lock().unwrap().clone();
+    Ok(tag_json_value(
+        "responses",
+        serde_json::to_value(&responses)?,
+    ))
 }

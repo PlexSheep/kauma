@@ -1,9 +1,8 @@
 //! multiply / add polynomials in a gallois field
 
-use core::panic;
 use std::fmt::Display;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -198,7 +197,7 @@ impl Display for Field {
 
 impl ChallengeLike<'_> for Challenge {
     type Solution = Solution;
-    fn solve(&self, action: Action) -> Result<Self::Solution> {
+    fn solve(&self) -> Result<Self::Solution> {
         Ok(match self.op {
             Operation::Add => Solution {
                 a: self.a,
@@ -233,7 +232,7 @@ impl Display for Solution {
     }
 }
 
-pub fn run_testcase(testcase: &Testcase) -> serde_json::Value {
+pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
     todo!()
 }
 
