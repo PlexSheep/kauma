@@ -83,37 +83,34 @@ impl Field {
     }
     /// Convert the machine representation of a polynomial to the human representation
     pub fn display_poly(&self, poly: Polynomial) -> String {
-        // FIXME: this is completely fucking broken
         let mut buf = String::new();
         let mut enabled = Vec::new();
-        for (i, byte) in poly.to_ne_bytes().iter().enumerate() {
-            for (j, bit) in byte_to_bits(*byte).iter().enumerate() {
+        for (i, byte) in poly.to_le_bytes().iter().rev().enumerate() {
+            for (j, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
                 if *bit {
-                    enabled.push(i + (j * 8));
+                    enabled.push(j + (i * 8));
                 }
             }
         }
 
-        // NOTE: this is probably just garbage-in garbage-out
         enabled.sort();
-        if enabled.len() == 1 {
-            buf = format!("α^{}", enabled[0]);
-        } else {
-            for (i, exp) in enabled.iter().enumerate() {
+        enabled.reverse();
+        if enabled.is_empty() {
+            buf = "0".to_string();
+            return buf;
+        }
+        for (i, exp) in enabled.iter().enumerate() {
+            if i == enabled.len() - 1 {
                 if *exp == 0 {
                     buf += "1";
-                    break;
+                } else if *exp == 1 {
+                    buf += "α";
+                } else {
+                    buf += &format!("α^{exp}");
                 }
-                if i == enabled.len() - 1 {
-                    if *exp == 1 {
-                        buf += "1"
-                    } else {
-                        buf += &format!("α^{exp}");
-                    }
-                    break;
-                }
-                buf += &format!("α^{exp} + ")
+                break;
             }
+            buf += &format!("α^{exp} + ")
         }
         buf
     }
