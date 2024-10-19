@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
-use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode as OpenSslMode};
+use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes, put_bytes};
-use crate::common::{bytes_to_u128, vec_to_arr};
+use crate::common::vec_to_arr;
 
 use super::{Action, Testcase};
 
