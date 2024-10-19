@@ -152,4 +152,26 @@ mod test {
 
         assert_eq!(denc, PLAIN);
     }
+
+    #[test]
+    fn test_openssl_aes_128_ecb_encrypt_decrypt() {
+        const PLAIN: [u8; 16] = *b"foobarqux amogus";
+        const KEY: [u8; 16] = *b"1238742fsaflk249";
+
+        let mut crypter_e =
+            Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, &KEY, None).unwrap();
+        let mut crypter_d =
+            Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, &KEY, None).unwrap();
+        crypter_d.pad(false);
+        crypter_e.pad(false);
+
+        let mut buf = [0; 32].to_vec();
+        crypter_e.update(&PLAIN, &mut buf).expect("encrypt failed");
+        crypter_e.finalize(&mut buf).expect("encrypt final failed");
+        eprintln!("ciphertext: {buf:02x?}");
+        crypter_d.update(&PLAIN, &mut buf).expect("decrypt failed");
+        crypter_d.finalize(&mut buf).expect("decrypt final failed");
+
+        assert_eq!(PLAIN.to_vec(), buf);
+    }
 }
