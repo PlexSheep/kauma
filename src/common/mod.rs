@@ -4,6 +4,22 @@ pub mod interface;
 
 use anyhow::{anyhow, Result};
 
+/// Try to downcast a [Vec<u8>] into an array of constant size
+pub fn vec_to_arr<const N: usize>(data: &Vec<u8>) -> Result<[u8; N]> {
+    let arr: [u8; N] = match data.clone().try_into() {
+        Ok(v) => v,
+        Err(e) => {
+            let e = anyhow!(
+                "! Data is of bad length {}: {:02x?} ; {e:#?}",
+                data.len(),
+                data
+            );
+            return Err(e);
+        }
+    };
+    Ok(arr)
+}
+
 /// Combine a number of [u8] into a [u128]
 ///
 /// Fails if the [Vec] is too long to fit into a [u128].
