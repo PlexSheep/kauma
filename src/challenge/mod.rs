@@ -1,3 +1,4 @@
+pub mod cipher;
 pub mod example;
 pub mod ffield;
 
@@ -43,6 +44,10 @@ pub enum Action {
     Block2Poly,
     /// Multiply two polynomials in [F_2_128](ffield::F_2_128)
     GfMul,
+
+    // cipher items
+    /// encrypt or decrypt with a special aes version (sea128)
+    Sea128,
 }
 
 impl Default for Testcase {
@@ -72,6 +77,7 @@ impl Action {
             Self::Poly2Block => "block",
             Self::Block2Poly => "coefficients",
             Self::GfMul => "product",
+            Self::Sea128 => "output",
         }
     }
 }
@@ -89,6 +95,7 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
                 Action::Poly2Block | Action::Block2Poly | Action::GfMul => {
                     ffield::run_testcase(&testcase)
                 }
+                Action::Sea128 => cipher::run_testcase(&testcase),
             };
             if let Err(e) = sol {
                 return Err(anyhow!("error while processing a testcase {uuid}: {e}"));

@@ -246,9 +246,8 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 
 fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
     let block: Polynomial = if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone()).inspect_err(|e| {
-            eprintln!("! something went wrong when serializing the semantinc: {e}")
-        })?;
+        let v: String = serde_json::from_value(args[key].clone())
+            .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
         let bytes = BASE64_STANDARD.decode(v)?;
         crate::common::bytes_to_u128(&bytes)?
     } else {
