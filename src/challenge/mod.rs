@@ -86,26 +86,11 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
     let mut handles: Vec<thread::JoinHandle<std::result::Result<(), anyhow::Error>>> = Vec::new();
+
     for (uuid, testcase) in testcases {
-        let answer_mutex = answers.clone();
-        eprintln!("* starting challenge {uuid}");
+        let answers_clone = answers.clone();
         handles.push(thread::spawn(move || {
-            let sol = match testcase.action {
-                Action::AddNumbers | Action::SubNumbers => example::run_testcase(&testcase),
-                Action::Poly2Block | Action::Block2Poly | Action::GfMul => {
-                    ffield::run_testcase(&testcase)
-                }
-                Action::Sea128 => cipher::run_testcase(&testcase),
-            };
-            if let Err(e) = sol {
-                return Err(anyhow!("error while processing a testcase {uuid}: {e}"));
-            }
-            answer_mutex.lock().unwrap().insert(
-                uuid,
-                tag_json_value(testcase.action.solution_key(), sol.unwrap()),
-            );
-            eprintln!("* finished challenge {uuid}");
-            Ok(())
+            challenge_runner(&testcase, answers_clone, &uuid)
         }));
     }
 
@@ -126,4 +111,26 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
         "responses",
         serde_json::to_value(&responses)?,
     ))
+}
+
+fn challenge_runner(
+    testcase: &Testcase,
+    answers: Arc<Mutex<HashMap<Uuid, serde_json::Value>>>,
+    uuid: &Uuid,
+) -> Result<()> {
+    eprintln!("* starting challenge {uuid}");
+    let sol = match testcase.action {
+        Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase),
+        Action::Poly2Block | Action::Block2Poly | Action::GfMul => ffield::run_testcase(testcase),
+        Action::Sea128 => cipher::run_testcase(testcase),
+    };
+    if let Err(e) = sol {
+        return Err(anyhow!("error while processing a testcase {uuid}: {e}"));
+    }
+    answers.lock().unwrap().insert(
+        *uuid,
+        tag_json_value(testcase.action.solution_key(), sol.unwrap()),
+    );
+    eprintln!("* finished challenge {uuid}");
+    Ok(())
 }
