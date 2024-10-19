@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
-use openssl::symm::{decrypt, encrypt, Cipher, Mode as OpenSslMode};
+use openssl::symm::{decrypt, encrypt, Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
-use crate::common::bytes_to_u128;
 use crate::common::interface::{get_bytes, put_bytes};
+use crate::common::{bytes_to_u128, vec_to_arr};
 
 use super::{Action, Testcase};
 
@@ -37,15 +37,30 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn sea_128_encrypt(key: &Vec<u8>, data: &Vec<u8>) -> Result<Vec<u8>> {
-    let cipher = Cipher::aes_128_ecb();
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
+    crypter.pad(false);
+
     eprintln!("? data:\t\t{data:02x?}");
-    let mut enc: Vec<u8> = encrypt(cipher, key, None, data)?
-        .first_chunk::<16>()
-        .expect("openssl encryption returned nothing")
-        .to_vec();
+
+    // NOTE: openssl panics if the buffer is not at least 32 bytes
+    let mut enc: Vec<u8> = [0; 32].to_vec();
+    crypter
+        .update(data, &mut enc)
+        .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
+    crypter
+        .finalize(&mut enc)
+        .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
+
+    // NOTE: openssl returns more than the length of the data in some cases, perhaps because of
+    // padding. This does not seem to be needed for the testcases, so I limit the length of the
+    // ciphertext to that of the data.
+
+    enc.truncate(data.len());
+
     eprintln!("? enc_pre:\t{enc:02x?}");
 
+    // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
         assert_eq!(chunk.len(), 16);
         for (n, magic_number) in chunk.iter_mut().zip(SEA_128_MAGIC_NUMBER_ARR) {
@@ -57,8 +72,35 @@ pub fn sea_128_encrypt(key: &Vec<u8>, data: &Vec<u8>) -> Result<Vec<u8>> {
     Ok(enc.to_vec())
 }
 
-pub fn sea_128_decrypt(key: &Vec<u8>, data: &Vec<u8>) -> Result<Vec<u8>> {
-    todo!()
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
+    crypter.pad(false);
+
+    eprintln!("? denc:\t\t{enc:02x?}");
+
+    // xor with the SEA_128_MAGIC_NUMBER
+    for chunk in enc.to_vec().chunks_exact_mut(16) {
+        assert_eq!(chunk.len(), 16);
+        for (n, magic_number) in chunk.iter_mut().zip(SEA_128_MAGIC_NUMBER_ARR) {
+            *n ^= magic_number;
+        }
+    }
+
+    // NOTE: openssl panics if the buffer is not at least 32 bytes
+    let mut denc: Vec<u8> = [0; 32].to_vec();
+    crypter
+        .update(enc, &mut denc)
+        .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
+    crypter
+        .finalize(&mut denc)
+        .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
+
+    // NOTE: openssl returns more than the length of the data in some cases, perhaps because of
+    // padding. This does not seem to be needed for the testcases, so I limit the length of the
+    // ciphertext to that of the data.
+
+    denc.truncate(enc.len());
+    Ok(denc.to_vec())
 }
 
 pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
@@ -67,6 +109,9 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let mode = get_mode(&testcase.arguments)?;
             let key = get_bytes(&testcase.arguments, "key")?;
             let input = get_bytes(&testcase.arguments, "input")?;
+
+            let key: [u8; 16] = vec_to_arr(&key)?;
+            let input: [u8; 16] = vec_to_arr(&input)?;
 
             let output = match mode {
                 Mode::Encrypt => sea_128_encrypt(&key, &input)?,
