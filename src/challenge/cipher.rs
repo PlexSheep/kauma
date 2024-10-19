@@ -58,7 +58,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
 
     enc.truncate(data.len());
 
-    eprintln!("? enc_pre:\t{enc:02x?}");
+    eprintln!("? pxor:\t\t{enc:02x?}");
 
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
@@ -68,7 +68,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
         }
     }
 
-    eprintln!("? enc1:\t\t{enc:02x?}");
+    eprintln!("? enc:\t\t{enc:02x?}");
     Ok(enc.to_vec())
 }
 
@@ -86,6 +86,8 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
         }
     }
 
+    eprintln!("? dxor:\t\t{enc:02x?}");
+
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut denc: Vec<u8> = [0; 32].to_vec();
     crypter
@@ -100,6 +102,8 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     // ciphertext to that of the data.
 
     denc.truncate(enc.len());
+    eprintln!("? denc:\t\t{denc:02x?}");
+
     Ok(denc.to_vec())
 }
 
