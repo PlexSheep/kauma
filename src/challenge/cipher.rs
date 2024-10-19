@@ -72,6 +72,8 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
     Ok(enc.to_vec())
 }
 
+// FIXME: openssl spits out total garbage and adds padding even though padding is off, just
+// for decryption #2
 pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
     crypter.pad(false);
@@ -169,6 +171,8 @@ mod test {
         crypter_e.update(&PLAIN, &mut buf).expect("encrypt failed");
         crypter_e.finalize(&mut buf).expect("encrypt final failed");
         eprintln!("ciphertext: {buf:02x?}");
+        // FIXME: openssl spits out total garbage and adds padding even though padding is off, just
+        // for decryption #2
         crypter_d.update(&PLAIN, &mut buf).expect("decrypt failed");
         crypter_d.finalize(&mut buf).expect("decrypt final failed");
 
