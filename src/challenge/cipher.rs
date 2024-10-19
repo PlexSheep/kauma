@@ -168,13 +168,22 @@ mod test {
         crypter_e.pad(false);
 
         let mut buf = [0; 32].to_vec();
-        crypter_e.update(&PLAIN, &mut buf).expect("encrypt failed");
-        crypter_e.finalize(&mut buf).expect("encrypt final failed");
-        eprintln!("ciphertext: {buf:02x?}");
-        // FIXME: openssl spits out total garbage and adds padding even though padding is off, just
-        // for decryption #2
-        crypter_d.update(&PLAIN, &mut buf).expect("decrypt failed");
-        crypter_d.finalize(&mut buf).expect("decrypt final failed");
+        let mut position: usize;
+        position = crypter_e.update(&PLAIN, &mut buf).expect("encrypt failed");
+        position += crypter_e
+            .finalize(&mut buf[position..])
+            .expect("encrypt final failed");
+        buf.truncate(position);
+
+        let cipher = buf;
+        let mut buf = [0; 32].to_vec();
+        eprintln!("ciphertext: {cipher:02x?}");
+
+        position = crypter_d.update(&cipher, &mut buf).expect("decrypt failed");
+        position += crypter_d
+            .finalize(&mut buf[position..])
+            .expect("decrypt final failed");
+        buf.truncate(position);
 
         assert_eq!(PLAIN.to_vec(), buf);
     }
