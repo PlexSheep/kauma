@@ -38,6 +38,8 @@ impl From<Mode> for OpenSslMode {
 }
 
 pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
+    eprintln!("? key:\t\t{key:02x?}");
+
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
     crypter.pad(false);
 
@@ -70,6 +72,8 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
 }
 
 pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
+    eprintln!("? key:\t\t{key:02x?}");
+
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
     crypter.pad(false);
 
@@ -91,7 +95,7 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     let mut denc: Vec<u8> = [0; 32].to_vec();
     let mut pos: usize;
     pos = crypter
-        .update(enc, &mut denc)
+        .update(&dxor, &mut denc)
         .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
     pos += crypter
         .finalize(&mut denc[pos..])
