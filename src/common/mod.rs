@@ -1,5 +1,7 @@
 //! Implements some helper functions that I might need in multiple challenges
 
+pub mod interface;
+
 use anyhow::{anyhow, Result};
 
 /// Combine a number of [u8] into a [u128]
