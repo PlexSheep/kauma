@@ -1,0 +1,11 @@
+{
+  "testcases": {
+    "b856d760-023d-4b00-bad2-15d2b6da22fe": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "ARIAAAAAAAAAAAAAAAAAgA=="
+      }
+    }
+  }
+}
