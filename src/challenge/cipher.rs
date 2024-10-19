@@ -132,3 +132,20 @@ fn get_mode(args: &serde_json::Value) -> Result<Mode> {
     };
     Ok(semantic)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_sea_128_encrypt_decrypt() {
+        const PLAIN: [u8; 16] = *b"foobarqux amogus";
+        const KEY: [u8; 16] = *b"1238742fsaflk249";
+
+        let enc = sea_128_encrypt(&KEY, &PLAIN).expect("encrypt fail");
+        let enc = vec_to_arr(&enc).expect("could not convert from vec to arr");
+        let denc = sea_128_decrypt(&KEY, &enc).expect("decrypt fail");
+
+        assert_eq!(denc, PLAIN);
+    }
+}
