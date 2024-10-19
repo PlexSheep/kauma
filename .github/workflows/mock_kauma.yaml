@@ -17,7 +17,7 @@ jobs:
     - name: install rust
       uses: dtolnay/rust-toolchain@stable
     - name: run addsub
-      run: cargo run -r -- ./example_challenges/addsub.json 
+      run: cargo run -r -- ./example_challenges/addsub.json
 
   block2poly:
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
     - name: install rust
       uses: dtolnay/rust-toolchain@stable
     - name: run addsub
-      run: cargo run -r -- ./example_challenges/block2poly.json 
+      run: cargo run -r -- ./example_challenges/block2poly.json
 
   poly2block:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
     - name: install rust
       uses: dtolnay/rust-toolchain@stable
     - name: run addsub
-      run: cargo run -r -- ./example_challenges/poly2block.json 
+      run: cargo run -r -- ./example_challenges/poly2block.json
 
   gfmul:
     runs-on: ubuntu-latest
@@ -50,4 +50,15 @@ jobs:
     - name: install rust
       uses: dtolnay/rust-toolchain@stable
     - name: run addsub
-      run: cargo run -r -- ./example_challenges/gfmul.json 
+      run: cargo run -r -- ./example_challenges/gfmul.json
+
+  sea128:
+    runs-on: ubuntu-latest
+    name: sea128
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run addsub
+      run: cargo run -r -- ./example_challenges/sea128.json

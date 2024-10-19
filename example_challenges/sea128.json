@@ -1,0 +1,12 @@
+{
+  "testcases": {
+    "b856d760-023d-4b00-bad2-15d2b6da22fe": {
+      "action": "sea128",
+      "arguments": {
+        "mode": "encrypt",
+        "key": "istDASeincoolerKEYrofg==",
+        "input": "yv66vvrO263eyviIiDNEVQ=="
+      }
+    }
+  }
+}
