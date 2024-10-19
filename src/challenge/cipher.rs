@@ -45,21 +45,18 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut enc: Vec<u8> = [0; 32].to_vec();
-    crypter
+    let mut pos: usize;
+    pos = crypter
         .update(data, &mut enc)
         .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
-    crypter
+    pos += crypter
         .finalize(&mut enc)
         .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
+    enc.truncate(pos);
 
-    // NOTE: openssl returns more than the length of the data in some cases, perhaps because of
-    // padding. This does not seem to be needed for the testcases, so I limit the length of the
-    // ciphertext to that of the data.
+    eprintln!("? enc:\t\t{enc:02x?}");
 
-    enc.truncate(data.len());
-
-    eprintln!("? pxor:\t\t{enc:02x?}");
-
+    eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
         assert_eq!(chunk.len(), 16);
@@ -68,42 +65,39 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
         }
     }
 
-    eprintln!("? enc:\t\t{enc:02x?}");
+    eprintln!("? xor:\t\t{enc:02x?}");
     Ok(enc.to_vec())
 }
 
-// FIXME: openssl spits out total garbage and adds padding even though padding is off, just
-// for decryption #2
 pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
     crypter.pad(false);
 
-    eprintln!("? denc:\t\t{enc:02x?}");
+    eprintln!("? enc:\t\t{enc:02x?}");
 
+    eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+    let mut dxor = enc.to_vec();
     // xor with the SEA_128_MAGIC_NUMBER
-    for chunk in enc.to_vec().chunks_exact_mut(16) {
+    for chunk in dxor.chunks_exact_mut(16) {
         assert_eq!(chunk.len(), 16);
         for (n, magic_number) in chunk.iter_mut().zip(SEA_128_MAGIC_NUMBER_ARR) {
             *n ^= magic_number;
         }
     }
 
-    eprintln!("? dxor:\t\t{enc:02x?}");
+    eprintln!("? dxor:\t\t{dxor:02x?}");
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut denc: Vec<u8> = [0; 32].to_vec();
-    crypter
+    let mut pos: usize;
+    pos = crypter
         .update(enc, &mut denc)
         .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
-    crypter
-        .finalize(&mut denc)
+    pos += crypter
+        .finalize(&mut denc[pos..])
         .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
+    denc.truncate(pos);
 
-    // NOTE: openssl returns more than the length of the data in some cases, perhaps because of
-    // padding. This does not seem to be needed for the testcases, so I limit the length of the
-    // ciphertext to that of the data.
-
-    denc.truncate(enc.len());
     eprintln!("? denc:\t\t{denc:02x?}");
 
     Ok(denc.to_vec())
