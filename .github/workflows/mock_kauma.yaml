@@ -62,3 +62,14 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     - name: run challenge
       run: cargo run -r -- ./example_challenges/sea128.json
+
+  sd_actions:
+    runs-on: ubuntu-latest
+    name: sd_actions
+    steps:
+    - name: get repo
+      uses: actions/checkout@v4
+    - name: install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: run sd_displaypolyblock
+      run: cargo run -r -- ./example_challenges/sd_displaypolyblock.json
