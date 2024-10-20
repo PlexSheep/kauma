@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use getopts::Options;
-use serde_json::Value;
+use kauma_analyzer::challenge::Action;
+use serde_json::{json, Value};
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
@@ -13,6 +14,18 @@ fn main() -> Result<()> {
     opts.parsing_style(getopts::ParsingStyle::FloatingFrees);
     opts.optopt("t", "threads", "set how many threads to use", "THREADS");
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag(
+        "V",
+        "version",
+        &format!("print the version of {}", env!("CARGO_PKG_NAME")),
+    );
+    opts.optopt(
+        "a",
+        "action",
+        "set an action without inputting a JSON challenge definition, requires args to be set",
+        "ACTION",
+    );
+    opts.optopt("d", "args", "additional arguments for the action", "ARGS");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -22,66 +35,114 @@ fn main() -> Result<()> {
         }
     };
 
-    if matches.opt_present("h") {
+    if matches.opt_present("help") {
         usage_and_exit(&opts, &program);
     }
 
-    let threads = opt_num(&opts, &args, "t");
-
-    if matches.free.len() != 1 {
-        eprintln!("Too many positional arguments, only one is allowed.");
-        usage_and_exit(&opts, &program)
+    if matches.opt_present("version") {
+        eprintln!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        std::process::exit(0);
     }
 
-    let raw_text: String = if matches.free[0] == "-" {
-        eprintln!("? Reading from stdin");
-        let mut buf: String = String::new();
-        let _len = match std::io::stdin().read_to_string(&mut buf) {
-            Ok(l) => l,
-            Err(e) => {
-                eprintln!("Could not read the challenge definition from stdin: {e}");
-                usage_and_exit(&opts, &program);
-            }
-        };
-        buf
-    } else {
-        let path: PathBuf = matches.free[0].clone().into();
-        eprintln!("* Path of the challenge definition: {:?}", path);
-        eprintln!("* Reading the challenge definition into memory");
+    let threads = opt_num(&opts, &args, "threads");
 
-        match std::fs::read_to_string(&path) {
-            Ok(s) => s,
+    let instructions: Value;
+    if let Some(raw) = matches.opt_str("action") {
+        let args: serde_json::Value = if let Some(s) = matches.opt_str("args") {
+            match serde_json::from_str(&s) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("ARGS are invalid JSON: {e}");
+                    usage_and_exit(&opts, &program)
+                }
+            }
+        } else {
+            eprintln!("ARGS are required with ACTION.");
+            usage_and_exit(&opts, &program)
+        };
+
+        let action: Action = match serde_json::from_str(&format!("\"{raw}\"")) {
+            Ok(a) => a,
             Err(e) => {
-                eprintln!("Could not read the challenge definition file: {e}");
+                eprintln!("Unable to parse '{raw}' as action:\n{e:#}");
                 usage_and_exit(&opts, &program)
             }
-        }
-    };
-    let json_value: Value = match serde_json::from_str(&raw_text) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("! Could not parse the text of the challenge definition file as JSON: {e}");
+        };
+
+        if !matches.free.is_empty() {
+            eprintln!("No CHALLENGE allowed with ACTION");
             usage_and_exit(&opts, &program)
         }
-    };
+        let dummy_uuid = uuid::Uuid::default();
+        instructions = json!({
+            "testcases": {
+            dummy_uuid: {
+                "action": action,
+                "arguments": args
+            }
+        }
+        });
+
+        eprintln!("? {instructions}")
+    } else {
+        if matches.free.len() != 1 {
+            eprintln!("Too many positional arguments, only one is allowed.");
+            usage_and_exit(&opts, &program)
+        }
+
+        let raw_text: String = if matches.free[0] == "-" {
+            eprintln!("? Reading from stdin");
+            let mut buf: String = String::new();
+            let _len = match std::io::stdin().read_to_string(&mut buf) {
+                Ok(l) => l,
+                Err(e) => {
+                    eprintln!("Could not read the challenge definition from stdin: {e}");
+                    usage_and_exit(&opts, &program);
+                }
+            };
+            buf
+        } else {
+            let path: PathBuf = matches.free[0].clone().into();
+            eprintln!("* Path of the challenge definition: {:?}", path);
+            eprintln!("* Reading the challenge definition into memory");
+
+            match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Could not read the challenge definition file: {e}");
+                    usage_and_exit(&opts, &program)
+                }
+            }
+        };
+        instructions = match serde_json::from_str(&raw_text) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!(
+                    "! Could not parse the text of the challenge definition file as JSON: {e}"
+                );
+                usage_and_exit(&opts, &program)
+            }
+        };
+    }
 
     println!(
         "{:#}",
-        kauma_analyzer::challenge::run_challenges(&json_value, threads)?
+        kauma_analyzer::challenge::run_challenges(&instructions, threads)?
     );
 
     Ok(())
 }
 
+// `!` is a pseudo type and means the function will never return
 fn usage_and_exit(opts: &Options, program: &str) -> ! {
     eprintln!("{} CHALLENGE", opts.short_usage(program));
     std::process::exit(1);
 }
 
-pub fn opt_num(opts: &Options, args: &Vec<String>, short: &str) -> Option<usize> {
+pub fn opt_num(opts: &Options, args: &Vec<String>, key: &str) -> Option<usize> {
     let matches = opts.parse(args).unwrap();
     let program = &args[0];
-    matches.opt_str(short).map(|raw| match raw.parse() {
+    matches.opt_str(key).map(|raw| match raw.parse() {
         Ok(t) => {
             if t < 1 {
                 eprintln!("Cannot run with less than 1 thread");
@@ -90,7 +151,7 @@ pub fn opt_num(opts: &Options, args: &Vec<String>, short: &str) -> Option<usize>
             t
         }
         Err(e) => {
-            eprintln!("could not parse -{short}: {e}");
+            eprintln!("could not parse -{key}: {e}");
             usage_and_exit(opts, program);
         }
     })

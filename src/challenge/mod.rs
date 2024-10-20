@@ -16,8 +16,6 @@ pub type ManyTestcases = HashMap<Uuid, Testcase>;
 pub type Response = serde_json::Value;
 pub type ManyResponses = HashMap<Uuid, Response>;
 
-const ENV_THREAD_NUM: &str = "KAUMA_THREADS";
-
 /// Describes what we should do and with what arguments
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Testcase {
