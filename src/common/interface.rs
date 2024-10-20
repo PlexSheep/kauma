@@ -6,8 +6,12 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 
 ///  Hex encoded [String] to [byte](u8) slice
+///
+/// Strips the `0x` prefix if it's there and adjusts for hex numbers where the leading 0 is left
+/// out. Also ignores underscores which can be used for readability.
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
     let mut s: String = s.to_string();
+    s = s.replace("_", "");
     if s.starts_with("0x") {
         s = s.strip_prefix("0x").unwrap().into();
     }
@@ -83,6 +87,10 @@ mod test {
         assert_eq!(decode_hex("337").unwrap(), &[0x03, 0x37]);
         assert_eq!(decode_hex("0x0337").unwrap(), &[0x03, 0x37]);
         assert_eq!(decode_hex("0x337").unwrap(), &[0x03, 0x37]);
+        assert_eq!(decode_hex("0x3_37").unwrap(), &[0x03, 0x37]);
+        assert_eq!(decode_hex("0x03_37").unwrap(), &[0x03, 0x37]);
+        assert_eq!(decode_hex("03_37").unwrap(), &[0x03, 0x37]);
+        assert_eq!(decode_hex("3_37").unwrap(), &[0x03, 0x37]);
         assert_eq!(
             decode_hex(
                 "0x4141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
