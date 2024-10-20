@@ -233,6 +233,11 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
+        Action::SD_DisplayPolyBlock => {
+            let _semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let block: Polynomial = get_poly(&testcase.arguments, "block")?;
+            serde_json::to_value(F_2_128.display_poly(block))?
+        }
         _ => unreachable!(),
     })
 }

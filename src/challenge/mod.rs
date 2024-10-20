@@ -98,6 +98,18 @@ pub enum Action {
     ///
     ///  `a` * `b` in the finite field for that semantic encoded in Base64 : [String]
     GfMul,
+    /// Display a polynomial block with it's math representation
+    ///
+    /// # Arguments
+    ///
+    /// - `semantic`: [Semantic](ffield::Semantic) - which kind of field to use
+    /// - `block`: [String] - Base64 string encoding a [Polynomial](ffield::Polynomial)
+    ///
+    /// # Returns
+    ///
+    /// The [Polynomial](ffield::Polynomial) defined by `block` in mathematical representation
+    /// : [String]
+    SD_DisplayPolyBlock,
 
     // cipher items ///////////////////////////////////////////////////////////////////////////////
     /// encrypt or decrypt a single block with a special AES version (sea128)
