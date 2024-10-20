@@ -17,6 +17,8 @@ pub type ManyTestcases = HashMap<Uuid, Testcase>;
 pub type Response = serde_json::Value;
 pub type ManyResponses = HashMap<Uuid, Response>;
 
+const ENV_THREAD_NUM: &str = "KAUMA_THREADS";
+
 /// Describes what we should do and with what arguments
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Testcase {
@@ -85,27 +87,42 @@ impl Action {
 pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value> {
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
-    let mut handles: Vec<thread::JoinHandle<std::result::Result<(), anyhow::Error>>> = Vec::new();
 
-    for (uuid, testcase) in testcases {
+    let threads: Option<usize> = match std::env::var(ENV_THREAD_NUM) {
+        Ok(v) => match v.parse() {
+            Ok(n) => Some(n),
+            Err(e) => {
+                eprintln!("! Could not parse ENV_THREAD_NUM: {e}");
+                None
+            }
+        },
+        Err(e) => {
+            eprintln!("! Could not read ENV_THREAD_NUM from environment: {e}");
+            None
+        }
+    };
+
+    let pool = threadpool::ThreadPool::new(threads.unwrap_or(num_cpus::get()));
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    for (uuid, testcase) in testcases.clone() {
+        let tx = tx.clone();
         let answers_clone = answers.clone();
-        handles.push(thread::spawn(move || {
-            challenge_runner(&testcase, answers_clone, &uuid)
-        }));
+        let testcase = testcase.clone();
+        pool.execute(move || {
+            tx.send(challenge_runner(&testcase, answers_clone, &uuid))
+                .expect("could not send return value of thread to main thread")
+        });
     }
 
-    for handle in handles {
-        match handle.join() {
-            Ok(inner_result) => {
-                eprintln!("? joined a thread");
-                match inner_result {
-                    Ok(_) => (),
-                    Err(e) => eprintln!("! failed to solve a challenge: {e:#?}"),
-                }
-            }
+    for result in rx.iter().take(testcases.len()) {
+        eprintln!("? joined a thread");
+        match result {
+            Ok(_) => (),
             Err(e) => eprintln!("! failed to solve a challenge: {e:#?}"),
         }
     }
+
     let responses = answers.lock().unwrap().clone();
     Ok(tag_json_value(
         "responses",
