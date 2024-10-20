@@ -23,7 +23,7 @@ pub fn vec_to_arr<const N: usize>(data: &Vec<u8>) -> Result<[u8; N]> {
 /// Combine a number of [u8] into a [u128]
 ///
 /// Fails if the [Vec] is too long to fit into a [u128].
-pub fn bytes_to_u128(bytes: &Vec<u8>) -> Result<u128> {
+pub fn bytes_to_u128(bytes: &[u8]) -> Result<u128> {
     if bytes.len() > u128::BITS as usize {
         return Err(anyhow!("input bytes are too long!"));
     }
