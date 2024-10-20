@@ -97,7 +97,10 @@ pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value>
             }
         },
         Err(e) => {
-            eprintln!("! Could not read ENV_THREAD_NUM from environment: {e}");
+            // it's only an error if the variable is defined but somehow bad
+            if !(e == std::env::VarError::NotPresent) {
+                eprintln!("! Could not read ENV_THREAD_NUM from environment: {e}");
+            }
             None
         }
     };
