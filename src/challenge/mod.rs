@@ -51,12 +51,9 @@ pub enum Action {
     Sea128,
 }
 
-impl Default for Testcase {
-    fn default() -> Self {
-        Testcase {
-            action: Action::AddNumbers,
-            arguments: serde_json::json!({"number1": 1, "number2":2}),
-        }
+impl Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(&self).unwrap())
     }
 }
 
@@ -137,7 +134,7 @@ fn challenge_runner(
     answers: Arc<Mutex<HashMap<Uuid, serde_json::Value>>>,
     uuid: &Uuid,
 ) -> Result<()> {
-    eprintln!("* starting challenge {uuid}");
+    eprintln!("* starting challenge {uuid} ({})", testcase.action);
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase),
         Action::Poly2Block | Action::Block2Poly | Action::GfMul => ffield::run_testcase(testcase),
@@ -150,6 +147,6 @@ fn challenge_runner(
         *uuid,
         tag_json_value(testcase.action.solution_key(), sol.unwrap()),
     );
-    eprintln!("* finished challenge {uuid}");
+    eprintln!("* finished challenge {uuid} ({})", testcase.action);
     Ok(())
 }
