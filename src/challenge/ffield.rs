@@ -165,7 +165,7 @@ impl FField {
 
     pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
         let mut enabled = Vec::new();
-        for (byte_idx, byte) in poly.to_le_bytes().iter().rev().enumerate() {
+        for (byte_idx, byte) in poly.to_be_bytes().iter().enumerate() {
             for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
                 if *bit {
                     enabled.push(bit_idx + (byte_idx * 8));
