@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::common::byte_to_bits;
+use crate::common::{byte_to_bits, bytes_to_u128};
 
 use super::{Action, Testcase};
 
@@ -140,7 +140,11 @@ impl FField {
 
         // I hate this machine representation. If something useful would be used, I could just:
         // (poly_x << 1) ^ self.defining_relation
-        poly_x << 1
+        let mut bytes = poly_x.to_be_bytes();
+        for byte in bytes.iter_mut() {
+            *byte <<= 1;
+        }
+        bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?")
     }
 
     pub fn coefficients_to_poly(
