@@ -156,26 +156,12 @@ impl Action {
     }
 }
 
-pub fn run_challenges(raw_json: &serde_json::Value) -> Result<serde_json::Value> {
+pub fn run_challenges(
+    raw_json: &serde_json::Value,
+    threads: Option<usize>,
+) -> Result<serde_json::Value> {
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
-
-    let threads: Option<usize> = match std::env::var(ENV_THREAD_NUM) {
-        Ok(v) => match v.parse() {
-            Ok(n) => Some(n),
-            Err(e) => {
-                eprintln!("! Could not parse ENV_THREAD_NUM: {e}");
-                None
-            }
-        },
-        Err(e) => {
-            // it's only an error if the variable is defined but somehow bad
-            if !(e == std::env::VarError::NotPresent) {
-                eprintln!("! Could not read ENV_THREAD_NUM from environment: {e}");
-            }
-            None
-        }
-    };
 
     let pool = threadpool::ThreadPool::new(threads.unwrap_or(num_cpus::get()));
 
