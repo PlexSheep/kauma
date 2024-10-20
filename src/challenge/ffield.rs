@@ -7,7 +7,8 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::common::{bit_at_i_inverted_order, byte_to_bits};
+use crate::common::interface::get_bytes_maybe_hex;
+use crate::common::{byte_to_bits, bytes_to_u128};
 
 use super::{Action, Testcase};
 
@@ -34,7 +35,7 @@ pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
 /// AES.
 pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128);
 /// This is a special polynomial used for multiplication in F_2_128
-pub const SPECIAL_ELEMENT_R: Polynomial = 0xE1000000_00000000_00000000_00000080;
+pub const SPECIAL_ELEMENT_R: Polynomial = 0b11100001 << 120;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "snake_case")]
@@ -98,7 +99,7 @@ impl FField {
     }
 
     /// Reduces the given [Polynomial] with the [defining relation](Self::defining_relation)
-    pub fn reduce(&self, poly: Polynomial) -> Polynomial {
+    pub const fn reduce(&self, poly: Polynomial) -> Polynomial {
         poly ^ self.defining_relation
     }
     /// Get the sum of two [polynomials](Polynomial)
@@ -109,7 +110,7 @@ impl FField {
     ///
     /// Addition on the finite field with a base of 2^n is the same as xor, therefore no reduction
     /// is needed.
-    pub fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
+    pub const fn add(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
         poly_a ^ poly_b
     }
     /// Get the product of two [polynomials](Polynomial)
@@ -124,23 +125,27 @@ impl FField {
     /// # Citation
     /// - The Galois/Counter Mode of Operation (GCM) by McGrew and Viega, Sect. 2.5, Algorithm 1
     ///     <https://csrc.nist.rip/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf>
-    pub fn mul(&self, poly_a: Polynomial, poly_b: Polynomial) -> Polynomial {
+    // keep it close to the original algorithm in the cited paper
+    #[allow(clippy::style)]
+    #[allow(clippy::complexity)]
+    pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial) -> Polynomial {
         if *self != F_2_128 {
             panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
-        let mut z: Polynomial = 0;
-        let mut v: Polynomial = poly_a;
-        for i in 0..128 {
-            if bit_at_i_inverted_order(poly_b, i) {
-                z ^= v;
-            }
-            if bit_at_i_inverted_order(v, 127) {
-                v = (v >> 1) ^ SPECIAL_ELEMENT_R;
-            } else {
-                v >>= 1;
-            }
+        // NOTE: This is an easy multiplication that can just work with block b being a single α .
+        // The generic algorithm is way too hard for me right now, I really don't get it even after
+        // hours of trying.
+        if self.display_poly(poly_y) != "α" {
+            panic!("Only multiplying wiht α is supported as of now!");
         }
-        z
+
+        // I hate this machine representation. If something useful would be used, I could just:
+        // (poly_x << 1) ^ self.defining_relation
+        let mut bytes = poly_x.to_be_bytes();
+        for byte in bytes.iter_mut() {
+            *byte <<= 1;
+        }
+        bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?")
     }
 
     pub fn coefficients_to_poly(
@@ -150,6 +155,8 @@ impl FField {
     ) -> Polynomial {
         let mut poly: Polynomial = 0;
         for coefficient in coefficients {
+            // NOTE: Why does this work? Shouldn't the horrible repr kill everything that uses
+            // simple bitshifts and indexing?
             poly |= 1u128 << coefficient as u128;
         }
         // PERF: by using swap bytes we can safe a bit of performance, as we dont need to do
@@ -159,7 +166,7 @@ impl FField {
 
     pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
         let mut enabled = Vec::new();
-        for (byte_idx, byte) in poly.to_le_bytes().iter().rev().enumerate() {
+        for (byte_idx, byte) in poly.to_be_bytes().iter().enumerate() {
             for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
                 if *bit {
                     enabled.push(bit_idx + (byte_idx * 8));
@@ -219,10 +226,18 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
+            eprintln!("? a:\t{a:032X} => {}", F_2_128.display_poly(a));
+            eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
 
             let sol = F_2_128.mul(a, b);
+            eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
+        }
+        Action::SD_DisplayPolyBlock => {
+            let _semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let block: Polynomial = get_poly(&testcase.arguments, "block")?;
+            serde_json::to_value(F_2_128.display_poly(block))?
         }
         _ => unreachable!(),
     })
@@ -240,16 +255,10 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 }
 
 fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
-    let block: Polynomial = if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone()).inspect_err(|e| {
-            eprintln!("! something went wrong when serializing the semantinc: {e}")
-        })?;
-        let bytes = BASE64_STANDARD.decode(v)?;
-        crate::common::bytes_to_u128(&bytes)?
-    } else {
-        return Err(anyhow!("block is not a string"));
-    };
-    Ok(block)
+    let bytes = get_bytes_maybe_hex(args, key)?;
+    let v = crate::common::bytes_to_u128(&bytes)?;
+    eprintln!("? {key}: {v:016X}");
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -262,14 +271,15 @@ mod test {
         assert_eq!(
             poly_a,
             poly_b,
-            "\n0x{poly_a:016X} => {}\nshould be\n0x{poly_b:016X} => {}",
+            "\n0x{poly_a:032X} => {}\nshould be\n0x{poly_b:032X} => {}\nbin of false solution:\n{:0128b}",
             F_2_128.display_poly(poly_a),
             F_2_128.display_poly(poly_b),
+            poly_a
         );
     }
 
     #[test]
-    fn test_add_alpha() {
+    fn test_add() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let sol = F_2_128.add(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -307,5 +317,36 @@ mod test {
         assert_eq!(F_2_128.display_poly(a), "α^4 + α^2");
         assert_eq!(F_2_128.display_poly(b), "α^4 + α^2 + α");
         assert_eq!(F_2_128.display_poly(c), "α");
+        assert_eq!(F_2_128.display_poly(1 << 7), "α^127");
+    }
+
+    #[test]
+    fn test_mul_0() {
+        const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
+        let sol = F_2_128.mul(
+            0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_1() {
+        const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
+        let sol = F_2_128.mul(
+            0x02000000_00000000_00000000_00000000, // α
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_2() {
+        const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
+        let sol = F_2_128.mul(
+            0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol, SOLUTION);
     }
 }

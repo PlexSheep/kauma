@@ -1,9 +1,30 @@
 //! Implements some helper functions that I might need in multiple challenges
 
+pub mod interface;
+
 use anyhow::{anyhow, Result};
 
-pub fn bytes_to_u128(bytes: &Vec<u8>) -> Result<u128> {
-    if bytes.len() > u128::BITS as usize {
+/// Try to downcast a [`Vec<u8>`] into an array of constant size
+pub fn vec_to_arr<const N: usize>(data: &Vec<u8>) -> Result<[u8; N]> {
+    let arr: [u8; N] = match data.clone().try_into() {
+        Ok(v) => v,
+        Err(e) => {
+            let e = anyhow!(
+                "! Data is of bad length {}: {:02x?} ; {e:#?}",
+                data.len(),
+                data
+            );
+            return Err(e);
+        }
+    };
+    Ok(arr)
+}
+
+/// Combine a number of [u8] into a [u128]
+///
+/// Fails if the [Vec] is too long to fit into a [u128].
+pub fn bytes_to_u128(bytes: &[u8]) -> Result<u128> {
+    if bytes.len() > (u128::BITS.div_ceil(8)) as usize {
         return Err(anyhow!("input bytes are too long!"));
     }
     let mut ri: u128 = 0;
@@ -55,6 +76,14 @@ pub fn bit_at_i(num: u128, i: usize) -> bool {
 }
 
 /// Like [bit_at_i] but with reversed order
+/// ```
+/// use kauma_analyzer::common::bit_at_i_inverted_order;
+/// assert_eq!(bit_at_i_inverted_order(1<<127, 0), true);
+/// assert_eq!(bit_at_i_inverted_order(1<<120, 7), true);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000, 0), false);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000_01111111, 120), false);
+/// assert_eq!(bit_at_i_inverted_order(0b00000000_11111111, 120), true);
+/// ```
 #[inline]
 pub fn bit_at_i_inverted_order(num: u128, i: usize) -> bool {
     let i = 127 - i;
