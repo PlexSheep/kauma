@@ -175,10 +175,9 @@ pub fn run_challenges(
     }
 
     for result in rx.iter().take(testcases.len()) {
-        eprintln!("? joined a thread");
         match result {
             Ok(_) => (),
-            Err(e) => eprintln!("! failed to solve a challenge: {e:#?}"),
+            Err(e) => eprintln!("! failed to solve a challenge: {e:#}"),
         }
     }
 
