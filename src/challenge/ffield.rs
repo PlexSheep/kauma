@@ -229,7 +229,7 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
 
             let sol = F_2_128.mul(a, b);
-            eprintln!("? c:\t{sol:032X} => {}", F_2_128.display_poly(sol));
+            eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
