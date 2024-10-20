@@ -1,5 +1,6 @@
 //! multiply / add polynomials in a gallois field
 
+use core::panic;
 use std::default::Default;
 use std::fmt::Display;
 
@@ -27,7 +28,7 @@ pub type Polynomial = u128;
 // NOTE: this might be just wrong, and I don't know how to get it into a u128. The α^128 would be the
 // 129th bit, no? I could just abstract it away and store α^7 + α^2 + α + 1 while having the α^128
 // implied...
-pub const DEFINING_RELATION_F_2_128: Polynomial = 0x87000000_00000000_00000000_00000080;
+pub const DEFINING_RELATION_F_2_128: Polynomial = 0x07000000_00000000_00000000_00000000;
 pub const DEFINING_RELATION_F_2_3: Polynomial = 0xb;
 pub const DEFINING_RELATION_F_2_4: Polynomial = 0x13;
 pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
@@ -129,23 +130,46 @@ impl FField {
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
     pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial) -> Polynomial {
+        eprintln!("? x:\t{poly_x:0128b}");
+        eprintln!("? y:\t{poly_y:0128b}");
         if *self != F_2_128 {
             panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
-        // NOTE: This is an easy multiplication that can just work with block b being a single α .
-        // The generic algorithm is way too hard for me right now, I really don't get it even after
-        // hours of trying.
         if self.display_poly(poly_y) != "α" {
             panic!("Only multiplying wiht α is supported as of now!");
         }
 
-        // I hate this machine representation. If something useful would be used, I could just:
-        // (poly_x << 1) ^ self.defining_relation
         let mut bytes = poly_x.to_be_bytes();
+        let carry: bool;
+
+        eprintln!("? by15:\t{:08b}", bytes[15]);
+        if bytes[15] >> 7 == 1 {
+            carry = true;
+        } else {
+            carry = false;
+        }
         for byte in bytes.iter_mut() {
             *byte <<= 1;
         }
-        bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?")
+
+        let mut poly: Polynomial =
+            bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?");
+
+        eprintln!("? rel:\t{:0128b}", self.defining_relation);
+        eprintln!("? pred:\t{poly:0128b}");
+
+        if !carry {
+            eprintln!("? no carry");
+        } else {
+            eprintln!("? carry");
+            poly ^= self.defining_relation;
+        }
+
+        if poly >> 127 == 1 {
+            poly ^= self.defining_relation;
+        }
+        eprintln!("? done:\t{poly:0128b}");
+        poly
     }
 
     pub fn coefficients_to_poly(
@@ -213,7 +237,7 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
                 return Err(anyhow!("coefficients is not a list"));
             }
             let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
-            eprintln!("* block {:016X}", sol);
+            eprintln!("* block {:032X}", sol);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
                 .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
         }
@@ -257,7 +281,7 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
     let bytes = get_bytes_maybe_hex(args, key)?;
     let v = crate::common::bytes_to_u128(&bytes)?;
-    eprintln!("? {key}: {v:016X}");
+    eprintln!("? {key}: {v:032X}");
     Ok(v)
 }
 
