@@ -141,6 +141,10 @@ fn get_mode(args: &serde_json::Value) -> Result<Mode> {
 mod test {
     use super::*;
 
+    fn assert_hex(data: &[u8], correct: &[u8]) {
+        assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
+    }
+
     #[test]
     fn test_sea_128_encrypt_decrypt() {
         const PLAIN: [u8; 16] = *b"foobarqux amogus";
@@ -150,7 +154,28 @@ mod test {
         let enc = vec_to_arr(&enc).expect("could not convert from vec to arr");
         let denc = sea_128_decrypt(&KEY, &enc).expect("decrypt fail");
 
-        assert_eq!(denc, PLAIN);
+        assert_hex(&denc, &PLAIN);
+    }
+
+    #[test]
+    fn test_sea_128_encrypt() {
+        const PLAIN: [u8; 16] = [
+            0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca, 0xf8, 0x88, 0x88, 0x33,
+            0x44, 0x55,
+        ];
+        const KEY: [u8; 16] = [
+            0x8a, 0xcb, 0x43, 0x01, 0x27, 0xa2, 0x9d, 0xca, 0x28, 0x95, 0xea, 0xca, 0x11, 0x8a,
+            0xe8, 0x7e,
+        ];
+        const ENC: [u8; 16] = [
+            0xf, 0x91, 0x43, 0xa3, 0x78, 0x95, 0x6, 0x80, 0x4d, 0xf6, 0x5, 0x62, 0xf7, 0xf3, 0x12,
+            0x29,
+        ];
+
+        assert_hex(
+            &sea_128_encrypt(&KEY, &PLAIN).expect("could not encrypt"),
+            &ENC,
+        );
     }
 
     #[test]
@@ -183,6 +208,6 @@ mod test {
             .expect("decrypt final failed");
         buf.truncate(position);
 
-        assert_eq!(PLAIN.to_vec(), buf);
+        assert_hex(&PLAIN, &buf);
     }
 }
