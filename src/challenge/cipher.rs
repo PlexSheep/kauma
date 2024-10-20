@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
-use crate::common::interface::{get_bytes, put_bytes};
+use crate::common::interface::{get_bytes_base64, put_bytes};
 use crate::common::vec_to_arr;
 
 use super::{Action, Testcase};
@@ -111,8 +111,8 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::Sea128 => {
             let mode = get_mode(&testcase.arguments)?;
-            let key = get_bytes(&testcase.arguments, "key")?;
-            let input = get_bytes(&testcase.arguments, "input")?;
+            let key = get_bytes_base64(&testcase.arguments, "key")?;
+            let input = get_bytes_base64(&testcase.arguments, "input")?;
 
             let key: [u8; 16] = vec_to_arr(&key)?;
             let input: [u8; 16] = vec_to_arr(&input)?;

@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::common::interface::get_bytes_maybe_hex;
 use crate::common::{byte_to_bits, bytes_to_u128};
 
 use super::{Action, Testcase};
@@ -254,15 +255,10 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 }
 
 fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
-    let block: Polynomial = if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone())
-            .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
-        let bytes = BASE64_STANDARD.decode(v)?;
-        crate::common::bytes_to_u128(&bytes)?
-    } else {
-        return Err(anyhow!("block is not a string"));
-    };
-    Ok(block)
+    let bytes = get_bytes_maybe_hex(args, key)?;
+    let v = crate::common::bytes_to_u128(&bytes)?;
+    eprintln!("? {key}: {v:016X}");
+    Ok(v)
 }
 
 #[cfg(test)]

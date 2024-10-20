@@ -29,14 +29,36 @@ pub fn encode_hex(bytes: &[u8]) -> String {
     s
 }
 
-/// Convert the base64 string of the JSON challenge definition to a [`Vec<u8>`].
+/// Convert the base64 or hex string of the JSON challenge definition to a [`Vec<u8>`].
 ///
-/// All binary data is encoded in base64 strings.
-pub fn get_bytes(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
+/// Input will be assumed to be encoded in base64 strings. Only if the prefix `0x!` is prepended,
+/// the following input will be interpreted as hexadecimal.
+pub fn get_bytes_maybe_hex(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
     let bytes: Vec<u8> = if args[key].is_string() {
         let v: String = serde_json::from_value(args[key].clone())
             .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
-        BASE64_STANDARD.decode(v)?
+
+        if let Some(s) = v.strip_prefix("0x!") {
+            decode_hex(s).inspect_err(|e| eprintln!("! could not decode hex string: {e}"))?
+        } else {
+            get_bytes_base64(args, key)?
+        }
+    } else {
+        return Err(anyhow!("{key} is not a string"));
+    };
+    Ok(bytes)
+}
+
+/// Convert the base64 string of the JSON challenge definition to a [`Vec<u8>`].
+///
+/// All binary data is encoded in base64 strings.
+pub fn get_bytes_base64(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
+    let bytes: Vec<u8> = if args[key].is_string() {
+        let v: String = serde_json::from_value(args[key].clone())
+            .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
+        BASE64_STANDARD
+            .decode(v)
+            .inspect_err(|e| eprintln!("! error while converting Base64 string to bytes: {e}"))?
     } else {
         return Err(anyhow!("{key} is not a string"));
     };
