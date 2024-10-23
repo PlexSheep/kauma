@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes_base64, put_bytes};
 use crate::common::vec_to_arr;
+use crate::settings::Settings;
 
 use super::{Action, Testcase};
 
@@ -37,13 +38,17 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
-    eprintln!("? key:\t\t{key:02x?}");
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+    if verbose {
+        eprintln!("? key:\t\t{key:02x?}");
+    }
 
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
     crypter.pad(false);
 
-    eprintln!("? data:\t\t{data:02x?}");
+    if verbose {
+        eprintln!("? data:\t\t{data:02x?}");
+    }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut enc: Vec<u8> = [0; 32].to_vec();
@@ -58,9 +63,10 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
     })?;
     enc.truncate(pos);
 
-    eprintln!("? enc:\t\t{enc:02x?}");
-
-    eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+    if verbose {
+        eprintln!("? enc:\t\t{enc:02x?}");
+        eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+    }
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
         assert_eq!(chunk.len(), 16);
@@ -69,19 +75,24 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
         }
     }
 
-    eprintln!("? xor:\t\t{enc:02x?}");
+    if verbose {
+        eprintln!("? xor:\t\t{enc:02x?}");
+    }
     Ok(enc.to_vec())
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
-    eprintln!("? key:\t\t{key:02x?}");
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+    if verbose {
+        eprintln!("? key:\t\t{key:02x?}");
+    }
 
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
     crypter.pad(false);
 
-    eprintln!("? enc:\t\t{enc:02x?}");
-
-    eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+    if verbose {
+        eprintln!("? enc:\t\t{enc:02x?}");
+        eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+    }
     let mut dxor = enc.to_vec();
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in dxor.chunks_exact_mut(16) {
@@ -91,7 +102,9 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
         }
     }
 
-    eprintln!("? dxor:\t\t{dxor:02x?}");
+    if verbose {
+        eprintln!("? dxor:\t\t{dxor:02x?}");
+    }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut denc: Vec<u8> = [0; 32].to_vec();
@@ -106,12 +119,14 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     })?;
     denc.truncate(pos);
 
-    eprintln!("? denc:\t\t{denc:02x?}");
+    if verbose {
+        eprintln!("? denc:\t\t{denc:02x?}");
+    }
 
     Ok(denc.to_vec())
 }
 
-pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
+pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::Sea128 => {
             let mode = get_mode(&testcase.arguments)?;
@@ -122,8 +137,8 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let input: [u8; 16] = vec_to_arr(&input)?;
 
             let output = match mode {
-                Mode::Encrypt => sea_128_encrypt(&key, &input)?,
-                Mode::Decrypt => sea_128_decrypt(&key, &input)?,
+                Mode::Encrypt => sea_128_encrypt(&key, &input, settings.verbose)?,
+                Mode::Decrypt => sea_128_decrypt(&key, &input, settings.verbose)?,
             };
             put_bytes(&output)?
         }
@@ -156,9 +171,9 @@ mod test {
         const PLAIN: [u8; 16] = *b"foobarqux amogus";
         const KEY: [u8; 16] = *b"1238742fsaflk249";
 
-        let enc = sea_128_encrypt(&KEY, &PLAIN).expect("encrypt fail");
+        let enc = sea_128_encrypt(&KEY, &PLAIN, true).expect("encrypt fail");
         let enc = vec_to_arr(&enc).expect("could not convert from vec to arr");
-        let denc = sea_128_decrypt(&KEY, &enc).expect("decrypt fail");
+        let denc = sea_128_decrypt(&KEY, &enc, true).expect("decrypt fail");
 
         assert_hex(&denc, &PLAIN);
     }
@@ -179,7 +194,7 @@ mod test {
         ];
 
         assert_hex(
-            &sea_128_encrypt(&KEY, &PLAIN).expect("could not encrypt"),
+            &sea_128_encrypt(&KEY, &PLAIN, true).expect("could not encrypt"),
             &ENC,
         );
     }
@@ -200,7 +215,7 @@ mod test {
         ];
 
         assert_hex(
-            &sea_128_decrypt(&KEY, &ENC).expect("could not decrypt"),
+            &sea_128_decrypt(&KEY, &ENC, true).expect("could not decrypt"),
             &PLAIN,
         );
     }

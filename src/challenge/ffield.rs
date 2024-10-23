@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
 use crate::common::{byte_to_bits, bytes_to_u128};
+use crate::settings::Settings;
 
 use super::{Action, Testcase};
 
@@ -129,9 +130,11 @@ impl FField {
     // keep it close to the original algorithm in the cited paper
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial) -> Polynomial {
-        eprintln!("? x:\t{poly_x:0128b}");
-        eprintln!("? y:\t{poly_y:0128b}");
+    pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
+        if verbose {
+            eprintln!("? x:\t{poly_x:0128b}");
+            eprintln!("? y:\t{poly_y:0128b}");
+        }
         if *self != F_2_128 {
             panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
@@ -142,7 +145,9 @@ impl FField {
         let mut bytes = poly_x.to_be_bytes();
         let carry: bool;
 
-        eprintln!("? by15:\t{:08b}", bytes[15]);
+        if verbose {
+            eprintln!("? by15:\t{:08b}", bytes[15]);
+        }
         if bytes[15] >> 7 == 1 {
             carry = true;
         } else {
@@ -155,20 +160,28 @@ impl FField {
         let mut poly: Polynomial =
             bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?");
 
-        eprintln!("? rel:\t{:0128b}", self.defining_relation);
-        eprintln!("? pred:\t{poly:0128b}");
+        if verbose {
+            eprintln!("? rel:\t{:0128b}", self.defining_relation);
+            eprintln!("? pred:\t{poly:0128b}");
+        }
 
         if !carry {
-            eprintln!("? no carry");
+            if verbose {
+                eprintln!("? no carry");
+            }
         } else {
-            eprintln!("? carry");
+            if verbose {
+                eprintln!("? carry");
+            }
             poly ^= self.defining_relation;
         }
 
         if poly >> 127 == 1 {
             poly ^= self.defining_relation;
         }
-        eprintln!("? done:\t{poly:0128b}");
+        if verbose {
+            eprintln!("? done:\t{poly:0128b}");
+        }
         poly
     }
 
@@ -221,7 +234,7 @@ impl Display for FField {
     }
 }
 
-pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
+pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::Poly2Block => {
             let coefficients: Vec<usize>;
@@ -252,11 +265,17 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
-            eprintln!("? a:\t{a:032X} => {}", F_2_128.display_poly(a));
-            eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
+            if settings.verbose {
+                eprintln!("? a:\t{a:032X} => {}", F_2_128.display_poly(a));
+            }
+            if settings.verbose {
+                eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
+            }
 
-            let sol = F_2_128.mul(a, b);
-            eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
+            let sol = F_2_128.mul(a, b, settings.verbose);
+            if settings.verbose {
+                eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
+            }
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
@@ -286,7 +305,6 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
     let bytes = get_bytes_maybe_hex(args, key)?;
     let v = crate::common::bytes_to_u128(&bytes)?;
-    eprintln!("? {key}: {v:032X}");
     Ok(v)
 }
 
@@ -355,6 +373,7 @@ mod test {
         let sol = F_2_128.mul(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
+            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -365,6 +384,7 @@ mod test {
         let sol = F_2_128.mul(
             0x02000000_00000000_00000000_00000000, // α
             0x02000000_00000000_00000000_00000000, // α
+            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -375,6 +395,7 @@ mod test {
         let sol = F_2_128.mul(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             0x02000000_00000000_00000000_00000000, // α
+            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }

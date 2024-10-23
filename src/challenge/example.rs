@@ -4,9 +4,11 @@
 
 use anyhow::{anyhow, Result};
 
+use crate::settings::Settings;
+
 use super::{Action, Testcase};
 
-pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
+pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::AddNumbers => {
             let (a, b) = get_numbers(&testcase.arguments)?;

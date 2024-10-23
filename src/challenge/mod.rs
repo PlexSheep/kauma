@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::common::tag_json_value;
+use crate::settings::Settings;
 
 pub type ManyTestcases = HashMap<Uuid, Testcase>;
 pub type Response = serde_json::Value;
@@ -156,12 +157,12 @@ impl Action {
 
 pub fn run_challenges(
     raw_json: &serde_json::Value,
-    threads: Option<usize>,
+    settings: Settings,
 ) -> Result<serde_json::Value> {
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
 
-    let pool = threadpool::ThreadPool::new(threads.unwrap_or(num_cpus::get()));
+    let pool = threadpool::ThreadPool::new(settings.threads.unwrap_or(num_cpus::get()));
 
     let (tx, rx) = std::sync::mpsc::channel();
     for (uuid, testcase) in testcases.clone() {
@@ -169,7 +170,7 @@ pub fn run_challenges(
         let answers_clone = answers.clone();
         let testcase = testcase.clone();
         pool.execute(move || {
-            tx.send(challenge_runner(&testcase, answers_clone, &uuid))
+            tx.send(challenge_runner(&testcase, answers_clone, &uuid, settings))
                 .expect("could not send return value of thread to main thread")
         });
     }
@@ -192,14 +193,18 @@ fn challenge_runner(
     testcase: &Testcase,
     answers: Arc<Mutex<HashMap<Uuid, serde_json::Value>>>,
     uuid: &Uuid,
+    settings: Settings,
 ) -> Result<()> {
     eprintln!("* starting challenge {uuid} ({})", testcase.action);
+    if settings.verbose {
+        eprintln!("? dumping challenge");
+    }
     let sol = match testcase.action {
-        Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase),
+        Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
         Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {
-            ffield::run_testcase(testcase)
+            ffield::run_testcase(testcase, settings)
         }
-        Action::Sea128 => cipher::run_testcase(testcase),
+        Action::Sea128 => cipher::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {uuid}: {e}"));

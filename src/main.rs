@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use getopts::Options;
 use kauma_analyzer::challenge::Action;
+use kauma_analyzer::settings::Settings;
 use serde_json::{json, Value};
 
 fn main() -> Result<()> {
@@ -14,6 +15,7 @@ fn main() -> Result<()> {
     opts.parsing_style(getopts::ParsingStyle::FloatingFrees);
     opts.optopt("t", "threads", "set how many threads to use", "THREADS");
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag("v", "verbose", "print verbose output menu");
     opts.optflag(
         "V",
         "version",
@@ -44,7 +46,12 @@ fn main() -> Result<()> {
         std::process::exit(0);
     }
 
-    let threads = opt_num(&opts, &args, "threads");
+    let mut settings = Settings::default();
+    if matches.opt_present("verbose") {
+        settings.verbose = true;
+    }
+
+    settings.threads = opt_num(&opts, &args, "threads");
 
     let instructions: Value;
     if let Some(raw) = matches.opt_str("action") {
@@ -83,7 +90,9 @@ fn main() -> Result<()> {
         }
         });
 
-        eprintln!("? {instructions}")
+        if settings.verbose {
+            eprintln!("? {instructions}")
+        }
     } else {
         if matches.free.len() != 1 {
             eprintln!("Too many positional arguments, only one is allowed.");
@@ -91,7 +100,9 @@ fn main() -> Result<()> {
         }
 
         let raw_text: String = if matches.free[0] == "-" {
-            eprintln!("? Reading from stdin");
+            if settings.verbose {
+                eprintln!("? Reading from stdin");
+            }
             let mut buf: String = String::new();
             let _len = match std::io::stdin().read_to_string(&mut buf) {
                 Ok(l) => l,
@@ -127,7 +138,7 @@ fn main() -> Result<()> {
 
     println!(
         "{:#}",
-        kauma_analyzer::challenge::run_challenges(&instructions, threads)?
+        kauma_analyzer::challenge::run_challenges(&instructions, settings)?
     );
 
     Ok(())
