@@ -120,14 +120,6 @@ impl FField {
     /// Multiplies poly a by poly b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular multiplication of two numbers!
-    ///
-    /// Multiplication in a finite field is rather complicated, so I use an algorithm from
-    /// a research paper.
-    ///
-    /// # Citation
-    /// - The Galois/Counter Mode of Operation (GCM) by McGrew and Viega, Sect. 2.5, Algorithm 1
-    ///     <https://csrc.nist.rip/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf>
-    // keep it close to the original algorithm in the cited paper
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
     pub fn mul_alpha(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
