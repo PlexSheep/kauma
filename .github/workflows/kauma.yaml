@@ -66,4 +66,4 @@ jobs:
           docker tag ghcr.io/johndoe31415/labwork-docker:master labwork
       - name: Run labwork container
         run: |
-          docker run -v $PWD:/dut/ labwork /bin/bash -c '/dut/build && /dut/kauma ./example_challenges/block2poly.json'
+          docker run -v $PWD:/dut/ labwork /bin/bash -c '/dut/build && /dut/kauma ./example_challenges/combined.json'
