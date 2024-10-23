@@ -167,6 +167,10 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let input = get_bytes_base64(&testcase.arguments, "input")?;
 
             let key: [u8; 32] = len_to_const_arr(&key)?;
+            let keys: ([u8; 16], [u8; 16]) = {
+                let (a, b) = key.split_at(15);
+                (len_to_const_arr(a)?, len_to_const_arr(b)?)
+            };
             let tweak: [u8; 16] = len_to_const_arr(&tweak)?;
 
             let output = match mode {
