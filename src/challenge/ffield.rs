@@ -8,8 +8,8 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::common::byte_to_bits;
 use crate::common::interface::get_bytes_maybe_hex;
-use crate::common::{byte_to_bits, bytes_to_u128};
 use crate::settings::Settings;
 
 use super::{Action, Testcase};
