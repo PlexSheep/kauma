@@ -29,7 +29,7 @@ pub type Polynomial = u128;
 // NOTE: this might be just wrong, and I don't know how to get it into a u128. The α^128 would be the
 // 129th bit, no? I could just abstract it away and store α^7 + α^2 + α + 1 while having the α^128
 // implied...
-pub const DEFINING_RELATION_F_2_128: Polynomial = 0x07000000_00000000_00000000_00000000;
+pub const DEFINING_RELATION_F_2_128: Polynomial = 0x87000000_00000000_00000000_00000000;
 pub const DEFINING_RELATION_F_2_3: Polynomial = 0xb;
 pub const DEFINING_RELATION_F_2_4: Polynomial = 0x13;
 pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
@@ -130,59 +130,45 @@ impl FField {
     // keep it close to the original algorithm in the cited paper
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
+    pub fn mul_alpha(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
         if verbose {
             eprintln!("? x:\t{poly_x:0128b}");
             eprintln!("? y:\t{poly_y:0128b}");
-        }
-        if *self != F_2_128 {
-            panic!("I don't know how to multiply if it's not in F_2_128 (well, or in real regular numbers)!")
         }
         if self.display_poly(poly_y) != "α" {
             panic!("Only multiplying wiht α is supported as of now!");
         }
 
-        let mut bytes = poly_x.to_be_bytes();
         let carry: bool;
 
-        if verbose {
-            eprintln!("? by15:\t{:08b}", bytes[15]);
-        }
-        if bytes[15] >> 7 == 1 {
+        let mut x: Polynomial = poly_x.to_be();
+
+        if x >> 127 == 1 {
             carry = true;
         } else {
             carry = false;
         }
-        for byte in bytes.iter_mut() {
-            *byte <<= 1;
-        }
-
-        let mut poly: Polynomial =
-            bytes_to_u128(&bytes).expect("bytes of u128 were not the length of u128?");
+        x <<= 1;
 
         if verbose {
-            eprintln!("? rel:\t{:0128b}", self.defining_relation);
-            eprintln!("? pred:\t{poly:0128b}");
+            eprintln!("? relation:\t{:032x}", self.defining_relation);
+            eprintln!("? prereduc:\t{x:032x}");
+            eprintln!("? x displa:\t{}", self.display_poly(x.to_be()));
+            eprintln!("? r displa:\t{}", self.display_poly(self.defining_relation));
         }
 
+        if verbose {
+            eprintln!("? carry:\t{carry}");
+        }
         if !carry {
-            if verbose {
-                eprintln!("? no carry");
-            }
         } else {
-            if verbose {
-                eprintln!("? carry");
-            }
-            poly ^= self.defining_relation;
+            x ^= self.defining_relation.to_be();
         }
 
-        if poly >> 127 == 1 {
-            poly ^= self.defining_relation;
-        }
         if verbose {
-            eprintln!("? done:\t{poly:0128b}");
+            eprintln!("? done:\t\t{x:032x}");
         }
-        poly
+        x.to_be()
     }
 
     pub fn coefficients_to_poly(
@@ -272,7 +258,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
                 eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
             }
 
-            let sol = F_2_128.mul(a, b, settings.verbose);
+            let sol = F_2_128.mul_alpha(a, b, settings.verbose);
             if settings.verbose {
                 eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
             }
@@ -370,7 +356,7 @@ mod test {
     #[test]
     fn test_mul_0() {
         const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
-        let sol = F_2_128.mul(
+        let sol = F_2_128.mul_alpha(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
             true,
@@ -381,7 +367,7 @@ mod test {
     #[test]
     fn test_mul_1() {
         const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
-        let sol = F_2_128.mul(
+        let sol = F_2_128.mul_alpha(
             0x02000000_00000000_00000000_00000000, // α
             0x02000000_00000000_00000000_00000000, // α
             true,
@@ -392,7 +378,7 @@ mod test {
     #[test]
     fn test_mul_2() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
-        let sol = F_2_128.mul(
+        let sol = F_2_128.mul_alpha(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             0x02000000_00000000_00000000_00000000, // α
             true,
