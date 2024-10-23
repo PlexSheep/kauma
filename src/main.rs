@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use getopts::Options;
-use kauma_analyzer::challenge::{Action, ChallengeKey};
+use kauma_analyzer::challenge::Action;
 use kauma_analyzer::settings::Settings;
 use serde_json::{json, Value};
 
