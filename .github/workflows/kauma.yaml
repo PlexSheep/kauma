@@ -1,0 +1,69 @@
+name: Kauma Pipeline (labwork-docker)
+
+on:
+  push:
+    branches:
+      - master
+      - devel
+      - main
+      - '**'
+
+jobs:
+  check_requirements:
+    name: Check requirements
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: build script may be present for compiling code
+        id: check-build
+        run: |
+          if [ -f ./build ]; then
+            echo "OK"
+          else
+            echo "WARNING: No \`build\` found (not required)" >> $GITHUB_STEP_SUMMARY
+          fi
+      - name: build script must be executable
+        id: check-build-exec
+        run: |
+          if [ -f ./build ]; then
+            if [ -x ./build ]; then
+              echo "OK"
+            else
+              echo "ERROR: \`build\` is not executable" >> $GITHUB_STEP_SUMMARY
+              echo "*HINT: The git command \`git add --chmod=+x build\` can be used*" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+      - name: kauma script must be present for running code
+        id: check-run
+        run: |
+          if [ -f ./kauma ]; then
+            echo "OK"
+          else
+            echo "ERROR: No \`run\` found (required)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+      - name: kauma script must be executable
+        id: check-run-exec
+        run: |
+          if [ -x ./kauma ]; then
+            echo "OK"
+          else
+            echo "ERROR: \`kauma\` is not executable" >> $GITHUB_STEP_SUMMARY
+            echo "*HINT: The git command \`git add --chmod=+x kauma\` can be used*" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+  labwork_docker_run:
+    name: Test project inside labwork-docker container
+    needs: check_requirements
+    runs-on: ubuntu-latest
+    steps:
+      - name: get repo
+        uses: actions/checkout@v4
+      - name: Pull labwork-docker image
+        run: |
+          docker pull ghcr.io/johndoe31415/labwork-docker:master
+          docker tag ghcr.io/johndoe31415/labwork-docker:master labwork
+      - name: Run labwork container
+        run: |
+          docker run -v $PWD:/dut/ labwork /bin/bash -c '/dut/build && /dut/kauma ./example_challenges/block2poly.json'
