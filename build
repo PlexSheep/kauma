@@ -1,2 +1,4 @@
 #!/bin/bash
-cargo build --release --locked
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+cargo build --release --locked --offline
