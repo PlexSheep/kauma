@@ -126,6 +126,24 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
     Ok(denc.to_vec())
 }
 
+pub fn sea_128_decrypt_xex(
+    keys: ([u8; 16], [u8; 16]),
+    tweak: &[u8; 16],
+    input: &[u8],
+    verbose: bool,
+) -> Result<Vec<u8>> {
+    todo!()
+}
+
+pub fn sea_128_encrypt_xex(
+    keys: ([u8; 16], [u8; 16]),
+    tweak: &[u8; 16],
+    input: &[u8],
+    verbose: bool,
+) -> Result<Vec<u8>> {
+    todo!()
+}
+
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::Sea128 => {
@@ -139,6 +157,21 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let output = match mode {
                 Mode::Encrypt => sea_128_encrypt(&key, &input, settings.verbose)?,
                 Mode::Decrypt => sea_128_decrypt(&key, &input, settings.verbose)?,
+            };
+            put_bytes(&output)?
+        }
+        Action::Xex => {
+            let mode = get_mode(&testcase.arguments)?;
+            let key = get_bytes_base64(&testcase.arguments, "key")?;
+            let tweak = get_bytes_base64(&testcase.arguments, "tweak")?;
+            let input = get_bytes_base64(&testcase.arguments, "input")?;
+
+            let key: [u8; 32] = vec_to_arr(&key)?;
+            let key: [u8; 16] = vec_to_arr(&tweak)?;
+
+            let output = match mode {
+                Mode::Encrypt => sea_128_encrypt_xex(&key, &tweak, &input, settings.verbose)?,
+                Mode::Decrypt => sea_128_decrypt_xex(&key, &tweak, &input, settings.verbose)?,
             };
             put_bytes(&output)?
         }

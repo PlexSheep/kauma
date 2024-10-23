@@ -123,6 +123,19 @@ pub enum Action {
     ///
     ///  `input` encrypted or decrypted with `key` : Base64 string encoding a `[u8; 16]`
     Sea128,
+    /// encrypt or decrypt a single block with a special AES version (sea128) in XEX mode
+    ///
+    /// # Arguments
+    ///
+    /// - `mode`: [Mode](cipher::Mode) - encrypt or decrypt
+    /// - `key`: [String] - Base64 string encoding a `[u8; 32]`
+    /// - `input`: [String] - Base64 string encoding a [`Vec<u8>`] whith length being $n \cdot 16$.
+    /// - `tweak`: [String] - Base64 string encoding a `[u8; 16]`
+    ///
+    /// # Returns
+    ///
+    ///  `input` with `tweak` encrypted or decrypted with `key` : Base64 string encoding a [`Vec<u8>`]
+    Xex,
 }
 
 impl Display for Action {
@@ -151,6 +164,7 @@ impl Action {
             Self::GfMul => "product",
             Self::Sea128 => "output",
             Self::SD_DisplayPolyBlock => "poly",
+            Self::Xex => "output",
         }
     }
 }
@@ -204,7 +218,7 @@ fn challenge_runner(
         Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {
             ffield::run_testcase(testcase, settings)
         }
-        Action::Sea128 => cipher::run_testcase(testcase, settings),
+        Action::Sea128 | Action::Xex => cipher::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
