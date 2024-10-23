@@ -197,7 +197,7 @@ fn challenge_runner(
 ) -> Result<()> {
     eprintln!("* starting challenge {key} ({})", testcase.action);
     if settings.verbose {
-        eprintln!("? dumping challenge\n{testcase:#}");
+        eprintln!("? dumping challenge {key}\n{testcase:#}");
     }
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
