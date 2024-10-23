@@ -1,7 +1,4 @@
 #!/bin/bash
-export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-export OPENSSL_INCLUDE_DIR=/usr/include/openssl
-
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 cargo run --release --locked --offline -- $@
