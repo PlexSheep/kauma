@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use getopts::Options;
-use kauma_analyzer::challenge::Action;
+use kauma_analyzer::challenge::{Action, ChallengeKey};
 use kauma_analyzer::settings::Settings;
 use serde_json::{json, Value};
 
@@ -80,10 +80,10 @@ fn main() -> Result<()> {
             eprintln!("No CHALLENGE allowed with ACTION");
             usage_and_exit(&opts, &program)
         }
-        let dummy_uuid = uuid::Uuid::default();
+        let dummy_key = "from_cli".to_string();
         instructions = json!({
             "testcases": {
-            dummy_uuid: {
+            dummy_key: {
                 "action": action,
                 "arguments": args
             }

@@ -8,14 +8,14 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::common::tag_json_value;
 use crate::settings::Settings;
 
-pub type ManyTestcases = HashMap<Uuid, Testcase>;
+pub type ChallengeKey = String;
+pub type ManyTestcases = HashMap<ChallengeKey, Testcase>;
 pub type Response = serde_json::Value;
-pub type ManyResponses = HashMap<Uuid, Response>;
+pub type ManyResponses = HashMap<ChallengeKey, Response>;
 
 /// Describes what we should do and with what arguments
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -165,12 +165,12 @@ pub fn run_challenges(
     let pool = threadpool::ThreadPool::new(settings.threads.unwrap_or(num_cpus::get()));
 
     let (tx, rx) = std::sync::mpsc::channel();
-    for (uuid, testcase) in testcases.clone() {
+    for (key, testcase) in testcases.clone() {
         let tx = tx.clone();
         let answers_clone = answers.clone();
         let testcase = testcase.clone();
         pool.execute(move || {
-            tx.send(challenge_runner(&testcase, answers_clone, &uuid, settings))
+            tx.send(challenge_runner(&testcase, answers_clone, &key, settings))
                 .expect("could not send return value of thread to main thread")
         });
     }
@@ -191,11 +191,11 @@ pub fn run_challenges(
 
 fn challenge_runner(
     testcase: &Testcase,
-    answers: Arc<Mutex<HashMap<Uuid, serde_json::Value>>>,
-    uuid: &Uuid,
+    answers: Arc<Mutex<HashMap<ChallengeKey, serde_json::Value>>>,
+    key: &ChallengeKey,
     settings: Settings,
 ) -> Result<()> {
-    eprintln!("* starting challenge {uuid} ({})", testcase.action);
+    eprintln!("* starting challenge {key} ({})", testcase.action);
     if settings.verbose {
         eprintln!("? dumping challenge");
     }
@@ -207,12 +207,12 @@ fn challenge_runner(
         Action::Sea128 => cipher::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
-        return Err(anyhow!("error while processing a testcase {uuid}: {e}"));
+        return Err(anyhow!("error while processing a testcase {key}: {e}"));
     }
     answers.lock().unwrap().insert(
-        *uuid,
+        key.clone(),
         tag_json_value(testcase.action.solution_key(), sol.unwrap()),
     );
-    eprintln!("* finished challenge {uuid} ({})", testcase.action);
+    eprintln!("* finished challenge {key} ({})", testcase.action);
     Ok(())
 }
