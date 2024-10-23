@@ -8,8 +8,8 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::common::byte_to_bits;
 use crate::common::interface::get_bytes_maybe_hex;
+use crate::common::{byte_to_bits, veprintln};
 use crate::settings::Settings;
 
 use super::{Action, Testcase};
@@ -124,43 +124,39 @@ impl FField {
     #[allow(clippy::complexity)]
     pub fn mul_alpha(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
         if verbose {
-            eprintln!("? x:\t{poly_x:0128b}");
-            eprintln!("? y:\t{poly_y:0128b}");
+            veprintln("x", format_args!("{}", self.dbg_poly(poly_x)));
+            veprintln("y", format_args!("{}", self.dbg_poly(poly_y)));
+            veprintln(
+                "relation",
+                format_args!("{}", self.dbg_poly(self.defining_relation)),
+            );
         }
         if self.display_poly(poly_y) != "α" {
             panic!("Only multiplying wiht α is supported as of now!");
         }
 
-        let carry: bool;
-
         let mut x: Polynomial = poly_x.to_be();
+        let carry: bool = x >> 127 == 1;
 
-        if x >> 127 == 1 {
-            carry = true;
-        } else {
-            carry = false;
-        }
         x <<= 1;
+        x = x.swap_bytes();
 
         if verbose {
-            eprintln!("? relation:\t{:032x}", self.defining_relation);
-            eprintln!("? prereduc:\t{x:032x}");
-            eprintln!("? x displa:\t{}", self.display_poly(x.to_be()));
-            eprintln!("? r displa:\t{}", self.display_poly(self.defining_relation));
+            veprintln("x", format_args!("{}", self.dbg_poly(x)));
         }
 
         if verbose {
-            eprintln!("? carry:\t{carry}");
+            veprintln("carry", format_args!("{carry}"));
         }
         if !carry {
         } else {
-            x ^= self.defining_relation.to_be();
+            x ^= self.defining_relation;
         }
 
         if verbose {
-            eprintln!("? done:\t\t{x:032x}");
+            veprintln("done", format_args!("{}", self.dbg_poly(x)));
         }
-        x.to_be()
+        x
     }
 
     pub fn coefficients_to_poly(
@@ -192,6 +188,12 @@ impl FField {
         enabled.sort();
         enabled.reverse();
         enabled
+    }
+
+    /// helps print a [Polynomial] for debug purposes
+    #[inline]
+    pub(crate) fn dbg_poly(&self, p: Polynomial) -> String {
+        format!("{p:032X} => {}", self.display_poly(p))
     }
 }
 
@@ -243,17 +245,8 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
-            if settings.verbose {
-                eprintln!("? a:\t{a:032X} => {}", F_2_128.display_poly(a));
-            }
-            if settings.verbose {
-                eprintln!("? b:\t{b:032X} => {}", F_2_128.display_poly(b));
-            }
 
             let sol = F_2_128.mul_alpha(a, b, settings.verbose);
-            if settings.verbose {
-                eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
-            }
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
