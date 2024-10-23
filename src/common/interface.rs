@@ -39,11 +39,16 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 /// the following input will be interpreted as hexadecimal.
 pub fn get_bytes_maybe_hex(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
     let bytes: Vec<u8> = if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone())
-            .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
+        let v: String = serde_json::from_value(args[key].clone()).map_err(|e| {
+            eprintln!("! something went wrong when serializing {key}: {e}");
+            e
+        })?;
 
         if let Some(s) = v.strip_prefix("0x!") {
-            decode_hex(s).inspect_err(|e| eprintln!("! could not decode hex string: {e}"))?
+            decode_hex(s).map_err(|e| {
+                eprintln!("! could not decode hex string: {e}");
+                e
+            })?
         } else {
             get_bytes_base64(args, key)?
         }
@@ -58,11 +63,14 @@ pub fn get_bytes_maybe_hex(args: &serde_json::Value, key: &str) -> Result<Vec<u8
 /// All binary data is encoded in base64 strings.
 pub fn get_bytes_base64(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
     let bytes: Vec<u8> = if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone())
-            .inspect_err(|e| eprintln!("! something went wrong when serializing {key}: {e}"))?;
-        BASE64_STANDARD
-            .decode(v)
-            .inspect_err(|e| eprintln!("! error while converting Base64 string to bytes: {e}"))?
+        let v: String = serde_json::from_value(args[key].clone()).map_err(|e| {
+            eprintln!("! something went wrong when serializing {key}: {e}");
+            e
+        })?;
+        BASE64_STANDARD.decode(v).map_err(|e| {
+            eprintln!("! error while converting Base64 string to bytes: {e}");
+            e
+        })?
     } else {
         return Err(anyhow!("{key} is not a string"));
     };

@@ -48,12 +48,14 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16]) -> Result<Vec<u8>> {
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut enc: Vec<u8> = [0; 32].to_vec();
     let mut pos: usize;
-    pos = crypter
-        .update(data, &mut enc)
-        .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
-    pos += crypter
-        .finalize(&mut enc)
-        .inspect_err(|e| eprintln!("! error while encrypting with sea_128: {e:#?}"))?;
+    pos = crypter.update(data, &mut enc).map_err(|e| {
+        eprintln!("! error while encrypting with sea_128: {e:#?}");
+        e
+    })?;
+    pos += crypter.finalize(&mut enc).map_err(|e| {
+        eprintln!("! error while encrypting with sea_128: {e:#?}");
+        e
+    })?;
     enc.truncate(pos);
 
     eprintln!("? enc:\t\t{enc:02x?}");
@@ -94,12 +96,14 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16]) -> Result<Vec<u8>> {
     // NOTE: openssl panics if the buffer is not at least 32 bytes
     let mut denc: Vec<u8> = [0; 32].to_vec();
     let mut pos: usize;
-    pos = crypter
-        .update(&dxor, &mut denc)
-        .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
-    pos += crypter
-        .finalize(&mut denc[pos..])
-        .inspect_err(|e| eprintln!("! error while decrypting with sea_128: {e:#?}"))?;
+    pos = crypter.update(&dxor, &mut denc).map_err(|e| {
+        eprintln!("! error while decrypting with sea_128: {e:#?}");
+        e
+    })?;
+    pos += crypter.finalize(&mut denc[pos..]).map_err(|e| {
+        eprintln!("! error while decrypting with sea_128: {e:#?}");
+        e
+    })?;
     denc.truncate(pos);
 
     eprintln!("? denc:\t\t{denc:02x?}");
@@ -129,8 +133,10 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
 
 fn get_mode(args: &serde_json::Value) -> Result<Mode> {
     let semantic: Mode = if args["mode"].is_string() {
-        serde_json::from_value(args["mode"].clone())
-            .inspect_err(|e| eprintln!("! something went wrong when serializing the mode: {e}"))?
+        serde_json::from_value(args["mode"].clone()).map_err(|e| {
+            eprintln!("! something went wrong when serializing the mode: {e}");
+            e
+        })?
     } else {
         return Err(anyhow!("mode is not a string"));
     };

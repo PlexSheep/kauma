@@ -238,8 +238,10 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
             }
             let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
             eprintln!("* block {:032X}", sol);
-            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
-                .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
+                eprintln!("! could not convert block to json: {e}");
+                e
+            })?
         }
         Action::Block2Poly => {
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
@@ -255,8 +257,10 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
 
             let sol = F_2_128.mul(a, b);
             eprintln!("? a*b:\t{sol:032X} => {}", F_2_128.display_poly(sol));
-            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes()))
-                .inspect_err(|e| eprintln!("! could not convert block to json: {e}"))?
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
+                eprintln!("! could not convert block to json: {e}");
+                e
+            })?
         }
         Action::SD_DisplayPolyBlock => {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
@@ -269,8 +273,9 @@ pub fn run_testcase(testcase: &Testcase) -> Result<serde_json::Value> {
 
 fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
     let semantic: Semantic = if args["semantic"].is_string() {
-        serde_json::from_value(args["semantic"].clone()).inspect_err(|e| {
-            eprintln!("! something went wrong when serializing the semantinc: {e}")
+        serde_json::from_value(args["semantic"].clone()).map_err(|e| {
+            eprintln!("! something went wrong when serializing the semantinc: {e}");
+            e
         })?
     } else {
         return Err(anyhow!("semantic is not a string"));

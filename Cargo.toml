@@ -1,4 +1,5 @@
 [package]
+rust-version = "1.75"
 name = "kauma-analyzer"
 default-run = "kauma"
 version = "0.1.0"
