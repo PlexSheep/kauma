@@ -3,7 +3,7 @@ use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes_base64, put_bytes};
-use crate::common::vec_to_arr;
+use crate::common::len_to_const_arr;
 use crate::settings::Settings;
 
 use super::{Action, Testcase};
@@ -151,8 +151,8 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let key = get_bytes_base64(&testcase.arguments, "key")?;
             let input = get_bytes_base64(&testcase.arguments, "input")?;
 
-            let key: [u8; 16] = vec_to_arr(&key)?;
-            let input: [u8; 16] = vec_to_arr(&input)?;
+            let key: [u8; 16] = len_to_const_arr(&key)?;
+            let input: [u8; 16] = len_to_const_arr(&input)?;
 
             let output = match mode {
                 Mode::Encrypt => sea_128_encrypt(&key, &input, settings.verbose)?,
@@ -166,8 +166,8 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let tweak = get_bytes_base64(&testcase.arguments, "tweak")?;
             let input = get_bytes_base64(&testcase.arguments, "input")?;
 
-            let key: [u8; 32] = vec_to_arr(&key)?;
-            let key: [u8; 16] = vec_to_arr(&tweak)?;
+            let key: [u8; 32] = len_to_const_arr(&key)?;
+            let tweak: [u8; 16] = len_to_const_arr(&tweak)?;
 
             let output = match mode {
                 Mode::Encrypt => sea_128_encrypt_xex(&key, &tweak, &input, settings.verbose)?,
@@ -205,7 +205,7 @@ mod test {
         const KEY: [u8; 16] = *b"1238742fsaflk249";
 
         let enc = sea_128_encrypt(&KEY, &PLAIN, true).expect("encrypt fail");
-        let enc = vec_to_arr(&enc).expect("could not convert from vec to arr");
+        let enc = len_to_const_arr(&enc).expect("could not convert from vec to arr");
         let denc = sea_128_decrypt(&KEY, &enc, true).expect("decrypt fail");
 
         assert_hex(&denc, &PLAIN);
