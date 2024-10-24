@@ -175,7 +175,8 @@ pub fn run_challenges(
         });
     }
 
-    for result in rx.iter().take(testcases.len()) {
+    for _ in 0..testcases.len() {
+        let result = rx.recv_timeout(std::time::Duration::from_secs(10));
         match result {
             Ok(_) => (),
             Err(e) => eprintln!("! failed to solve a challenge: {e:#}"),
