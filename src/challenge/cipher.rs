@@ -343,4 +343,19 @@ mod test {
 
         assert_hex(&PLAIN, &buf);
     }
+
+    #[test]
+    fn test_sea_128_xex_encrypt_decrypt() {
+        const PLAIN: &[u8] = b"geheimer geheim text ist total super geheim";
+        const KEYS: ([u8; 16], [u8; 16]) = (*b"1238742fsaflk249", *b"abti74kfsaflh2b9");
+        const TWEAK: &[u8; 16] = b"9812485081250825";
+
+        eprintln!("encrypting...");
+        let ciphertext = sea_128_encrypt_xex(&KEYS, TWEAK, PLAIN, true).expect("could not encrypt");
+        eprintln!("decrypting...");
+        veprintln("ciphertext", format_args!("{ciphertext:02x?}"));
+        let plaintext =
+            sea_128_decrypt_xex(&KEYS, TWEAK, &ciphertext, true).expect("could not decrypt");
+        assert_hex(&plaintext, &ciphertext);
+    }
 }
