@@ -1,4 +1,5 @@
 pub mod cipher;
+pub mod debug;
 pub mod example;
 pub mod ffield;
 
@@ -123,6 +124,10 @@ pub enum Action {
     ///
     ///  `input` encrypted or decrypted with `key` : Base64 string encoding a `[u8; 16]`
     Sea128,
+
+    // debug items ////////////////////////////////////////////////////////////////////////////////
+    /// wait indefinitely, job should eventually be killed
+    SD_Timeout,
 }
 
 impl Display for Action {
@@ -151,6 +156,7 @@ impl Action {
             Self::GfMul => "product",
             Self::Sea128 => "output",
             Self::SD_DisplayPolyBlock => "poly",
+            Self::SD_Timeout => unreachable!(),
         }
     }
 }
@@ -176,7 +182,13 @@ pub fn run_challenges(
     }
 
     for _ in 0..testcases.len() {
-        let result = rx.recv_timeout(std::time::Duration::from_secs(10));
+        let result = match rx.recv_timeout(std::time::Duration::from_secs(10)) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("! Job timed out: {e}");
+                return Err(e.into());
+            }
+        };
         match result {
             Ok(_) => (),
             Err(e) => eprintln!("! failed to solve a challenge: {e:#}"),
@@ -206,6 +218,7 @@ fn challenge_runner(
             ffield::run_testcase(testcase, settings)
         }
         Action::Sea128 => cipher::run_testcase(testcase, settings),
+        Action::SD_Timeout => debug::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
