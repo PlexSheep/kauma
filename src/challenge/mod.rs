@@ -176,7 +176,13 @@ pub fn run_challenges(
     }
 
     for _ in 0..testcases.len() {
-        let result = rx.recv_timeout(std::time::Duration::from_secs(10));
+        let result = match rx.recv_timeout(std::time::Duration::from_secs(10)) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("! Job timed out: {e}");
+                return Err(e.into());
+            }
+        };
         match result {
             Ok(_) => (),
             Err(e) => eprintln!("! failed to solve a challenge: {e:#}"),
