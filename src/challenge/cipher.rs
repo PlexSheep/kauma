@@ -3,9 +3,10 @@ use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes_base64, put_bytes};
-use crate::common::len_to_const_arr;
+use crate::common::{bytes_to_u128, len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
+use super::ffield::{F_2_128, F_2_128_ALPHA};
 use super::{Action, Testcase};
 
 pub const SEA_128_MAGIC_NUMBER: u128 = 0xc0ffeec0ffeec0ffeec0ffeec0ffee11;
@@ -38,7 +39,7 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -76,12 +77,12 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     }
 
     if verbose {
-        eprintln!("? xor:\t\t{enc:02x?}");
+        veprintln("xor", format_args!("{enc:02x?}"));
     }
-    Ok(enc.to_vec())
+    Ok(len_to_const_arr(&enc)?)
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -123,25 +124,78 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(denc.to_vec())
+    Ok(len_to_const_arr(&denc)?)
+}
+
+/// Helper function to get the first part for AES-XEX
+fn sea_128_decrypt_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+    let enc0 = sea_128_encrypt(key, tweak, verbose)?;
+    if verbose {
+        veprintln("enc0", format_args!("{enc0:02x?}"));
+    }
+    Ok(enc0)
 }
 
 pub fn sea_128_decrypt_xex(
-    keys: ([u8; 16], [u8; 16]),
+    keys: &([u8; 16], [u8; 16]),
     tweak: &[u8; 16],
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    todo!()
+    let enc0 = sea_128_decrypt_xex_enc0(&keys.0, tweak, verbose)?;
+    Ok(vec![0])
 }
 
 pub fn sea_128_encrypt_xex(
-    keys: ([u8; 16], [u8; 16]),
+    keys: &([u8; 16], [u8; 16]),
     tweak: &[u8; 16],
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    todo!()
+    let enc0 = sea_128_decrypt_xex_enc0(&keys.0, tweak, verbose)?;
+    if !input.len() % 16 == 0 {
+        return Err(anyhow!("XEX input of bad length: {}", input.len()));
+    }
+    let inputs = input.chunks_exact(16);
+
+    let mut cipher: Vec<[u8; 16]> = Vec::new();
+    let mut xorval = enc0;
+    let mut buf = [0u8; 16];
+    cipher.reserve(input.len());
+
+    if verbose {
+        veprintln("plaintext", format_args!("{input:02x?}"));
+    }
+    for (_block_idx, input) in inputs.enumerate() {
+        if verbose {
+            veprintln("xorval", format_args!("{xorval:02x?}"));
+        }
+        for (byte_idx, (inbyte, xorbyte)) in input.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = inbyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor0", format_args!("{buf:02x?}"));
+        }
+        let tmp = sea_128_encrypt(&keys.1, &buf, false)?;
+        if verbose {
+            veprintln("post enc", format_args!("{tmp:02x?}"));
+        }
+        for (byte_idx, (cybyte, xorbyte)) in tmp.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = cybyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor1", format_args!("{buf:02x?}"));
+        }
+        cipher.push(buf);
+
+        xorval = F_2_128
+            .mul_alpha(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .to_be_bytes();
+    }
+    if verbose {
+        veprintln("ciphertext", format_args!("{cipher:02x?}"));
+    }
+    Ok(cipher.into_flattened())
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
@@ -168,14 +222,14 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
 
             let key: [u8; 32] = len_to_const_arr(&key)?;
             let keys: ([u8; 16], [u8; 16]) = {
-                let (a, b) = key.split_at(15);
+                let (a, b) = key.split_at(16);
                 (len_to_const_arr(a)?, len_to_const_arr(b)?)
             };
             let tweak: [u8; 16] = len_to_const_arr(&tweak)?;
 
             let output = match mode {
-                Mode::Encrypt => sea_128_encrypt_xex(&key, &tweak, &input, settings.verbose)?,
-                Mode::Decrypt => sea_128_decrypt_xex(&key, &tweak, &input, settings.verbose)?,
+                Mode::Encrypt => sea_128_encrypt_xex(&keys, &tweak, &input, settings.verbose)?,
+                Mode::Decrypt => sea_128_decrypt_xex(&keys, &tweak, &input, settings.verbose)?,
             };
             put_bytes(&output)?
         }
