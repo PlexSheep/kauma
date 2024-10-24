@@ -1,6 +1,6 @@
 //! Debug actions
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 
 use crate::settings::Settings;
 
