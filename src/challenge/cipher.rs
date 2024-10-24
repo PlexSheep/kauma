@@ -79,7 +79,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     if verbose {
         veprintln("xor", format_args!("{enc:02x?}"));
     }
-    Ok(len_to_const_arr(&enc)?)
+    len_to_const_arr(&enc)
 }
 
 pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
@@ -124,7 +124,7 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(len_to_const_arr(&denc)?)
+    len_to_const_arr(&denc)
 }
 
 /// Helper function to get the first part for AES-XEX
@@ -166,7 +166,7 @@ pub fn sea_128_encrypt_xex(
     if verbose {
         veprintln("plaintext", format_args!("{input:02x?}"));
     }
-    for (_block_idx, input) in inputs.enumerate() {
+    for input in inputs {
         if verbose {
             veprintln("xorval", format_args!("{xorval:02x?}"));
         }
