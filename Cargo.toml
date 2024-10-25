@@ -17,7 +17,6 @@ repository = "https://github.com/PlexSheep/kauma"
 anyhow = "1.0.89"
 base64 = "0.22.1"
 getopts = "0.2.21"
-num_cpus = "1.16.0"
 openssl = "0.10.68"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
