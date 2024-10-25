@@ -78,7 +78,6 @@ dependencies = [
  "anyhow",
  "base64",
  "getopts",
- "num_cpus",
  "openssl",
  "serde",
  "serde_json",
