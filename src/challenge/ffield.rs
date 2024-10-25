@@ -122,7 +122,12 @@ impl FField {
     /// This is not regular multiplication of two numbers!
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul_alpha(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
+    pub fn mul_alpha(
+        &self,
+        mut poly_x: Polynomial,
+        mut poly_y: Polynomial,
+        verbose: bool,
+    ) -> Polynomial {
         if verbose {
             veprintln("x", format_args!("{}", self.dbg_poly(poly_x)));
             veprintln("y", format_args!("{}", self.dbg_poly(poly_y)));
@@ -130,6 +135,9 @@ impl FField {
                 "relation",
                 format_args!("{}", self.dbg_poly(self.defining_relation)),
             );
+        }
+        if self.display_poly(poly_x) == "α" {
+            std::mem::swap(&mut poly_y, &mut poly_x);
         }
         if self.display_poly(poly_y) != "α" {
             panic!("Only multiplying wiht α is supported as of now!");
