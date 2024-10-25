@@ -136,12 +136,10 @@ fn main() -> Result<()> {
         };
     }
 
-    let responses = kauma_analyzer::challenge::run_challenges(&instructions, settings)?;
-    if settings.verbose {
-        println!("{:#}", responses);
-    } else {
-        println!("{}", responses)
-    }
+    println!(
+        "{}",
+        kauma_analyzer::challenge::run_challenges(&instructions, settings)?
+    );
 
     Ok(())
 }
