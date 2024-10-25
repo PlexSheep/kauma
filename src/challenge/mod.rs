@@ -168,7 +168,10 @@ pub fn run_challenges(
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
     let answers = Arc::new(Mutex::new(ManyResponses::new()));
 
-    let pool = threadpool::ThreadPool::new(settings.threads.unwrap_or(num_cpus::get()));
+    let pool = match settings.threads {
+        Some(threads) => threadpool::ThreadPool::new(threads),
+        None => threadpool::ThreadPool::default(),
+    };
 
     let (tx, rx) = std::sync::mpsc::channel();
     for (key, testcase) in testcases.clone() {
