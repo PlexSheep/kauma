@@ -122,7 +122,12 @@ impl FField {
     /// This is not regular multiplication of two numbers!
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul_alpha(&self, poly_x: Polynomial, poly_y: Polynomial, verbose: bool) -> Polynomial {
+    pub fn mul_alpha(
+        &self,
+        mut poly_x: Polynomial,
+        mut poly_y: Polynomial,
+        verbose: bool,
+    ) -> Polynomial {
         if verbose {
             veprintln("x", format_args!("{}", self.dbg_poly(poly_x)));
             veprintln("y", format_args!("{}", self.dbg_poly(poly_y)));
@@ -130,6 +135,9 @@ impl FField {
                 "relation",
                 format_args!("{}", self.dbg_poly(self.defining_relation)),
             );
+        }
+        if self.display_poly(poly_x) == "α" {
+            std::mem::swap(&mut poly_y, &mut poly_x);
         }
         if self.display_poly(poly_y) != "α" {
             panic!("Only multiplying wiht α is supported as of now!");
@@ -366,6 +374,16 @@ mod test {
         let sol = F_2_128.mul_alpha(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             0x02000000_00000000_00000000_00000000, // α
+            true,
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+    #[test]
+    fn test_mul_3() {
+        const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
+        let sol = F_2_128.mul_alpha(
+            0x02000000_00000000_00000000_00000000, // α
+            0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             true,
         );
         assert_eq_polys(sol, SOLUTION);
