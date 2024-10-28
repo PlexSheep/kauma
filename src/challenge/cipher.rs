@@ -252,6 +252,7 @@ fn get_mode(args: &serde_json::Value) -> Result<Mode> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use base64::prelude::*;
 
     fn assert_hex(data: &[u8], correct: &[u8]) {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
@@ -345,7 +346,7 @@ mod test {
     }
 
     #[test]
-    fn test_sea_128_xex_encrypt_decrypt() {
+    fn test_sea_128_xex_back_and_forth() {
         const PLAIN: &[u8] = b"geheimer geheim text ist total super geheim";
         const KEYS: ([u8; 16], [u8; 16]) = (*b"1238742fsaflk249", *b"abti74kfsaflh2b9");
         const TWEAK: &[u8; 16] = b"9812485081250825";
@@ -357,5 +358,33 @@ mod test {
         let plaintext =
             sea_128_decrypt_xex(&KEYS, TWEAK, &ciphertext, true).expect("could not decrypt");
         assert_hex(&plaintext, &ciphertext);
+    }
+
+    #[test]
+    fn test_sea_128_xex_encrypt() {
+        let plain: &[u8] = &BASE64_STANDARD
+            .decode("/aOg4jMocLkBLkDLgkHYtFKc2L9jjyd2WXSSyxXQikpMY9ZRnsJE76e9dW9olZIW")
+            .unwrap();
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+        let ciphertext: &[u8] = &BASE64_STANDARD
+            .decode("mHAVhRCKPAPx0BcufG5BZ4+/CbneMV/gRvqK5rtLe0OJgpDU5iT7z2P0R7gEeRDO")
+            .unwrap();
+
+        let ciphertext =
+            sea_128_encrypt_xex(&keys, &tweak, plain, true).expect("could not encrypt");
+        assert_hex(&ciphertext, &ciphertext);
     }
 }
