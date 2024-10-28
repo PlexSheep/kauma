@@ -394,12 +394,12 @@ mod test {
         };
         let tweak: [u8; 16] =
             len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
-        let ciphertext: &[u8] = &BASE64_STANDARD
+        let ciphertext_correct: &[u8] = &BASE64_STANDARD
             .decode("mHAVhRCKPAPx0BcufG5BZ4+/CbneMV/gRvqK5rtLe0OJgpDU5iT7z2P0R7gEeRDO")
             .unwrap();
 
         let ciphertext =
             sea_128_encrypt_xex(&keys, &tweak, plain, true).expect("could not encrypt");
-        assert_hex(&ciphertext, &ciphertext);
+        assert_hex(&ciphertext, ciphertext_correct);
     }
 }
