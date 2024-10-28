@@ -152,7 +152,7 @@ pub fn sea_128_decrypt_xex(
             input.len()
         ));
     }
-    return Ok(Vec::new());
+    Ok(Vec::new())
 }
 
 pub fn sea_128_encrypt_xex(
