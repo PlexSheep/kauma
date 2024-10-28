@@ -41,14 +41,14 @@ impl From<Mode> for OpenSslMode {
 
 pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
-        eprintln!("? key:\t\t{key:02x?}");
+        veprintln("key", format_args!("{key:02x?}"))
     }
 
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
     crypter.pad(false);
 
     if verbose {
-        eprintln!("? data:\t\t{data:02x?}");
+        veprintln("data", format_args!("{data:02x?}"))
     }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
@@ -65,8 +65,11 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     enc.truncate(pos);
 
     if verbose {
-        eprintln!("? enc:\t\t{enc:02x?}");
-        eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+        veprintln("enc", format_args!("{enc:02x?}"));
+        veprintln(
+            "sea_magic",
+            format_args!("{:02x?}", SEA_128_MAGIC_NUMBER_ARR),
+        );
     }
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
@@ -79,7 +82,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     if verbose {
         veprintln("xor", format_args!("{enc:02x?}"));
     }
-    Ok(len_to_const_arr(&enc)?)
+    len_to_const_arr(&enc)
 }
 
 pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
@@ -124,12 +127,12 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(len_to_const_arr(&denc)?)
+    len_to_const_arr(&denc)
 }
 
 /// Helper function to get the first part for AES-XEX
-fn sea_128_decrypt_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
-    let enc0 = sea_128_encrypt(key, tweak, verbose)?;
+fn sea_128_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+    let enc0 = sea_128_encrypt(key, tweak, false)?;
     if verbose {
         veprintln("enc0", format_args!("{enc0:02x?}"));
     }
@@ -142,8 +145,14 @@ pub fn sea_128_decrypt_xex(
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    let enc0 = sea_128_decrypt_xex_enc0(&keys.0, tweak, verbose)?;
-    Ok(vec![0])
+    let _enc0 = sea_128_xex_enc0(&keys.0, tweak, verbose)?;
+    if !input.len() % 16 == 0 {
+        return Err(anyhow!(
+            "XEX ciphertext input of bad length: {}",
+            input.len()
+        ));
+    }
+    return Ok(Vec::new());
 }
 
 pub fn sea_128_encrypt_xex(
@@ -152,21 +161,27 @@ pub fn sea_128_encrypt_xex(
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    let enc0 = sea_128_decrypt_xex_enc0(&keys.0, tweak, verbose)?;
+    let enc0 = sea_128_xex_enc0(&keys.0, tweak, verbose)?;
     if !input.len() % 16 == 0 {
-        return Err(anyhow!("XEX input of bad length: {}", input.len()));
+        return Err(anyhow!(
+            "XEX plaintext input of bad length: {}",
+            input.len()
+        ));
     }
     let inputs = input.chunks_exact(16);
 
-    let mut cipher: Vec<[u8; 16]> = Vec::new();
+    let mut cipher_text: Vec<[u8; 16]> = Vec::new();
     let mut xorval = enc0;
     let mut buf = [0u8; 16];
-    cipher.reserve(input.len());
+    cipher_text.reserve(input.len());
 
     if verbose {
         veprintln("plaintext", format_args!("{input:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        veprintln("key0", format_args!("{:02x?}", keys.0));
+        veprintln("key1", format_args!("{:02x?}", keys.1));
     }
-    for (_block_idx, input) in inputs.enumerate() {
+    for input in inputs {
         if verbose {
             veprintln("xorval", format_args!("{xorval:02x?}"));
         }
@@ -186,16 +201,16 @@ pub fn sea_128_encrypt_xex(
         if verbose {
             veprintln("post xor1", format_args!("{buf:02x?}"));
         }
-        cipher.push(buf);
+        cipher_text.push(buf);
 
         xorval = F_2_128
             .mul_alpha(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
             .to_be_bytes();
     }
     if verbose {
-        veprintln("ciphertext", format_args!("{cipher:02x?}"));
+        veprintln("ciphertext", format_args!("{cipher_text:02x?}"));
     }
-    Ok(cipher.into_flattened())
+    Ok(cipher_text.into_flattened())
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
