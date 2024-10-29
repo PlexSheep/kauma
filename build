@@ -1,5 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
+echo "script location: $SCRIPT_DIR"
+ls /rust /rust/vendor
 ln -s /rust/vendor $SCRIPT_DIR/vendor
 cargo build --release --offline
