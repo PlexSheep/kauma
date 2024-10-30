@@ -196,7 +196,7 @@ pub fn sea_128_decrypt_xex(
     if verbose {
         veprintln("plaintext", format_args!("{plain_text:02x?}"));
     }
-    Ok(plain_text.into_flattened())
+    Ok(plain_text.concat())
 }
 
 pub fn sea_128_encrypt_xex(
@@ -254,7 +254,7 @@ pub fn sea_128_encrypt_xex(
     if verbose {
         veprintln("ciphertext", format_args!("{cipher_text:02x?}"));
     }
-    Ok(cipher_text.into_flattened())
+    Ok(cipher_text.concat())
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
