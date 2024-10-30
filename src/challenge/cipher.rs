@@ -131,6 +131,8 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
 }
 
 /// Helper function to get the first part for AES-XEX
+///
+/// NOTE: The second key of XEX mode needs to be given to this!
 fn sea_128_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     let enc0 = sea_128_encrypt(key, tweak, false)?;
     if verbose {
@@ -373,6 +375,32 @@ mod test {
         let plaintext =
             sea_128_decrypt_xex(&KEYS, TWEAK, &ciphertext, true).expect("could not decrypt");
         assert_hex(&plaintext, &ciphertext);
+    }
+
+    #[test]
+    fn test_sea_128_xex_tweakblock() {
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+        const SOLUTION: &[u8] = &[
+            0x35, 0x37, 0xd2, 0xf1, 0xca, 0x78, 0x36, 0x80, 0x27, 0x3b, 0xb1, 0x90, 0xbe, 0x46,
+            0x77, 0x51,
+        ];
+        veprintln("keys", format_args!("{keys:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        let a = sea_128_xex_enc0(&keys.1, &tweak, true).expect("could not compute the tweakblock");
+        assert_hex(&a, SOLUTION);
     }
 
     #[test]
