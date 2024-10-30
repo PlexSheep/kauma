@@ -406,7 +406,7 @@ mod test {
 
     #[test]
     fn test_sea_128_xex_back_and_forth() {
-        const PLAIN: &[u8] = b"geheimer geheim text ist total super geheim";
+        const PLAIN: &[u8; 16 * 3] = b"geheimer geheim text ist total super geheim.....";
         const KEYS: ([u8; 16], [u8; 16]) = (*b"1238742fsaflk249", *b"abti74kfsaflh2b9");
         const TWEAK: &[u8; 16] = b"9812485081250825";
 
@@ -416,7 +416,7 @@ mod test {
         veprintln("ciphertext", format_args!("{ciphertext:02x?}"));
         let plaintext =
             sea_128_decrypt_xex(&KEYS, TWEAK, &ciphertext, true).expect("could not decrypt");
-        assert_hex(&plaintext, &ciphertext);
+        assert_hex(&plaintext, PLAIN);
     }
 
     #[test]
