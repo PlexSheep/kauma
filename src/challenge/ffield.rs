@@ -79,7 +79,11 @@ impl FField {
     /// ```
     pub fn display_poly(&self, poly: Polynomial) -> String {
         let mut buf = String::new();
-        let enabled = self.poly_to_coefficients(poly, Semantic::default());
+        let enabled: Vec<_> = self
+            .poly_to_coefficients(poly, Semantic::default())
+            .into_iter()
+            .rev()
+            .collect();
         if enabled.is_empty() {
             buf = "0".to_string();
             return buf;
@@ -194,7 +198,6 @@ impl FField {
         }
 
         enabled.sort();
-        enabled.reverse();
         enabled
     }
 
