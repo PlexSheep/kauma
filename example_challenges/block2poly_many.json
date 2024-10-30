@@ -1,0 +1,46 @@
+{
+  "testcases": {
+    "b2p_0": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "ARIAAAAAAAAAAAAAAAAAgA=="
+      }
+    },
+    "b2p_1": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "t8C5y70T0nJCumJDmB3+uA=="
+      }
+    },
+    "b2p_2": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "a7+i8mXKQNYm5eqYoBbHpg=="
+      }
+    },
+    "b2p_3": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "46Kc18XnJyKpdtwId3VNQg=="
+      }
+    },
+    "b2p_4": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "5Po9BXw9obxDO4yIw9GLlQ=="
+      }
+    },
+    "b2p_5": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "xex",
+        "block": "zstycG3ppypUbTObHaxWaQ=="
+      }
+    }
+  }
+}
