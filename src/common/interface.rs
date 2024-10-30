@@ -79,7 +79,7 @@ pub fn get_bytes_base64(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> 
 
 /// Convert from [`Vec<u8>`] to a [serde_json::Value] with a [base64] string encoding that data.
 #[inline]
-pub fn put_bytes(data: &Vec<u8>) -> Result<serde_json::Value> {
+pub fn put_bytes(data: &[u8]) -> Result<serde_json::Value> {
     Ok(BASE64_STANDARD.encode(data).into())
 }
 

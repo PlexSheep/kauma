@@ -5,12 +5,12 @@ pub mod interface;
 use anyhow::{anyhow, Result};
 
 pub fn veprintln(key: &str, format_args: std::fmt::Arguments) {
-    eprintln!("? {key:016}:\t{format_args}");
+    eprintln!("? {key:012}:\t{format_args}");
 }
 
-/// Try to downcast a [`Vec<u8>`] into an array of constant size
-pub fn vec_to_arr<const N: usize>(data: &Vec<u8>) -> Result<[u8; N]> {
-    let arr: [u8; N] = match data.clone().try_into() {
+/// Try to downcast any array of [u8] into an array of constant size
+pub fn len_to_const_arr<const N: usize>(data: &[u8]) -> Result<[u8; N]> {
+    let arr: [u8; N] = match data.try_into() {
         Ok(v) => v,
         Err(e) => {
             let e = anyhow!(

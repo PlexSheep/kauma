@@ -3,9 +3,10 @@ use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes_base64, put_bytes};
-use crate::common::vec_to_arr;
+use crate::common::{bytes_to_u128, len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
+use super::ffield::{F_2_128, F_2_128_ALPHA};
 use super::{Action, Testcase};
 
 pub const SEA_128_MAGIC_NUMBER: u128 = 0xc0ffeec0ffeec0ffeec0ffeec0ffee11;
@@ -38,16 +39,16 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
-        eprintln!("? key:\t\t{key:02x?}");
+        veprintln("key", format_args!("{key:02x?}"))
     }
 
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
     crypter.pad(false);
 
     if verbose {
-        eprintln!("? data:\t\t{data:02x?}");
+        veprintln("data", format_args!("{data:02x?}"))
     }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
@@ -64,8 +65,11 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     enc.truncate(pos);
 
     if verbose {
-        eprintln!("? enc:\t\t{enc:02x?}");
-        eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
+        veprintln("enc", format_args!("{enc:02x?}"));
+        veprintln(
+            "sea_magic",
+            format_args!("{:02x?}", SEA_128_MAGIC_NUMBER_ARR),
+        );
     }
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in enc.chunks_exact_mut(16) {
@@ -76,12 +80,12 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     }
 
     if verbose {
-        eprintln!("? xor:\t\t{enc:02x?}");
+        veprintln("xor", format_args!("{enc:02x?}"));
     }
-    Ok(enc.to_vec())
+    len_to_const_arr(&enc)
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<Vec<u8>> {
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -123,7 +127,134 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(denc.to_vec())
+    len_to_const_arr(&denc)
+}
+
+/// Helper function to get the first part for AES-XEX
+///
+/// NOTE: The second key of XEX mode needs to be given to this!
+fn sea_128_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+    let enc0 = sea_128_encrypt(key, tweak, false)?;
+    if verbose {
+        veprintln("enc0", format_args!("{enc0:02x?}"));
+    }
+    Ok(enc0)
+}
+
+pub fn sea_128_decrypt_xex(
+    keys: &([u8; 16], [u8; 16]),
+    tweak: &[u8; 16],
+    input: &[u8],
+    verbose: bool,
+) -> Result<Vec<u8>> {
+    let tweakblock = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
+    if input.len() % 16 != 0 {
+        return Err(anyhow!(
+            "XEX plaintext input of bad length: {}",
+            input.len()
+        ));
+    }
+    let inputs: Vec<&[u8]> = input.chunks_exact(16).collect();
+
+    let mut plain_text: Vec<[u8; 16]> = Vec::new();
+    let mut xorval = tweakblock;
+    let mut buf = [0u8; 16];
+    plain_text.reserve(input.len());
+
+    if verbose {
+        veprintln("ciphertext_c", format_args!("{inputs:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        veprintln("key0", format_args!("{:02x?}", keys.0));
+        veprintln("key1", format_args!("{:02x?}", keys.1));
+    }
+    for input in inputs {
+        if verbose {
+            veprintln("xorval", format_args!("{xorval:02x?}"));
+        }
+        for (byte_idx, (inbyte, xorbyte)) in input.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = inbyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor0", format_args!("{buf:02x?}"));
+        }
+        let tmp = sea_128_decrypt(&keys.0, &buf, false)?;
+        if verbose {
+            veprintln("post denc", format_args!("{tmp:02x?}"));
+        }
+        for (byte_idx, (cybyte, xorbyte)) in tmp.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = cybyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor1", format_args!("{buf:02x?}"));
+        }
+        plain_text.push(buf);
+
+        xorval = F_2_128
+            .mul_alpha(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .to_be_bytes();
+    }
+    if verbose {
+        veprintln("plaintext", format_args!("{plain_text:02x?}"));
+    }
+    Ok(plain_text.concat())
+}
+
+pub fn sea_128_encrypt_xex(
+    keys: &([u8; 16], [u8; 16]),
+    tweak: &[u8; 16],
+    input: &[u8],
+    verbose: bool,
+) -> Result<Vec<u8>> {
+    let tweakblock = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
+    if input.len() % 16 != 0 {
+        return Err(anyhow!(
+            "XEX plaintext input of bad length: {}",
+            input.len()
+        ));
+    }
+    let inputs: Vec<&[u8]> = input.chunks_exact(16).collect();
+
+    let mut cipher_text: Vec<[u8; 16]> = Vec::new();
+    let mut xorval = tweakblock;
+    let mut buf = [0u8; 16];
+    cipher_text.reserve(input.len());
+
+    if verbose {
+        veprintln("plaintext_c", format_args!("{inputs:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        veprintln("key0", format_args!("{:02x?}", keys.0));
+        veprintln("key1", format_args!("{:02x?}", keys.1));
+    }
+    for input in inputs {
+        if verbose {
+            veprintln("xorval", format_args!("{xorval:02x?}"));
+        }
+        for (byte_idx, (inbyte, xorbyte)) in input.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = inbyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor0", format_args!("{buf:02x?}"));
+        }
+        let tmp = sea_128_encrypt(&keys.0, &buf, false)?;
+        if verbose {
+            veprintln("post enc", format_args!("{tmp:02x?}"));
+        }
+        for (byte_idx, (cybyte, xorbyte)) in tmp.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = cybyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor1", format_args!("{buf:02x?}"));
+        }
+        cipher_text.push(buf);
+
+        xorval = F_2_128
+            .mul_alpha(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .to_be_bytes();
+    }
+    if verbose {
+        veprintln("ciphertext", format_args!("{cipher_text:02x?}"));
+    }
+    Ok(cipher_text.concat())
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
@@ -133,12 +264,31 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let key = get_bytes_base64(&testcase.arguments, "key")?;
             let input = get_bytes_base64(&testcase.arguments, "input")?;
 
-            let key: [u8; 16] = vec_to_arr(&key)?;
-            let input: [u8; 16] = vec_to_arr(&input)?;
+            let key: [u8; 16] = len_to_const_arr(&key)?;
+            let input: [u8; 16] = len_to_const_arr(&input)?;
 
             let output = match mode {
                 Mode::Encrypt => sea_128_encrypt(&key, &input, settings.verbose)?,
                 Mode::Decrypt => sea_128_decrypt(&key, &input, settings.verbose)?,
+            };
+            put_bytes(&output)?
+        }
+        Action::Xex => {
+            let mode = get_mode(&testcase.arguments)?;
+            let key = get_bytes_base64(&testcase.arguments, "key")?;
+            let tweak = get_bytes_base64(&testcase.arguments, "tweak")?;
+            let input = get_bytes_base64(&testcase.arguments, "input")?;
+
+            let key: [u8; 32] = len_to_const_arr(&key)?;
+            let keys: ([u8; 16], [u8; 16]) = {
+                let (a, b) = key.split_at(16);
+                (len_to_const_arr(a)?, len_to_const_arr(b)?)
+            };
+            let tweak: [u8; 16] = len_to_const_arr(&tweak)?;
+
+            let output = match mode {
+                Mode::Encrypt => sea_128_encrypt_xex(&keys, &tweak, &input, settings.verbose)?,
+                Mode::Decrypt => sea_128_decrypt_xex(&keys, &tweak, &input, settings.verbose)?,
             };
             put_bytes(&output)?
         }
@@ -161,6 +311,7 @@ fn get_mode(args: &serde_json::Value) -> Result<Mode> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use base64::prelude::*;
 
     fn assert_hex(data: &[u8], correct: &[u8]) {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
@@ -172,7 +323,7 @@ mod test {
         const KEY: [u8; 16] = *b"1238742fsaflk249";
 
         let enc = sea_128_encrypt(&KEY, &PLAIN, true).expect("encrypt fail");
-        let enc = vec_to_arr(&enc).expect("could not convert from vec to arr");
+        let enc = len_to_const_arr(&enc).expect("could not convert from vec to arr");
         let denc = sea_128_decrypt(&KEY, &enc, true).expect("decrypt fail");
 
         assert_hex(&denc, &PLAIN);
@@ -251,5 +402,102 @@ mod test {
         buf.truncate(position);
 
         assert_hex(&PLAIN, &buf);
+    }
+
+    #[test]
+    fn test_sea_128_xex_back_and_forth() {
+        const PLAIN: &[u8; 16 * 3] = b"geheimer geheim text ist total super geheim.....";
+        const KEYS: ([u8; 16], [u8; 16]) = (*b"1238742fsaflk249", *b"abti74kfsaflh2b9");
+        const TWEAK: &[u8; 16] = b"9812485081250825";
+
+        eprintln!("encrypting...");
+        let ciphertext = sea_128_encrypt_xex(&KEYS, TWEAK, PLAIN, true).expect("could not encrypt");
+        eprintln!("decrypting...");
+        veprintln("ciphertext", format_args!("{ciphertext:02x?}"));
+        let plaintext =
+            sea_128_decrypt_xex(&KEYS, TWEAK, &ciphertext, true).expect("could not decrypt");
+        assert_hex(&plaintext, PLAIN);
+    }
+
+    #[test]
+    fn test_sea_128_xex_tweakblock() {
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+        const SOLUTION: &[u8] = &[
+            0xAF, 0x8D, 0x74, 0xBC, 0x32, 0x9E, 0x0D, 0xE0, 0xC9, 0x4E, 0x2C, 0xA4, 0xAF, 0xD1,
+            0x5D, 0xD4,
+        ];
+        veprintln("keys", format_args!("{keys:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        let a = sea_128_xex_enc0(&keys.1, &tweak, true).expect("could not compute the tweakblock");
+        assert_hex(&a, SOLUTION);
+    }
+
+    #[test]
+    fn test_sea_128_xex_encrypt() {
+        let plain: &[u8] = &BASE64_STANDARD
+            .decode("/aOg4jMocLkBLkDLgkHYtFKc2L9jjyd2WXSSyxXQikpMY9ZRnsJE76e9dW9olZIW")
+            .unwrap();
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+        let ciphertext_correct: &[u8] = &BASE64_STANDARD
+            .decode("mHAVhRCKPAPx0BcufG5BZ4+/CbneMV/gRvqK5rtLe0OJgpDU5iT7z2P0R7gEeRDO")
+            .unwrap();
+
+        let ciphertext =
+            sea_128_encrypt_xex(&keys, &tweak, plain, true).expect("could not encrypt");
+        assert_hex(&ciphertext, ciphertext_correct);
+    }
+
+    #[test]
+    fn test_sea_128_xex_decrypt() {
+        let plain_correct: &[u8] = &BASE64_STANDARD
+            .decode("/aOg4jMocLkBLkDLgkHYtFKc2L9jjyd2WXSSyxXQikpMY9ZRnsJE76e9dW9olZIW")
+            .unwrap();
+        let ciphertext: &[u8] = &BASE64_STANDARD
+            .decode("mHAVhRCKPAPx0BcufG5BZ4+/CbneMV/gRvqK5rtLe0OJgpDU5iT7z2P0R7gEeRDO")
+            .unwrap();
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+
+        let plain =
+            sea_128_decrypt_xex(&keys, &tweak, ciphertext, true).expect("could not decrypt");
+        assert_hex(&plain, plain_correct);
     }
 }

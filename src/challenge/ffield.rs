@@ -36,8 +36,8 @@ pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
 /// A finite field over 2^128 with the defining relation [DEFINING_RELATION_F_2_128] as used in
 /// AES.
 pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128);
-/// This is a special polynomial used for multiplication in F_2_128
-pub const SPECIAL_ELEMENT_R: Polynomial = 0b11100001 << 120;
+/// Special element that also finds use in XEX mode
+pub const F_2_128_ALPHA: Polynomial = 0x02000000_00000000_00000000_00000000; // α
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
 #[serde(rename_all = "snake_case")]
@@ -136,10 +136,10 @@ impl FField {
                 format_args!("{}", self.dbg_poly(self.defining_relation)),
             );
         }
-        if self.display_poly(poly_x) == "α" {
+        if poly_x == F_2_128_ALPHA {
             std::mem::swap(&mut poly_y, &mut poly_x);
         }
-        if self.display_poly(poly_y) != "α" {
+        if poly_y != F_2_128_ALPHA {
             panic!("Only multiplying wiht α is supported as of now!");
         }
 
