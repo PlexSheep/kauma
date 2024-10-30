@@ -147,14 +147,56 @@ pub fn sea_128_decrypt_xex(
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    let _enc0 = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
-    if !input.len() % 16 == 0 {
+    let tweakblock = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
+    if input.len() % 16 != 0 {
         return Err(anyhow!(
-            "XEX ciphertext input of bad length: {}",
+            "XEX plaintext input of bad length: {}",
             input.len()
         ));
     }
-    Ok(Vec::new())
+    let inputs: Vec<&[u8]> = input.chunks_exact(16).collect();
+
+    let mut plain_text: Vec<[u8; 16]> = Vec::new();
+    let mut xorval = tweakblock;
+    let mut buf = [0u8; 16];
+    plain_text.reserve(input.len());
+
+    if verbose {
+        veprintln("ciphertext_c", format_args!("{inputs:02x?}"));
+        veprintln("tweak", format_args!("{tweak:02x?}"));
+        veprintln("key0", format_args!("{:02x?}", keys.0));
+        veprintln("key1", format_args!("{:02x?}", keys.1));
+    }
+    for input in inputs {
+        if verbose {
+            veprintln("xorval", format_args!("{xorval:02x?}"));
+        }
+        for (byte_idx, (inbyte, xorbyte)) in input.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = inbyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor0", format_args!("{buf:02x?}"));
+        }
+        let tmp = sea_128_decrypt(&keys.0, &buf, false)?;
+        if verbose {
+            veprintln("post denc", format_args!("{tmp:02x?}"));
+        }
+        for (byte_idx, (cybyte, xorbyte)) in tmp.iter().zip(xorval).enumerate() {
+            buf[byte_idx] = cybyte ^ xorbyte;
+        }
+        if verbose {
+            veprintln("post xor1", format_args!("{buf:02x?}"));
+        }
+        plain_text.push(buf);
+
+        xorval = F_2_128
+            .mul_alpha(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .to_be_bytes();
+    }
+    if verbose {
+        veprintln("plaintext", format_args!("{plain_text:02x?}"));
+    }
+    Ok(plain_text.into_flattened())
 }
 
 pub fn sea_128_encrypt_xex(
