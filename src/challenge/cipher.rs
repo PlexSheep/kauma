@@ -430,4 +430,32 @@ mod test {
             sea_128_encrypt_xex(&keys, &tweak, plain, true).expect("could not encrypt");
         assert_hex(&ciphertext, ciphertext_correct);
     }
+
+    #[test]
+    fn test_sea_128_xex_decrypt() {
+        let plain_correct: &[u8] = &BASE64_STANDARD
+            .decode("/aOg4jMocLkBLkDLgkHYtFKc2L9jjyd2WXSSyxXQikpMY9ZRnsJE76e9dW9olZIW")
+            .unwrap();
+        let ciphertext: &[u8] = &BASE64_STANDARD
+            .decode("mHAVhRCKPAPx0BcufG5BZ4+/CbneMV/gRvqK5rtLe0OJgpDU5iT7z2P0R7gEeRDO")
+            .unwrap();
+        let keys: ([u8; 16], [u8; 16]) = {
+            let v: Vec<_> = BASE64_STANDARD
+                .decode("B1ygNO/CyRYIUYhTSgoUysX5Y/wWLi4UiWaVeloUWs0=")
+                .unwrap()
+                .chunks_exact(16)
+                .map(|c| c.to_owned())
+                .collect();
+            (
+                len_to_const_arr(&v[0]).unwrap(),
+                len_to_const_arr(&v[1]).unwrap(),
+            )
+        };
+        let tweak: [u8; 16] =
+            len_to_const_arr(&BASE64_STANDARD.decode("6VXORr+YYHrd2nVe0OlA+Q==").unwrap()).unwrap();
+
+        let plain =
+            sea_128_decrypt_xex(&keys, &tweak, ciphertext, true).expect("could not decrypt");
+        assert_hex(&plain, plain_correct);
+    }
 }
