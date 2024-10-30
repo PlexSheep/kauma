@@ -13,7 +13,7 @@ jobs:
     name: Check requirements
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: build script may be present for compiling code
         id: check-build
         run: |
