@@ -147,7 +147,7 @@ pub fn sea_128_decrypt_xex(
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    let _enc0 = sea_128_xex_enc0(&keys.0, tweak, verbose)?;
+    let _enc0 = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
     if !input.len() % 16 == 0 {
         return Err(anyhow!(
             "XEX ciphertext input of bad length: {}",
@@ -163,22 +163,22 @@ pub fn sea_128_encrypt_xex(
     input: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
-    let enc0 = sea_128_xex_enc0(&keys.0, tweak, verbose)?;
-    if !input.len() % 16 == 0 {
+    let tweakblock = sea_128_xex_enc0(&keys.1, tweak, verbose)?;
+    if input.len() % 16 != 0 {
         return Err(anyhow!(
             "XEX plaintext input of bad length: {}",
             input.len()
         ));
     }
-    let inputs = input.chunks_exact(16);
+    let inputs: Vec<&[u8]> = input.chunks_exact(16).collect();
 
     let mut cipher_text: Vec<[u8; 16]> = Vec::new();
-    let mut xorval = enc0;
+    let mut xorval = tweakblock;
     let mut buf = [0u8; 16];
     cipher_text.reserve(input.len());
 
     if verbose {
-        veprintln("plaintext", format_args!("{input:02x?}"));
+        veprintln("plaintext_c", format_args!("{inputs:02x?}"));
         veprintln("tweak", format_args!("{tweak:02x?}"));
         veprintln("key0", format_args!("{:02x?}", keys.0));
         veprintln("key1", format_args!("{:02x?}", keys.1));
@@ -193,7 +193,7 @@ pub fn sea_128_encrypt_xex(
         if verbose {
             veprintln("post xor0", format_args!("{buf:02x?}"));
         }
-        let tmp = sea_128_encrypt(&keys.1, &buf, false)?;
+        let tmp = sea_128_encrypt(&keys.0, &buf, false)?;
         if verbose {
             veprintln("post enc", format_args!("{tmp:02x?}"));
         }
