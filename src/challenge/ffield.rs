@@ -387,4 +387,37 @@ mod test {
         );
         assert_eq_polys(sol, SOLUTION);
     }
+
+    #[test]
+    fn test_mul_4() {
+        const SOLUTION: Polynomial = 0x40A81400000000000000000000000000;
+        let sol = F_2_128.mul(
+            0x03010000000000000000000000000080,
+            0x80100000000000000000000000000000,
+            true,
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_5() {
+        const SOLUTION: Polynomial = 0x50801400000000000000000000000000;
+        let sol = F_2_128.mul(
+            0x03010000000000000000000000000080,
+            0xA0100000000000000000000000000000,
+            true,
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_6() {
+        const SOLUTION: Polynomial = 0x85240000000000000000000000000000;
+        let sol = F_2_128.mul(
+            0x01120000000000000000000000000080,
+            0x02000000000000000000000000000000,
+            true,
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
 }
