@@ -1,0 +1,14 @@
+[package]
+rust-version = "1.75"
+name = "bint-easy"
+version = "0.1.0"
+edition = "2021"
+publish = false                                         # for now
+authors = ["Christoph J. Scherr <software@cscherr.de>"]
+description = "Easy large integer types"
+readme = "README.md"
+# homepage and repository will be adjusted after kauma class is over
+homepage = "https://github.com/PlexSheep/kauma"
+repository = "https://github.com/PlexSheep/kauma"
+
+[dependencies]
