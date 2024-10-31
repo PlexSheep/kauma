@@ -1,10 +1,12 @@
 //! An unsigned integer type with 256 bits
 
+use std::cmp::Ordering;
+use std::fmt::{Binary, Display, LowerHex, UpperHex};
 use std::ops::{Add, Shl, Shr};
 
 use crate::bit_at_i;
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, PartialOrd, Ord, Default)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Default)]
 pub struct U256(u128, u128);
 
 impl U256 {
@@ -69,15 +71,37 @@ impl Add for U256 {
     }
 }
 
-impl Shl for U256 {
+impl Shl<usize> for U256 {
     type Output = Self;
     // FIXME: only works for rhs==1
-    fn shl(self, rhs: Self) -> Self::Output {
+    fn shl(self, rhs: usize) -> Self::Output {
+        if rhs != 1 {
+            panic!("shift only implemented for rhs=1");
+        }
         let carry_bit = bit_at_i(self.1, 127);
         if carry_bit {
-            Self((self.0 << rhs.0) | 1, self.1 << rhs.1)
+            Self((self.0 << rhs) | 1, self.1 << rhs)
         } else {
-            Self(self.0 << rhs.0, self.1 << rhs.1)
+            Self(self.0 << rhs, self.1 << rhs)
+        }
+    }
+}
+
+impl Shr<usize> for U256 {
+    type Output = Self;
+    // FIXME: only works for rhs==1
+    fn shr(self, rhs: usize) -> Self::Output {
+        if rhs != 1 {
+            panic!("shift only implemented for rhs=1");
+        }
+        let carry_bit = bit_at_i(self.0, 0);
+        if carry_bit {
+            Self(self.0 >> rhs, (self.1 >> rhs) | 1 << 127)
+        } else {
+            Self(self.0 >> rhs, self.1 >> rhs)
+        }
+    }
+}
         }
     }
 }
@@ -147,19 +171,45 @@ mod test {
     #[test]
     fn test_u256_lshift_0() {
         let a = U256(0, 1);
-        assert_eq!(a << U256(0, 1), U256(0, 2))
+        assert_eq!(a << 1, U256(0, 2))
     }
 
     #[test]
     fn test_u256_lshift_1() {
         let a = U256(0, 1 << 127);
-        assert_eq!(a << U256(0, 1), U256(1, 0))
+        assert_eq!(a << 1, U256(1, 0))
     }
 
     #[test]
     fn test_u256_lshift_2() {
         let a = U256(0, u128::MAX);
-        assert_eq!(a << U256(0, 1), U256(1, u128::MAX << 1))
+        assert_eq!(a << 1, U256(1, u128::MAX << 1))
+    }
+
+    #[test]
+    #[ignore = "will do shift with n later"]
+    fn test_u256_lshift_3() {
+        let a = U256(0, u128::MAX);
+        assert_eq!(a << 4, U256(16, u128::MAX << 4))
+    }
+
+    #[test]
+    fn test_u256_rshift_0() {
+        let a = U256(0, 1);
+        assert_eq!(a >> 1, U256(0, 0))
+    }
+
+    #[test]
+    fn test_u256_rshift_1() {
+        let a = U256(1, 0);
+        assert_eq!(a >> 1, U256(0, 1 << 127))
+    }
+
+    #[test]
+    #[ignore = "will do shift with n later"]
+    fn test_u256_rshift_2() {
+        let a = U256(1, 0);
+        assert_eq!(a >> 5, U256(0, 1 << (128 - 5)))
     }
 
     // this test will fail on a big endian system
