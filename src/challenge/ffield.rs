@@ -6,10 +6,11 @@ use std::fmt::Display;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
+use bint_easy::u256::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
-use crate::common::{byte_to_bits, veprintln};
+use crate::common::{bit_at_i, byte_to_bits, veprintln};
 use crate::settings::Settings;
 
 use super::{Action, Testcase};
@@ -29,7 +30,8 @@ pub type Polynomial = u128;
 // NOTE: this might be just wrong, and I don't know how to get it into a u128. The α^128 would be the
 // 129th bit, no? I could just abstract it away and store α^7 + α^2 + α + 1 while having the α^128
 // implied...
-pub const DEFINING_RELATION_F_2_128: Polynomial = 0x87000000_00000000_00000000_00000000;
+pub const DEFINING_RELATION_F_2_128: U256 = U256(1, DEFINING_RELATION_F_2_128_SHORT);
+pub const DEFINING_RELATION_F_2_128_SHORT: Polynomial = 0x87000000_00000000_00000000_00000000;
 pub const DEFINING_RELATION_F_2_3: Polynomial = 0xb;
 pub const DEFINING_RELATION_F_2_4: Polynomial = 0x13;
 pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
@@ -51,7 +53,7 @@ pub enum Semantic {
 ///
 /// For the purposes of kauma-analyzer, we will focus on binary finite fields, so those with a base
 /// of 2^n.
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FField {
     /// Forms the base as 2^n
     pub n: u64,
@@ -60,12 +62,12 @@ pub struct FField {
     /// the value of that bit.
     ///
     /// Note that the byte order is from least to highest, unintuitively.
-    pub defining_relation: Polynomial,
+    pub defining_relation: U256,
 }
 
 impl FField {
     /// Create a new finite field with a base that is a power of two.
-    pub const fn new(n: u64, defining_relation: Polynomial) -> Self {
+    pub const fn new(n: u64, defining_relation: U256) -> Self {
         Self {
             n,
             defining_relation,
@@ -104,10 +106,6 @@ impl FField {
         buf
     }
 
-    /// Reduces the given [Polynomial] with the [defining relation](Self::defining_relation)
-    pub const fn reduce(&self, poly: Polynomial) -> Polynomial {
-        poly ^ self.defining_relation
-    }
     /// Get the sum of two [polynomials](Polynomial)
     ///
     /// Adds poly a and b together.
@@ -124,46 +122,49 @@ impl FField {
     /// Multiplies poly a by poly b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular multiplication of two numbers!
+    // FIXME: some crap happens still. The reason has to be endianess and bitorder
+    // shenanigans, as always
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul(&self, mut poly_x: Polynomial, mut poly_y: Polynomial, verbose: bool) -> Polynomial {
-        if verbose {
-            veprintln("x", format_args!("{}", self.dbg_poly(poly_x)));
-            veprintln("y", format_args!("{}", self.dbg_poly(poly_y)));
-            veprintln(
-                "relation",
-                format_args!("{}", self.dbg_poly(self.defining_relation)),
-            );
-        }
-        if poly_x == F_2_128_ALPHA {
-            std::mem::swap(&mut poly_y, &mut poly_x);
-        }
-        if poly_y != F_2_128_ALPHA {
-            panic!("Only multiplying wiht α is supported as of now!");
-        }
-
-        let mut x: Polynomial = poly_x.to_be();
-        let carry: bool = x >> 127 == 1;
-
-        x <<= 1;
-        x = x.swap_bytes();
-
+    pub fn mul(&self, x: Polynomial, y: Polynomial, verbose: bool) -> Polynomial {
         if verbose {
             veprintln("x", format_args!("{}", self.dbg_poly(x)));
+            veprintln("y", format_args!("{}", self.dbg_poly(y)));
+            veprintln(
+                "relation~",
+                format_args!("{}", self.dbg_poly(self.defining_relation.0.swap_bytes())),
+            );
+        }
+        let z: Polynomial;
+        let mut accumulator: U256 = U256::from(x);
+        let mut xorlist: Vec<Polynomial> = Vec::new();
+
+        if bit_at_i(y, 0) {
+            xorlist.push(accumulator.try_into().unwrap());
         }
 
-        if verbose {
-            veprintln("carry", format_args!("{carry}"));
-        }
-        if !carry {
-        } else {
-            x ^= self.defining_relation;
+        for i in 1..128 {
+            let bit = bit_at_i(y, i);
+            if !bit {
+                continue;
+            }
+            accumulator <<= 1;
+            if accumulator.upper() != 0 {
+                accumulator ^= self.defining_relation;
+            }
+            xorlist.push(
+                accumulator
+                    .try_into()
+                    .expect("buf is still too big to fit into a u128 for some reason"),
+            );
         }
 
+        z = xorlist.into_iter().fold(0, |acc, v| acc ^ v);
+
         if verbose {
-            veprintln("done", format_args!("{}", self.dbg_poly(x)));
+            veprintln("done", format_args!("{}", self.dbg_poly(z)));
         }
-        x
+        z
     }
 
     pub fn coefficients_to_poly(
@@ -213,9 +214,9 @@ impl Display for FField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "F_2^({}); {}",
+            "F_2^({}); ~{}",
             self.n,
-            self.display_poly(self.defining_relation)
+            self.display_poly(self.defining_relation.0)
         )
     }
 }
