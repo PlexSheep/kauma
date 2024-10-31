@@ -126,12 +126,7 @@ impl FField {
     /// This is not regular multiplication of two numbers!
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul_alpha(
-        &self,
-        mut poly_x: Polynomial,
-        mut poly_y: Polynomial,
-        verbose: bool,
-    ) -> Polynomial {
+    pub fn mul(&self, mut poly_x: Polynomial, mut poly_y: Polynomial, verbose: bool) -> Polynomial {
         if verbose {
             veprintln("x", format_args!("{}", self.dbg_poly(poly_x)));
             veprintln("y", format_args!("{}", self.dbg_poly(poly_y)));
@@ -257,7 +252,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
 
-            let sol = F_2_128.mul_alpha(a, b, settings.verbose);
+            let sol = F_2_128.mul(a, b, settings.verbose);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
@@ -352,7 +347,7 @@ mod test {
     #[test]
     fn test_mul_0() {
         const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
-        let sol = F_2_128.mul_alpha(
+        let sol = F_2_128.mul(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
             true,
@@ -363,7 +358,7 @@ mod test {
     #[test]
     fn test_mul_1() {
         const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
-        let sol = F_2_128.mul_alpha(
+        let sol = F_2_128.mul(
             0x02000000_00000000_00000000_00000000, // α
             0x02000000_00000000_00000000_00000000, // α
             true,
@@ -374,17 +369,18 @@ mod test {
     #[test]
     fn test_mul_2() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
-        let sol = F_2_128.mul_alpha(
+        let sol = F_2_128.mul(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             0x02000000_00000000_00000000_00000000, // α
             true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
+
     #[test]
     fn test_mul_3() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
-        let sol = F_2_128.mul_alpha(
+        let sol = F_2_128.mul(
             0x02000000_00000000_00000000_00000000, // α
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             true,
