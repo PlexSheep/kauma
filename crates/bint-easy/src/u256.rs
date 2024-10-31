@@ -1,7 +1,7 @@
 //! An unsigned integer type with 256 bits
 
 use std::cmp::Ordering;
-use std::fmt::{Binary, Display, LowerHex, UpperHex};
+use std::fmt::{Binary, LowerHex, UpperHex};
 use std::ops::{Add, Shl, Shr};
 
 use crate::bit_at_i;
