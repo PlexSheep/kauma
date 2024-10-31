@@ -14,6 +14,12 @@
 /// Implements [U256].
 pub mod u256;
 
+/// The error type returned when a checked integral type conversion fails.
+///
+/// The one from the std library can not be created from other crates
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct TryFromIntError(pub(crate) ());
+
 /// Helper function to get the bit at position i. Left is 127 and right is 0.
 #[inline]
 pub(crate) fn bit_at_i(num: u128, i: usize) -> bool {

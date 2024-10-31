@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 use std::fmt::{Binary, LowerHex, UpperHex};
-use std::ops::{Add, Shl, Shr};
+use std::ops::{Add, Shl, ShlAssign, Shr, ShrAssign};
 
 use crate::bit_at_i;
 
@@ -13,6 +13,36 @@ impl U256 {
     pub const MAX: Self = U256(u128::MAX, u128::MAX);
     pub const MIN: Self = U256(0, 0);
     pub const BITS: u32 = 256;
+
+    #[inline]
+    pub const fn upper(self) -> u128 {
+        self.0
+    }
+
+    #[inline]
+    pub const fn lower(self) -> u128 {
+        self.1
+    }
+
+    #[inline]
+    pub const fn upper_ref(&self) -> &u128 {
+        &self.0
+    }
+
+    #[inline]
+    pub const fn lower_ref(&self) -> &u128 {
+        &self.1
+    }
+
+    #[inline]
+    pub fn upper_mut(&mut self) -> &mut u128 {
+        &mut self.0
+    }
+
+    #[inline]
+    pub fn lower_mut(&mut self) -> &mut u128 {
+        &mut self.1
+    }
 
     #[inline]
     const fn new(upper: u128, lower: u128) -> Self {
@@ -71,6 +101,13 @@ impl Add for U256 {
     }
 }
 
+impl std::ops::BitXor for U256 {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        U256(self.0 ^ rhs.0, self.1 ^ rhs.1)
+    }
+}
+
 impl Shl<usize> for U256 {
     type Output = Self;
     // FIXME: only works for rhs==1
@@ -100,6 +137,24 @@ impl Shr<usize> for U256 {
         } else {
             Self(self.0 >> rhs, self.1 >> rhs)
         }
+    }
+}
+
+impl ShlAssign<usize> for U256 {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = *self << rhs;
+    }
+}
+
+impl ShrAssign<usize> for U256 {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = *self >> rhs;
+    }
+}
+
+impl std::ops::BitXorAssign for U256 {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs;
     }
 }
 
@@ -196,6 +251,18 @@ impl From<U256> for [u128; 2] {
 impl<'a> From<&'a U256> for [&'a u128; 2] {
     fn from(value: &'a U256) -> Self {
         [&value.0, &value.1]
+    }
+}
+
+impl TryFrom<U256> for u128 {
+    type Error = crate::TryFromIntError;
+
+    fn try_from(value: U256) -> Result<Self, Self::Error> {
+        if value.0 != 0 {
+            Err(crate::TryFromIntError(()))
+        } else {
+            Ok(value.1)
+        }
     }
 }
 
