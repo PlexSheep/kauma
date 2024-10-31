@@ -6,6 +6,10 @@
 //!
 //! The aim of this library is to be simple to use and understand. Big numbers are just tuple
 //! structs / structs with arrays of [u128].
+//!
+//! Honorable Mentions:
+//!
+//! The `u256` crate was helpful when trying to implement the trait functions for [U256](u256::U256).
 
 /// Implements [U256].
 pub mod u256;
