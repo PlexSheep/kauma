@@ -7,7 +7,7 @@ use std::ops::{Add, Shl, Shr};
 use crate::bit_at_i;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Default)]
-pub struct U256(u128, u128);
+pub struct U256(pub u128, pub u128);
 
 impl U256 {
     pub const MAX: Self = U256(u128::MAX, u128::MAX);
