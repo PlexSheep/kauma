@@ -102,6 +102,55 @@ impl Shr<usize> for U256 {
         }
     }
 }
+
+impl Ord for U256 {
+    #[allow(clippy::comparison_chain)] // I can't use cmp here as that's what I'm implementing
+    fn cmp(&self, other: &U256) -> Ordering {
+        if self.0 < other.0 {
+            return Ordering::Less;
+        } else if self.0 > other.0 {
+            return Ordering::Greater;
+        }
+        if self.1 < other.1 {
+            return Ordering::Less;
+        } else if self.1 > other.1 {
+            return Ordering::Greater;
+        }
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for U256 {
+    fn partial_cmp(&self, other: &U256) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Binary for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Binary::fmt(&self.0, f)?;
+        std::fmt::Binary::fmt(&self.1, f)
+    }
+}
+
+impl LowerHex for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 == 0 {
+            std::fmt::LowerHex::fmt(&self.1, f)
+        } else {
+            std::fmt::LowerHex::fmt(&self.0, f)?;
+            write!(f, "{:032x}", self.1)
+        }
+    }
+}
+
+impl UpperHex for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 == 0 {
+            std::fmt::LowerHex::fmt(&self.1, f)
+        } else {
+            std::fmt::LowerHex::fmt(&self.0, f)?;
+            write!(f, "{:032X}", self.1)
         }
     }
 }
@@ -247,5 +296,17 @@ mod test {
                 0, 0, 0, 0, 255,
             ]
         )
+    }
+
+    #[test]
+    fn test_u256_display() {
+        assert_eq!(
+            format!("{:x}", U256(1, 15)),
+            "10000000000000000000000000000000f"
+        );
+        assert_eq!(
+            format!("{:X}", U256(1, 15)),
+            "10000000000000000000000000000000F"
+        );
     }
 }
