@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 use std::fmt::{Binary, LowerHex, UpperHex};
-use std::ops::{Add, Shl, Shr};
+use std::ops::{Add, Shl, ShlAssign, Shr, ShrAssign};
 
 use crate::bit_at_i;
 
@@ -14,12 +14,53 @@ impl U256 {
     pub const MIN: Self = U256(0, 0);
     pub const BITS: u32 = 256;
 
+    /// get the upper [u128]
+    #[inline]
+    pub const fn upper(self) -> u128 {
+        self.0
+    }
+
+    /// get the lower [u128]
+    #[inline]
+    pub const fn lower(self) -> u128 {
+        self.1
+    }
+
+    /// get a reference to the upper [u128]
+    #[inline]
+    pub const fn upper_ref(&self) -> &u128 {
+        &self.0
+    }
+
+    /// get a reference to the lower [u128]
+    #[inline]
+    pub const fn lower_ref(&self) -> &u128 {
+        &self.1
+    }
+
+    /// get a mutable reference to the upper [u128]
+    #[inline]
+    pub fn upper_mut(&mut self) -> &mut u128 {
+        &mut self.0
+    }
+
+    /// get a mutable reference to the lower [u128]
+    #[inline]
+    pub fn lower_mut(&mut self) -> &mut u128 {
+        &mut self.1
+    }
+
     #[inline]
     const fn new(upper: u128, lower: u128) -> Self {
         Self(upper, lower)
     }
 
-    /// to native endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// native byte order.
+    ///
+    /// As the target platform's native endianness is used, portable code
+    /// should use [`to_be_bytes`](U256::to_be_bytes) or
+    /// [`to_le_bytes`](U256::to_le_bytes), as appropriate, instead.
     pub fn to_ne_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -32,7 +73,8 @@ impl U256 {
         buffer
     }
 
-    /// to big endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// big-endian (network) byte order.
     pub fn to_be_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -45,7 +87,8 @@ impl U256 {
         buffer
     }
 
-    /// to little endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// little-endian byte order.
     pub fn to_le_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -56,6 +99,48 @@ impl U256 {
             .copy_from_slice(&self.0.to_le_bytes());
 
         buffer
+    }
+
+    /// swap upper and lower 128 bits around
+    pub fn swap_parts(self) -> Self {
+        Self(self.1, self.0)
+    }
+
+    /// Reverses the byte order of the integer.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// # use bint_easy::u256::U256;
+    /// let n = U256::from(1);
+    /// assert_eq!(format!("{n:x}"), "0000000000000000000000000000000000000000000000000000000000000001");
+    /// let n = n.swap_bytes();
+    /// assert_eq!(format!("{n:064x}"), "0100000000000000000000000000000000000000000000000000000000000000");
+    /// ```
+    pub fn swap_bytes(self) -> Self {
+        let t = self.swap_parts();
+        Self(t.0.swap_bytes(), t.1.swap_bytes())
+    }
+
+    /// Reverses the order of bits in the integer. The least significant bit becomes the most significant bit,
+    /// second least-significant bit becomes second most-significant bit, etc.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// # use bint_easy::u256::U256;
+    /// let n = U256::from(1);
+    /// assert_eq!(format!("{n:x}"), "0000000000000000000000000000000000000000000000000000000000000001");
+    /// let n = n.reverse_bits();
+    /// assert_eq!(format!("{n:064x}"), "8000000000000000000000000000000000000000000000000000000000000000");
+    /// ```
+    pub fn reverse_bits(self) -> Self {
+        let t = self.swap_parts();
+        Self(t.0.reverse_bits(), t.1.reverse_bits())
     }
 }
 
@@ -68,6 +153,13 @@ impl Add for U256 {
         } else {
             Self(self.0 + rhs.0, self.1 + rhs.1)
         }
+    }
+}
+
+impl std::ops::BitXor for U256 {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        U256(self.0 ^ rhs.0, self.1 ^ rhs.1)
     }
 }
 
@@ -103,6 +195,75 @@ impl Shr<usize> for U256 {
     }
 }
 
+impl ShlAssign<usize> for U256 {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = *self << rhs;
+    }
+}
+
+impl ShrAssign<usize> for U256 {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = *self >> rhs;
+    }
+}
+
+impl std::ops::BitXorAssign for U256 {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs;
+    }
+}
+
+impl std::ops::BitAnd for U256 {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        U256(self.0 & rhs.0, self.1 & rhs.1)
+    }
+}
+
+impl std::ops::BitXor<u128> for U256 {
+    type Output = Self;
+    fn bitxor(self, rhs: u128) -> Self::Output {
+        U256(self.0, self.1 ^ rhs)
+    }
+}
+
+impl std::ops::BitAnd<u128> for U256 {
+    type Output = Self;
+    fn bitand(self, rhs: u128) -> Self::Output {
+        U256(self.0, self.1 & rhs)
+    }
+}
+
+impl std::ops::BitAndAssign for U256 {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
+impl PartialEq<usize> for U256 {
+    fn eq(&self, other: &usize) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<i32> for U256 {
+    fn eq(&self, other: &i32) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<u32> for U256 {
+    fn eq(&self, other: &u32) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<u128> for U256 {
+    fn eq(&self, other: &u128) -> bool {
+        self.upper() == 0 && self.lower() == *other
+    }
+}
+
 impl Ord for U256 {
     #[allow(clippy::comparison_chain)] // I can't use cmp here as that's what I'm implementing
     fn cmp(&self, other: &U256) -> Ordering {
@@ -128,30 +289,22 @@ impl PartialOrd for U256 {
 
 impl Binary for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Binary::fmt(&self.0, f)?;
-        std::fmt::Binary::fmt(&self.1, f)
+        write!(f, "{:032b}", self.upper())?;
+        write!(f, "{:032b}", self.lower())
     }
 }
 
 impl LowerHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 == 0 {
-            std::fmt::LowerHex::fmt(&self.1, f)
-        } else {
-            std::fmt::LowerHex::fmt(&self.0, f)?;
-            write!(f, "{:032x}", self.1)
-        }
+        write!(f, "{:032x}", self.upper())?;
+        write!(f, "{:032x}", self.lower())
     }
 }
 
 impl UpperHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 == 0 {
-            std::fmt::LowerHex::fmt(&self.1, f)
-        } else {
-            std::fmt::LowerHex::fmt(&self.0, f)?;
-            write!(f, "{:032X}", self.1)
-        }
+        write!(f, "{:032X}", self.upper())?;
+        write!(f, "{:032X}", self.lower())
     }
 }
 
@@ -171,6 +324,12 @@ impl From<u64> for U256 {
 
 impl From<u32> for U256 {
     fn from(value: u32) -> Self {
+        Self::new(0, value as u128)
+    }
+}
+
+impl From<i32> for U256 {
+    fn from(value: i32) -> Self {
         Self::new(0, value as u128)
     }
 }
@@ -196,6 +355,18 @@ impl From<U256> for [u128; 2] {
 impl<'a> From<&'a U256> for [&'a u128; 2] {
     fn from(value: &'a U256) -> Self {
         [&value.0, &value.1]
+    }
+}
+
+impl TryFrom<U256> for u128 {
+    type Error = crate::TryFromIntError;
+
+    fn try_from(value: U256) -> Result<Self, Self::Error> {
+        if value.0 != 0 {
+            Err(crate::TryFromIntError(()))
+        } else {
+            Ok(value.1)
+        }
     }
 }
 
@@ -302,11 +473,11 @@ mod test {
     fn test_u256_display() {
         assert_eq!(
             format!("{:x}", U256(1, 15)),
-            "10000000000000000000000000000000f"
+            "000000000000000000000000000000010000000000000000000000000000000f"
         );
         assert_eq!(
             format!("{:X}", U256(1, 15)),
-            "10000000000000000000000000000000F"
+            "000000000000000000000000000000010000000000000000000000000000000F"
         );
     }
 }
