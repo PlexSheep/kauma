@@ -113,9 +113,10 @@ impl U256 {
     /// Basic usage:
     ///
     /// ```
+    /// # use bint_easy::u256::U256;
     /// let n = U256::from(1);
-    /// assert_eq!(format!("{n}"), "1");
-    /// let m = n.swap_bytes();
+    /// assert_eq!(format!("{n:x}"), "0000000000000000000000000000000000000000000000000000000000000001");
+    /// let n = n.swap_bytes();
     /// assert_eq!(format!("{n:064x}"), "0100000000000000000000000000000000000000000000000000000000000000");
     /// ```
     pub fn swap_bytes(self) -> Self {
@@ -131,8 +132,11 @@ impl U256 {
     /// Basic usage:
     ///
     /// ```rust
-    /// let m = n.reverse_bits();
-    ///
+    /// # use bint_easy::u256::U256;
+    /// let n = U256::from(1);
+    /// assert_eq!(format!("{n:x}"), "0000000000000000000000000000000000000000000000000000000000000001");
+    /// let n = n.reverse_bits();
+    /// assert_eq!(format!("{n:064x}"), "8000000000000000000000000000000000000000000000000000000000000000");
     /// ```
     pub fn reverse_bits(self) -> Self {
         let t = self.swap_parts();
@@ -285,22 +289,22 @@ impl PartialOrd for U256 {
 
 impl Binary for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Binary::fmt(&self.0, f)?;
-        std::fmt::Binary::fmt(&self.1, f)
+        write!(f, "{:032b}", self.upper())?;
+        write!(f, "{:032b}", self.lower())
     }
 }
 
 impl LowerHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::LowerHex::fmt(&self.upper(), f)?;
-        std::fmt::LowerHex::fmt(&self.lower(), f)
+        write!(f, "{:032x}", self.upper())?;
+        write!(f, "{:032x}", self.lower())
     }
 }
 
 impl UpperHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::UpperHex::fmt(&self.upper(), f)?;
-        std::fmt::UpperHex::fmt(&self.lower(), f)
+        write!(f, "{:032X}", self.upper())?;
+        write!(f, "{:032X}", self.lower())
     }
 }
 
@@ -469,11 +473,11 @@ mod test {
     fn test_u256_display() {
         assert_eq!(
             format!("{:x}", U256(1, 15)),
-            "10000000000000000000000000000000f"
+            "000000000000000000000000000000010000000000000000000000000000000f"
         );
         assert_eq!(
             format!("{:X}", U256(1, 15)),
-            "10000000000000000000000000000000F"
+            "000000000000000000000000000000010000000000000000000000000000000F"
         );
     }
 }
