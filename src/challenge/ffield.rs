@@ -1,6 +1,5 @@
 //! multiply / add polynomials in a gallois field
 
-use core::panic;
 use std::default::Default;
 use std::fmt::Display;
 
