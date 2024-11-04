@@ -87,6 +87,28 @@ impl U256 {
 
         buffer
     }
+
+    /// swap upper and lower 128 bits around
+    pub fn swap_parts(self) -> Self {
+        Self(self.1, self.0)
+    }
+
+    /// Reverses the byte order of the integer.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```
+    /// let n = U256::from(1);
+    /// assert_eq!(format!("{n}"), "1");
+    /// let m = n.swap_bytes();
+    /// assert_eq!(format!("{n:064x}"), "0100000000000000000000000000000000000000000000000000000000000000");
+    /// ```
+    pub fn swap_bytes(self) -> Self {
+        let t = self.swap_parts();
+        Self(t.0.swap_bytes(), t.1.swap_bytes())
+    }
 }
 
 impl Add for U256 {
