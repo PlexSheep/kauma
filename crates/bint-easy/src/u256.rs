@@ -14,31 +14,37 @@ impl U256 {
     pub const MIN: Self = U256(0, 0);
     pub const BITS: u32 = 256;
 
+    /// get the upper [u128]
     #[inline]
     pub const fn upper(self) -> u128 {
         self.0
     }
 
+    /// get the lower [u128]
     #[inline]
     pub const fn lower(self) -> u128 {
         self.1
     }
 
+    /// get a reference to the upper [u128]
     #[inline]
     pub const fn upper_ref(&self) -> &u128 {
         &self.0
     }
 
+    /// get a reference to the lower [u128]
     #[inline]
     pub const fn lower_ref(&self) -> &u128 {
         &self.1
     }
 
+    /// get a mutable reference to the upper [u128]
     #[inline]
     pub fn upper_mut(&mut self) -> &mut u128 {
         &mut self.0
     }
 
+    /// get a mutable reference to the lower [u128]
     #[inline]
     pub fn lower_mut(&mut self) -> &mut u128 {
         &mut self.1
@@ -49,7 +55,12 @@ impl U256 {
         Self(upper, lower)
     }
 
-    /// to native endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// native byte order.
+    ///
+    /// As the target platform's native endianness is used, portable code
+    /// should use [`to_be_bytes`](U256::to_be_bytes) or
+    /// [`to_le_bytes`](U256::to_le_bytes), as appropriate, instead.
     pub fn to_ne_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -62,7 +73,8 @@ impl U256 {
         buffer
     }
 
-    /// to big endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// big-endian (network) byte order.
     pub fn to_be_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -75,7 +87,8 @@ impl U256 {
         buffer
     }
 
-    /// to little endian bytes
+    /// Return the memory representation of this integer as a byte array in
+    /// little-endian byte order.
     pub fn to_le_bytes(self) -> [u8; 32] {
         let mut buffer: [u8; 32] = [0; 32];
         buffer[0..16]
@@ -108,6 +121,22 @@ impl U256 {
     pub fn swap_bytes(self) -> Self {
         let t = self.swap_parts();
         Self(t.0.swap_bytes(), t.1.swap_bytes())
+    }
+
+    /// Reverses the order of bits in the integer. The least significant bit becomes the most significant bit,
+    /// second least-significant bit becomes second most-significant bit, etc.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```rust
+    /// let m = n.reverse_bits();
+    ///
+    /// ```
+    pub fn reverse_bits(self) -> Self {
+        let t = self.swap_parts();
+        Self(t.0.reverse_bits(), t.1.reverse_bits())
     }
 }
 
@@ -205,30 +234,28 @@ impl PartialOrd for U256 {
 
 impl Binary for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Binary::fmt(&self.0, f)?;
+        if self.upper() > 0 {
+            std::fmt::Binary::fmt(&self.0, f)?;
+        }
         std::fmt::Binary::fmt(&self.1, f)
     }
 }
 
 impl LowerHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 == 0 {
-            std::fmt::LowerHex::fmt(&self.1, f)
-        } else {
-            std::fmt::LowerHex::fmt(&self.0, f)?;
-            write!(f, "{:032x}", self.1)
+        if self.upper() > 0 {
+            std::fmt::LowerHex::fmt(&self.upper(), f)?;
         }
+        std::fmt::LowerHex::fmt(&self.lower(), f)
     }
 }
 
 impl UpperHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.0 == 0 {
-            std::fmt::LowerHex::fmt(&self.1, f)
-        } else {
-            std::fmt::LowerHex::fmt(&self.0, f)?;
-            write!(f, "{:032X}", self.1)
+        if self.upper() > 0 {
+            std::fmt::UpperHex::fmt(&self.upper(), f)?;
         }
+        std::fmt::UpperHex::fmt(&self.lower(), f)
     }
 }
 
