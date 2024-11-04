@@ -209,6 +209,57 @@ impl std::ops::BitXorAssign for U256 {
     }
 }
 
+impl std::ops::BitAnd for U256 {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        U256(self.0 & rhs.0, self.1 & rhs.1)
+    }
+}
+
+impl std::ops::BitXor<u128> for U256 {
+    type Output = Self;
+    fn bitxor(self, rhs: u128) -> Self::Output {
+        U256(self.0, self.1 ^ rhs)
+    }
+}
+
+impl std::ops::BitAnd<u128> for U256 {
+    type Output = Self;
+    fn bitand(self, rhs: u128) -> Self::Output {
+        U256(self.0, self.1 & rhs)
+    }
+}
+
+impl std::ops::BitAndAssign for U256 {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
+impl PartialEq<usize> for U256 {
+    fn eq(&self, other: &usize) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<i32> for U256 {
+    fn eq(&self, other: &i32) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<u32> for U256 {
+    fn eq(&self, other: &u32) -> bool {
+        self.upper() == 0 && self.lower() == (*other as u128)
+    }
+}
+
+impl PartialEq<u128> for U256 {
+    fn eq(&self, other: &u128) -> bool {
+        self.upper() == 0 && self.lower() == *other
+    }
+}
+
 impl Ord for U256 {
     #[allow(clippy::comparison_chain)] // I can't use cmp here as that's what I'm implementing
     fn cmp(&self, other: &U256) -> Ordering {
@@ -234,27 +285,21 @@ impl PartialOrd for U256 {
 
 impl Binary for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.upper() > 0 {
-            std::fmt::Binary::fmt(&self.0, f)?;
-        }
+        std::fmt::Binary::fmt(&self.0, f)?;
         std::fmt::Binary::fmt(&self.1, f)
     }
 }
 
 impl LowerHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.upper() > 0 {
-            std::fmt::LowerHex::fmt(&self.upper(), f)?;
-        }
+        std::fmt::LowerHex::fmt(&self.upper(), f)?;
         std::fmt::LowerHex::fmt(&self.lower(), f)
     }
 }
 
 impl UpperHex for U256 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.upper() > 0 {
-            std::fmt::UpperHex::fmt(&self.upper(), f)?;
-        }
+        std::fmt::UpperHex::fmt(&self.upper(), f)?;
         std::fmt::UpperHex::fmt(&self.lower(), f)
     }
 }
@@ -275,6 +320,12 @@ impl From<u64> for U256 {
 
 impl From<u32> for U256 {
     fn from(value: u32) -> Self {
+        Self::new(0, value as u128)
+    }
+}
+
+impl From<i32> for U256 {
+    fn from(value: i32) -> Self {
         Self::new(0, value as u128)
     }
 }
