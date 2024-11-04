@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
 use crate::common::{bit_at_i, byte_to_bits, veprintln};
-use crate::settings::Settings;
+use crate::settings::{Settings, DEFAULT_SETTINGS};
 
 use super::{Action, Testcase};
 
@@ -36,7 +36,7 @@ pub const DEFINING_RELATION_F_2_4: Polynomial = 0x13;
 pub const DEFINING_RELATION_F_2_8: Polynomial = 0x11b;
 /// A finite field over 2^128 with the defining relation [DEFINING_RELATION_F_2_128] as used in
 /// AES.
-pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128);
+pub const F_2_128: FField = FField::new(2, DEFINING_RELATION_F_2_128, DEFAULT_SETTINGS);
 /// Special element that also finds use in XEX mode
 pub const F_2_128_ALPHA: Polynomial = 0x02000000_00000000_00000000_00000000; // α
 
@@ -62,16 +62,35 @@ pub struct FField {
     ///
     /// Note that the byte order is from least to highest, unintuitively.
     pub defining_relation: U256,
+    pub settings: Settings,
 }
 
 impl FField {
     /// Create a new finite field with a base that is a power of two.
-    pub const fn new(n: u64, defining_relation: U256) -> Self {
+    pub const fn new(n: u64, defining_relation: U256, settings: Settings) -> Self {
         Self {
             n,
             defining_relation,
+            settings,
         }
     }
+
+    pub fn set_settings(&mut self, settings: &Settings) {
+        self.settings = *settings
+    }
+
+    pub fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    pub fn settings_mut(&mut self) -> &mut Settings {
+        &mut self.settings
+    }
+
+    pub fn verbose(&self) -> bool {
+        self.settings.verbose
+    }
+
     /// Convert the machine representation of a polynomial to the human representation
     /// ```
     /// use kauma_analyzer::challenge::ffield::F_2_128;
@@ -125,8 +144,8 @@ impl FField {
     // shenanigans, as always
     #[allow(clippy::style)]
     #[allow(clippy::complexity)]
-    pub fn mul(&self, x: Polynomial, y: Polynomial, verbose: bool) -> Polynomial {
-        if verbose {
+    pub fn mul(&self, x: Polynomial, y: Polynomial) -> Polynomial {
+        if self.verbose() {
             veprintln("x", format_args!("{}", self.dbg_poly(x)));
             veprintln("y", format_args!("{}", self.dbg_poly(y)));
             veprintln(
@@ -160,7 +179,7 @@ impl FField {
 
         z = xorlist.into_iter().fold(0, |acc, v| acc ^ v);
 
-        if verbose {
+        if self.verbose() {
             veprintln("done", format_args!("{}", self.dbg_poly(z)));
         }
         z
@@ -205,7 +224,7 @@ impl FField {
 
 impl Default for FField {
     fn default() -> Self {
-        Self::new(128, DEFINING_RELATION_F_2_128)
+        Self::new(128, DEFINING_RELATION_F_2_128, Settings::default())
     }
 }
 
@@ -221,6 +240,9 @@ impl Display for FField {
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
+    let mut field = F_2_128;
+    field.set_settings(&settings);
+
     Ok(match testcase.action {
         Action::Poly2Block => {
             let coefficients: Vec<usize>;
@@ -235,7 +257,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
-            let sol = F_2_128.coefficients_to_poly(coefficients, semantic);
+            let sol = field.coefficients_to_poly(coefficients, semantic);
             eprintln!("* block {:032X}", sol);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
@@ -245,14 +267,14 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
         Action::Block2Poly => {
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
             let block: Polynomial = get_poly(&testcase.arguments, "block")?;
-            serde_json::to_value(F_2_128.poly_to_coefficients(block, semantic))?
+            serde_json::to_value(field.poly_to_coefficients(block, semantic))?
         }
         Action::GfMul => {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
 
-            let sol = F_2_128.mul(a, b, settings.verbose);
+            let sol = field.mul(a, b);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
@@ -261,7 +283,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
         Action::SD_DisplayPolyBlock => {
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let block: Polynomial = get_poly(&testcase.arguments, "block")?;
-            serde_json::to_value(F_2_128.display_poly(block))?
+            serde_json::to_value(field.display_poly(block))?
         }
         _ => unreachable!(),
     })
@@ -291,13 +313,22 @@ mod test {
 
     use super::*;
 
+    fn field() -> FField {
+        let mut f = F_2_128;
+        f.set_settings(&Settings {
+            verbose: true,
+            threads: None,
+        });
+        f
+    }
+
     fn assert_eq_polys(poly_a: Polynomial, poly_b: Polynomial) {
         assert_eq!(
             poly_a,
             poly_b,
             "\n0x{poly_a:032X} => {}\nshould be\n0x{poly_b:032X} => {}\nbin of false solution:\n{:0128b}",
-            F_2_128.display_poly(poly_a),
-            F_2_128.display_poly(poly_b),
+            field().display_poly(poly_a),
+            field().display_poly(poly_b),
             poly_a
         );
     }
@@ -305,7 +336,7 @@ mod test {
     #[test]
     fn test_add() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
-        let sol = F_2_128.add(
+        let sol = field().add(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
         );
@@ -315,7 +346,7 @@ mod test {
     #[test]
     fn test_poly_from_coefficients() {
         const SOLUTION: Polynomial = 0x01120000000000000000000000000080;
-        let sol = F_2_128.coefficients_to_poly(vec![0, 9, 12, 127], Semantic::Xex);
+        let sol = field().coefficients_to_poly(vec![0, 9, 12, 127], Semantic::Xex);
         assert_eq_polys(sol, SOLUTION);
     }
 
@@ -323,7 +354,7 @@ mod test {
     fn test_coefficients_from_poly() {
         // we don't care about order, so just put things in a set
         assert_eq!(
-            F_2_128
+            field()
                 .poly_to_coefficients(0x01120000000000000000000000000080, Semantic::Xex)
                 .into_iter()
                 .collect::<HashSet<_>>(),
@@ -336,21 +367,20 @@ mod test {
         let a: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let b: Polynomial = 0x16000000_00000000_00000000_00000000; // α^4 + α^2 + α
         let c: Polynomial = 0x02000000_00000000_00000000_00000000; // α
-        assert_eq!(F_2_128.display_poly(1 << 120), "1");
-        assert_eq!(F_2_128.display_poly(1 << 121), "α");
-        assert_eq!(F_2_128.display_poly(a), "α^4 + α^2");
-        assert_eq!(F_2_128.display_poly(b), "α^4 + α^2 + α");
-        assert_eq!(F_2_128.display_poly(c), "α");
-        assert_eq!(F_2_128.display_poly(1 << 7), "α^127");
+        assert_eq!(field().display_poly(1 << 120), "1");
+        assert_eq!(field().display_poly(1 << 121), "α");
+        assert_eq!(field().display_poly(a), "α^4 + α^2");
+        assert_eq!(field().display_poly(b), "α^4 + α^2 + α");
+        assert_eq!(field().display_poly(c), "α");
+        assert_eq!(field().display_poly(1 << 7), "α^127");
     }
 
     #[test]
     fn test_mul_0() {
         const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
             0x02000000_00000000_00000000_00000000, // α
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -358,10 +388,9 @@ mod test {
     #[test]
     fn test_mul_1() {
         const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x02000000_00000000_00000000_00000000, // α
             0x02000000_00000000_00000000_00000000, // α
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -369,10 +398,9 @@ mod test {
     #[test]
     fn test_mul_2() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
             0x02000000_00000000_00000000_00000000, // α
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -380,10 +408,9 @@ mod test {
     #[test]
     fn test_mul_3() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x02000000_00000000_00000000_00000000, // α
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -391,10 +418,9 @@ mod test {
     #[test]
     fn test_mul_4() {
         const SOLUTION: Polynomial = 0x40A81400000000000000000000000000;
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x03010000000000000000000000000080,
             0x80100000000000000000000000000000,
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -402,10 +428,9 @@ mod test {
     #[test]
     fn test_mul_5() {
         const SOLUTION: Polynomial = 0x50801400000000000000000000000000;
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x03010000000000000000000000000080,
             0xA0100000000000000000000000000000,
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -413,10 +438,9 @@ mod test {
     #[test]
     fn test_mul_6() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000;
-        let sol = F_2_128.mul(
+        let sol = field().mul(
             0x01120000000000000000000000000080,
             0x02000000000000000000000000000000,
-            true,
         );
         assert_eq_polys(sol, SOLUTION);
     }

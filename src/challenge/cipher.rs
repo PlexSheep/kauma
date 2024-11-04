@@ -190,7 +190,7 @@ pub fn sea_128_decrypt_xex(
         plain_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA)
             .to_be_bytes();
     }
     if verbose {
@@ -248,7 +248,7 @@ pub fn sea_128_encrypt_xex(
         cipher_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA, false)
+            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA)
             .to_be_bytes();
     }
     if verbose {
