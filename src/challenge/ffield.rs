@@ -62,6 +62,9 @@ pub struct FField {
     ///
     /// Note that the byte order is from least to highest, unintuitively.
     pub defining_relation: U256,
+    /// Defines how the program executes, mostly concerned with debug printing.
+    ///
+    /// The important variables are part of [FField], not [Settings].
     pub settings: Settings,
 }
 
@@ -91,7 +94,7 @@ impl FField {
         self.settings.verbose
     }
 
-    /// Convert the machine representation of a polynomial to the human representation
+    /// Convert the machine representation of a polynomial to the human representation, using [XEX Semantic](Semantic::Xex).
     /// ```
     /// use kauma_analyzer::challenge::ffield::F_2_128;
     /// assert_eq!(F_2_128.display_poly(1 << 121), "α");
@@ -140,49 +143,71 @@ impl FField {
     /// Multiplies poly a by poly b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular multiplication of two numbers!
-    // FIXME: some crap happens still. The reason has to be endianess and bitorder
-    // shenanigans, as always
-    #[allow(clippy::style)]
-    #[allow(clippy::complexity)]
     pub fn mul(&self, x: Polynomial, y: Polynomial) -> Polynomial {
         if self.verbose() {
+            eprintln!("? inputs");
             veprintln("x", format_args!("{}", self.dbg_poly(x)));
             veprintln("y", format_args!("{}", self.dbg_poly(y)));
             veprintln(
                 "relation~",
-                format_args!("{}", self.dbg_poly(self.defining_relation.0.swap_bytes())),
+                format_args!("{}", self.dbg_poly(self.defining_relation.lower())),
             );
-        }
-        let z: Polynomial;
-        let mut accumulator: U256 = U256::from(x);
-        let mut xorlist: Vec<Polynomial> = Vec::new();
-
-        if bit_at_i(y, 0) {
-            xorlist.push(accumulator.try_into().unwrap());
+            veprintln("relation", format_args!("{:032x}", self.defining_relation));
         }
 
-        for i in 1..128 {
-            let bit = bit_at_i(y, i);
-            if !bit {
-                continue;
+        let mut x = U256::from(x.to_be());
+        let mut y = U256::from(y.to_be());
+        let mut z = U256::from(0);
+
+        self.dbg_mul("preparation", x, y, z);
+
+        // if lsb
+        if bit_at_i(y.lower(), 0) {
+            z ^= x;
+        }
+        self.dbg_mul("first", x, y, z);
+
+        y >>= 1;
+
+        while y != 0 {
+            x <<= 1;
+
+            // if msb
+            if x.upper() > 0 {
+                x = (x.lower() ^ self.defining_relation.lower().swap_bytes()).into();
             }
-            accumulator <<= 1;
-            if accumulator.upper() != 0 {
-                accumulator ^= self.defining_relation;
+
+            // if lsb
+            if bit_at_i(y.lower(), 0) {
+                z ^= x;
             }
-            xorlist.push(
-                accumulator
-                    .try_into()
-                    .expect("buf is still too big to fit into a u128 for some reason"),
-            );
+            y >>= 1;
+            self.dbg_mul("step", x, y, z);
         }
 
-        z = xorlist.into_iter().fold(0, |acc, v| acc ^ v);
+        self.dbg_mul("final", x, y, z);
 
         if self.verbose() {
-            veprintln("done", format_args!("{}", self.dbg_poly(z)));
+            eprintln!("? outputs");
+            veprintln("x", format_args!("{}", self.dbg_poly(x.lower())));
+            veprintln("y", format_args!("{}", self.dbg_poly(y.lower())));
+            veprintln("z", format_args!("{}", self.dbg_poly(z.lower())));
         }
-        z
+
+        z.swap_bytes()
+            .swap_parts()
+            .try_into()
+            .expect("z is still too big, was not reduced correctly in multiplication")
+    }
+
+    /// helper function for debug prints in [Self::mul].
+    fn dbg_mul(&self, title: &str, x: U256, y: U256, z: U256) {
+        if self.verbose() {
+            eprintln!("? {title}");
+            veprintln("x", format_args!("{x:032x}"));
+            veprintln("y", format_args!("{y:032x}"));
+            veprintln("z", format_args!("{z:032x}"));
+        }
     }
 
     pub fn coefficients_to_poly(
@@ -273,6 +298,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let _semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a")?;
             let b: Polynomial = get_poly(&testcase.arguments, "b")?;
+            eprintln!("{a:032x}");
 
             let sol = field.mul(a, b);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
@@ -441,6 +467,16 @@ mod test {
         let sol = field().mul(
             0x01120000000000000000000000000080,
             0x02000000000000000000000000000000,
+        );
+        assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_mul_7() {
+        const SOLUTION: Polynomial = 0x04000000_00000000_00000000_00000000;
+        let sol = field().mul(
+            0x02000000_00000000_00000000_00000000, // α
+            0x02000000_00000000_00000000_00000000, // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
