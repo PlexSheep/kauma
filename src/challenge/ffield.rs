@@ -143,6 +143,8 @@ impl FField {
     /// Multiplies poly a by poly b together, automatically reducing it with the defining relation.
     ///
     /// This is not regular multiplication of two numbers!
+    ///
+    /// Note: This function uses the [XEX Semantic](Semantic::Xex) for [polynomials](Polynomial).
     pub fn mul(&self, x: Polynomial, y: Polynomial) -> Polynomial {
         if self.verbose() {
             eprintln!("? inputs");
@@ -155,6 +157,8 @@ impl FField {
             veprintln("relation", format_args!("{:032x}", self.defining_relation));
         }
 
+        // Reverse the byte order, so that we can work with regular bitshifts.
+        // Otherwise, the bit order and the byte order are different, resulting in garbage.
         let mut x = U256::from(x.to_be());
         let mut y = U256::from(y.to_be());
         let mut z = U256::from(0);
@@ -174,7 +178,9 @@ impl FField {
 
             // if msb
             if x.upper() > 0 {
-                x = (x.lower() ^ self.defining_relation.lower().swap_bytes()).into();
+                // the defining relation needs to be converted to the same ordering as the x,y and
+                // z values
+                x = (x.lower() ^ self.defining_relation.lower().to_be()).into();
             }
 
             // if lsb
@@ -194,8 +200,11 @@ impl FField {
             veprintln("z", format_args!("{}", self.dbg_poly(z.lower())));
         }
 
-        z.swap_bytes()
+        z
+            // swap the byte order of the result back, so that we are in XEX semantic again.
+            .swap_bytes()
             .swap_parts()
+            // convert U256 into u128, dropping the higher part of the 'big' int
             .try_into()
             .expect("z is still too big, was not reduced correctly in multiplication")
     }
