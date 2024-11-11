@@ -1,0 +1,11 @@
+{
+  "testcases": {
+    "b2p": {
+      "action": "block2poly",
+      "arguments": {
+        "semantic": "gcm",
+        "block": "gEgAAAAAAAAAAAAAAAAAAQ=="
+      }
+    }
+  }
+}
