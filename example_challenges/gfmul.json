@@ -7,6 +7,14 @@
         "a": "ARIAAAAAAAAAAAAAAAAAgA==",
         "b": "AgAAAAAAAAAAAAAAAAAAAA=="
       }
+    },
+    "gfmul_gcm": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "gcm",
+        "a": "gEgAAAAAAAAAAAAAAAAAAQ==",
+        "b": "gEgAAAAAAAAAAAAAAAAAAQ=="
+      }
     }
   }
 }
