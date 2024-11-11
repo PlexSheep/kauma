@@ -9,7 +9,7 @@ use bint_easy::u256::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
-use crate::common::{bit_at_i, byte_to_bits, veprintln};
+use crate::common::{bit_at_i, byte_to_bits, bytes_to_u128, veprintln};
 use crate::settings::{Settings, DEFAULT_SETTINGS};
 
 use super::{Action, Testcase};
@@ -46,6 +46,7 @@ pub enum Semantic {
     /// whatever is used in AES-XEX
     #[default]
     Xex,
+    Gcm,
 }
 
 /// Which finite field to use, e.g. F_(2^(128))
@@ -300,13 +301,13 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
         }
         Action::Block2Poly => {
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
-            let block: Polynomial = get_poly(&testcase.arguments, "block")?;
+            let block: Polynomial = get_poly(&testcase.arguments, "block", semantic)?;
             serde_json::to_value(field.poly_to_coefficients(block, semantic))?
         }
         Action::GfMul => {
-            let _semantic: Semantic = get_semantic(&testcase.arguments)?;
-            let a: Polynomial = get_poly(&testcase.arguments, "a")?;
-            let b: Polynomial = get_poly(&testcase.arguments, "b")?;
+            let semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let a: Polynomial = get_poly(&testcase.arguments, "a", semantic)?;
+            let b: Polynomial = get_poly(&testcase.arguments, "b", semantic)?;
             eprintln!("{a:032x}");
 
             let sol = field.mul(a, b);
@@ -316,8 +317,8 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             })?
         }
         Action::SD_DisplayPolyBlock => {
-            let _semantic: Semantic = get_semantic(&testcase.arguments)?;
-            let block: Polynomial = get_poly(&testcase.arguments, "block")?;
+            let semantic: Semantic = get_semantic(&testcase.arguments)?;
+            let block: Polynomial = get_poly(&testcase.arguments, "block", semantic)?;
             serde_json::to_value(field.display_poly(block))?
         }
         _ => unreachable!(),
@@ -336,10 +337,30 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
     Ok(semantic)
 }
 
-fn get_poly(args: &serde_json::Value, key: &str) -> Result<Polynomial> {
+fn get_poly_from_bytes(bytes: &[u8], semantic: Semantic) -> Result<Polynomial> {
+    let v = crate::common::bytes_to_u128(bytes)?;
+    Ok(change_semantic(v, semantic, Semantic::Xex)) // hacky :(
+}
+
+fn get_poly(args: &serde_json::Value, key: &str, semantic: Semantic) -> Result<Polynomial> {
     let bytes = get_bytes_maybe_hex(args, key)?;
-    let v = crate::common::bytes_to_u128(&bytes)?;
+    let v = get_poly_from_bytes(&bytes, semantic)?;
     Ok(v)
+}
+
+pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Polynomial {
+    match (source, target) {
+        (Semantic::Xex, Semantic::Gcm) => {
+            let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
+            bytes_to_u128(&by).expect("same size u128 is not same size")
+        }
+        (Semantic::Gcm, Semantic::Xex) => {
+            let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
+            bytes_to_u128(&by).expect("same size u128 is not same size")
+        }
+        (Semantic::Gcm, Semantic::Gcm) => p,
+        (Semantic::Xex, Semantic::Xex) => p,
+    }
 }
 
 #[cfg(test)]
@@ -488,5 +509,19 @@ mod test {
             0x02000000_00000000_00000000_00000000, // α
         );
         assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_poly_from_gcm() {
+        let xex = BASE64_STANDARD.decode("ARIAAAAAAAAAAAAAAAAAgA==").unwrap();
+        let gcm = BASE64_STANDARD.decode("gEgAAAAAAAAAAAAAAAAAAQ==").unwrap();
+
+        eprintln!("XEX DUMP: {xex:02x?}");
+        eprintln!("GCM DUMP: {gcm:02x?}");
+
+        assert_eq_polys(
+            get_poly_from_bytes(&xex, Semantic::Xex).unwrap(),
+            get_poly_from_bytes(&gcm, Semantic::Gcm).unwrap(),
+        )
     }
 }
