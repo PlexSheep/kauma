@@ -339,7 +339,7 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 
 fn get_poly_from_bytes(bytes: &[u8], semantic: Semantic) -> Result<Polynomial> {
     let v = crate::common::bytes_to_u128(bytes)?;
-    Ok(change_semantic(v, semantic, Semantic::Xex)) // hacky :(
+    Ok(change_semantic(v, semantic, Semantic::Xex))
 }
 
 fn get_poly(args: &serde_json::Value, key: &str, semantic: Semantic) -> Result<Polynomial> {
@@ -348,13 +348,9 @@ fn get_poly(args: &serde_json::Value, key: &str, semantic: Semantic) -> Result<P
     Ok(v)
 }
 
-pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Polynomial {
+fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Polynomial {
     match (source, target) {
-        (Semantic::Xex, Semantic::Gcm) => {
-            let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
-            bytes_to_u128(&by).expect("same size u128 is not same size")
-        }
-        (Semantic::Gcm, Semantic::Xex) => {
+        (Semantic::Xex, Semantic::Gcm) | (Semantic::Gcm, Semantic::Xex) => {
             let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
             bytes_to_u128(&by).expect("same size u128 is not same size")
         }
