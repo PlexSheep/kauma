@@ -404,6 +404,34 @@ pub fn sea_128_encrypt_xex(
     Ok(cipher_text.concat())
 }
 
+fn ghash(auth_key: &[u8; 16], associated_data: &[u8], ciphertext: &[u8]) -> [u8; 16] {
+    let mut buf: u128 = 0;
+    let mut ad = Vec::from(associated_data);
+    let mut ct = Vec::from(ciphertext);
+    while ad.len() % 16 != 0 {
+        ad.push(0);
+    }
+    while ct.len() % 16 != 0 {
+        ct.push(0);
+    }
+    let ak: u128 = u128::from_be_bytes(*auth_key);
+
+    let mut all = ad;
+    all.extend(ciphertext);
+    let mut all: Vec<u128> = all
+        .chunks_exact(16)
+        .map(|c| u128::from_be_bytes(len_to_const_arr(c).unwrap()))
+        .collect();
+    all.push((all.len() * 128) as u128);
+
+    for item in all {
+        buf ^= item;
+        buf = F_2_128.mul(buf, ak);
+    }
+
+    buf.to_be_bytes()
+}
+
 pub fn gcm_encrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
