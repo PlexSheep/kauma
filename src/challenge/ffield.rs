@@ -287,7 +287,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let sol = change_semantic(
                 field.coefficients_to_poly(coefficients),
                 Semantic::Xex,
-                Semantic::Gcm,
+                semantic,
             );
             eprintln!("* block {:032X}", sol);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
