@@ -344,7 +344,7 @@ fn get_poly(args: &serde_json::Value, key: &str, semantic: Semantic) -> Result<P
     Ok(v)
 }
 
-fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Polynomial {
+pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Polynomial {
     match (source, target) {
         (Semantic::Xex, Semantic::Gcm) | (Semantic::Gcm, Semantic::Xex) => {
             let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
