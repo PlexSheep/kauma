@@ -33,13 +33,13 @@ pub struct GcmEncrypted {
     pub associated_data: Vec<u8>,
     pub ciphertext: Vec<u8>,
     pub auth_tag: [u8; 16],
-    pub authentic: bool,
 }
 
 pub struct GcmDecrypted {
     pub nonce: [u8; 12],
     pub associated_data: Vec<u8>,
     pub plaintext: Vec<u8>,
+    pub authentic: bool,
 }
 
 impl GcmEncrypted {
@@ -48,7 +48,6 @@ impl GcmEncrypted {
         associated_data: &[u8],
         ciphertext: &[u8],
         auth_tag: &[u8; 16],
-        authentic: bool,
     ) -> Result<Self> {
         if ciphertext.len() % 16 != 0 {
             return Err(anyhow!(
@@ -68,13 +67,18 @@ impl GcmEncrypted {
             associated_data: associated_data.to_vec(),
             ciphertext: ciphertext.to_vec(),
             auth_tag: *auth_tag,
-            authentic,
         })
     }
 }
 
 impl GcmDecrypted {
-    pub fn build(nonce: &[u8; 12], associated_data: &[u8], plaintext: &[u8]) -> Result<Self> {
+    pub fn build(
+        nonce: &[u8; 12],
+        associated_data: &[u8],
+        plaintext: &[u8],
+
+        authentic: bool,
+    ) -> Result<Self> {
         if plaintext.len() % 16 != 0 {
             return Err(anyhow!(
                 "plaintext length is not multiple of 16 bytes: {}",
@@ -92,6 +96,7 @@ impl GcmDecrypted {
             nonce: *nonce,
             associated_data: associated_data.to_vec(),
             plaintext: plaintext.to_vec(),
+            authentic,
         })
     }
 }
@@ -404,10 +409,40 @@ pub fn gcm_encrypt(
     key: &[u8; 16],
     input: GcmDecrypted,
 ) -> Result<GcmEncrypted> {
+    let mut ciphertext: Vec<u8> = Vec::with_capacity(input.plaintext.len());
+    let mut auth_tag = [0; 16];
+    let mut counter: u32 = 1;
+
     let mut nonce_up = [0; 16];
     nonce_up[..12].copy_from_slice(&input.nonce);
-    eprintln!("{nonce_up:02x?}");
-    todo!()
+    let nonce_up: u128 = u128::from_be_bytes(nonce_up);
+
+    let mut y = nonce_up | counter as u128;
+
+    let xor_me_with_ghash = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
+    let auth_key = algorithm.encrypt(key, &[0; 16], false)?;
+
+    for chunk in input.plaintext.chunks_exact(16) {
+        counter += 1;
+        y = nonce_up | counter as u128;
+
+        let k = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
+        for (kb, pb) in k.iter().zip(chunk) {
+            ciphertext.push(kb ^ pb);
+        }
+    }
+
+    let ghash_out = ghash(&auth_key, &input.associated_data, &ciphertext);
+    for ((xb, gb), ab) in xor_me_with_ghash
+        .iter()
+        .zip(ghash_out)
+        .zip(auth_tag.iter_mut())
+    {
+        *ab = xb ^ gb;
+    }
+
+    let out = GcmEncrypted::build(&input.nonce, &input.associated_data, &ciphertext, &auth_tag)?;
+    Ok(out)
 }
 
 pub fn gcm_decrypt(
@@ -478,6 +513,7 @@ mod test {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
     }
 
+    #[allow(unused)] // I use it every once in a while to help debug tests
     fn dump_b64(base: &str) -> Vec<u8> {
         let a = BASE64_STANDARD.decode(base).expect("this is bad base64");
         eprintln!("{a:#02x?}");
@@ -701,7 +737,7 @@ mod test {
             0x32, 0x9d, 0x0, 0x3c, 0x96, 0xff, 0x64, 0x85, 0x11, 0x47, 0x4, 0x25, 0x32, 0x3, 0x4d,
             0xff,
         ];
-        let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN).unwrap();
+        let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN, true).unwrap();
 
         let enc = gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, input).expect("could not encrypt");
 
