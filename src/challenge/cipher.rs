@@ -592,4 +592,15 @@ mod test {
             sea_128_decrypt_xex(&keys, &tweak, ciphertext, true).expect("could not decrypt");
         assert_hex(&plain, plain_correct);
     }
+
+    #[test]
+    fn test_aes_encrypt_then_decrypt() {
+        const PLAIN: [u8; 16] = *b"foobarqux amogus";
+        const KEY: [u8; 16] = *b"1238742fsaflk249";
+
+        let enc = aes_128_encrypt(&KEY, &PLAIN, true).expect("could not encrypt");
+        let denc = aes_128_decrypt(&KEY, &enc, true).expect("could not decrypt");
+
+        assert_hex(&denc, &PLAIN)
+    }
 }
