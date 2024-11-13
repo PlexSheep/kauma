@@ -42,14 +42,14 @@ pub struct GcmDecrypted {
 }
 
 impl PrimitiveAlgorithm {
-    pub fn encrypt(self, key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
+    pub fn encrypt(self, key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
         match self {
             Self::Sea128 => Ok(sea_128_encrypt(key, data, verbose)?),
             Self::Aes128 => Ok(aes_128_encrypt(key, data, verbose)?),
         }
     }
 
-    pub fn decrypt(self, key: &[u8; 16], ciphertext: &[u8], verbose: bool) -> Result<Vec<u8>> {
+    pub fn decrypt(self, key: &[u8; 16], ciphertext: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
         match self {
             Self::Sea128 => Ok(sea_128_decrypt(key, ciphertext, verbose)?),
             Self::Aes128 => Ok(aes_128_decrypt(key, ciphertext, verbose)?),
@@ -75,7 +75,7 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn aes_128_encrypt(key: &[u8; 16], data: &[u8], _verbose: bool) -> Result<Vec<u8>> {
+pub fn aes_128_encrypt(key: &[u8; 16], data: &[u8; 16], _verbose: bool) -> Result<[u8; 16]> {
     if data.len() % 16 != 0 {
         return Err(anyhow!(
             "data length is not a multiple of 16: {}",
@@ -99,10 +99,10 @@ pub fn aes_128_encrypt(key: &[u8; 16], data: &[u8], _verbose: bool) -> Result<Ve
     })?;
     enc.truncate(pos);
 
-    Ok(enc)
+    len_to_const_arr(&enc)
 }
 
-pub fn aes_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<u8>> {
+pub fn aes_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
     crypter.pad(false);
 
@@ -123,16 +123,10 @@ pub fn aes_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(denc)
+    len_to_const_arr(&denc)
 }
 
-pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
-    if data.len() % 16 != 0 {
-        return Err(anyhow!(
-            "data length is not a multiple of 16: {}",
-            data.len()
-        ));
-    }
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         veprintln("key", format_args!("{key:02x?}"))
     }
@@ -175,10 +169,10 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec
     if verbose {
         veprintln("xor", format_args!("{enc:02x?}"));
     }
-    Ok(enc)
+    len_to_const_arr(&enc)
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<u8>> {
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -220,7 +214,7 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    Ok(denc)
+    len_to_const_arr(&denc)
 }
 
 /// Helper function to get the first part for AES-XEX
@@ -231,7 +225,7 @@ fn sea_128_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[
     if verbose {
         veprintln("enc0", format_args!("{enc0:02x?}"));
     }
-    len_to_const_arr(&enc0)
+    Ok(enc0)
 }
 
 pub fn sea_128_decrypt_xex(
@@ -416,6 +410,7 @@ mod test {
         const KEY: [u8; 16] = *b"1238742fsaflk249";
 
         let enc = sea_128_encrypt(&KEY, &PLAIN, true).expect("encrypt fail");
+        let enc = len_to_const_arr(&enc).expect("could not convert from vec to arr");
         let denc = sea_128_decrypt(&KEY, &enc, true).expect("decrypt fail");
 
         assert_hex(&denc, &PLAIN);
