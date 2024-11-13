@@ -1,0 +1,16 @@
+{
+  "testcases": {
+    "p2b": {
+      "action": "poly2block",
+      "arguments": {
+        "semantic": "gcm",
+        "coefficients": [
+          12,
+          127,
+          9,
+          0
+        ]
+      }
+    }
+  }
+}

@@ -103,11 +103,7 @@ impl FField {
     /// ```
     pub fn display_poly(&self, poly: Polynomial) -> String {
         let mut buf = String::new();
-        let enabled: Vec<_> = self
-            .poly_to_coefficients(poly, Semantic::default())
-            .into_iter()
-            .rev()
-            .collect();
+        let enabled: Vec<_> = self.poly_to_coefficients(poly).into_iter().rev().collect();
         if enabled.is_empty() {
             buf = "0".to_string();
             return buf;
@@ -220,11 +216,7 @@ impl FField {
         }
     }
 
-    pub fn coefficients_to_poly(
-        &self,
-        coefficients: Vec<usize>,
-        _semantic: Semantic,
-    ) -> Polynomial {
+    pub fn coefficients_to_poly(&self, coefficients: Vec<usize>) -> Polynomial {
         let mut poly: Polynomial = 0;
         for coefficient in coefficients {
             // NOTE: Why does this work? Shouldn't the horrible repr kill everything that uses
@@ -236,7 +228,7 @@ impl FField {
         poly.swap_bytes()
     }
 
-    pub fn poly_to_coefficients(&self, poly: Polynomial, _semantic: Semantic) -> Vec<usize> {
+    pub fn poly_to_coefficients(&self, poly: Polynomial) -> Vec<usize> {
         let mut enabled = Vec::new();
         for (byte_idx, byte) in poly.to_be_bytes().iter().enumerate() {
             for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
@@ -292,7 +284,11 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
-            let sol = field.coefficients_to_poly(coefficients, semantic);
+            let sol = change_semantic(
+                field.coefficients_to_poly(coefficients),
+                Semantic::Xex,
+                Semantic::Gcm,
+            );
             eprintln!("* block {:032X}", sol);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
@@ -302,7 +298,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
         Action::Block2Poly => {
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
             let block: Polynomial = get_poly(&testcase.arguments, "block", semantic)?;
-            serde_json::to_value(field.poly_to_coefficients(block, semantic))?
+            serde_json::to_value(field.poly_to_coefficients(block))?
         }
         Action::GfMul => {
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
@@ -398,7 +394,7 @@ mod test {
     #[test]
     fn test_poly_from_coefficients() {
         const SOLUTION: Polynomial = 0x01120000000000000000000000000080;
-        let sol = field().coefficients_to_poly(vec![0, 9, 12, 127], Semantic::Xex);
+        let sol = field().coefficients_to_poly(vec![0, 9, 12, 127]);
         assert_eq_polys(sol, SOLUTION);
     }
 
@@ -407,7 +403,7 @@ mod test {
         // we don't care about order, so just put things in a set
         assert_eq!(
             field()
-                .poly_to_coefficients(0x01120000000000000000000000000080, Semantic::Xex)
+                .poly_to_coefficients(0x01120000000000000000000000000080)
                 .into_iter()
                 .collect::<HashSet<_>>(),
             HashSet::from([0, 9, 12, 127])
