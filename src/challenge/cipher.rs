@@ -30,6 +30,7 @@ pub enum PrimitiveAlgorithm {
 
 pub struct GcmEncrypted {
     pub nonce: [u8; 12],
+    pub associated_data: Vec<u8>,
     pub ciphertext: Vec<u8>,
     pub auth_tag: [u8; 16],
     pub authentic: bool,
@@ -39,6 +40,60 @@ pub struct GcmDecrypted {
     pub nonce: [u8; 12],
     pub associated_data: Vec<u8>,
     pub plaintext: Vec<u8>,
+}
+
+impl GcmEncrypted {
+    pub fn build(
+        nonce: &[u8; 12],
+        associated_data: &[u8],
+        ciphertext: &[u8],
+        auth_tag: &[u8; 16],
+        authentic: bool,
+    ) -> Result<Self> {
+        if ciphertext.len() % 16 != 0 {
+            return Err(anyhow!(
+                "ciphertext length is not multiple of 16 bytes: {}",
+                ciphertext.len()
+            ));
+        }
+        if associated_data.len() & 16 != 0 {
+            return Err(anyhow!(
+                "associated_data length is not multiple of 16 bytes: {}",
+                associated_data.len()
+            ));
+        }
+
+        Ok(Self {
+            nonce: *nonce,
+            associated_data: associated_data.to_vec(),
+            ciphertext: ciphertext.to_vec(),
+            auth_tag: *auth_tag,
+            authentic,
+        })
+    }
+}
+
+impl GcmDecrypted {
+    pub fn build(nonce: &[u8; 12], associated_data: &[u8], plaintext: &[u8]) -> Result<Self> {
+        if plaintext.len() % 16 != 0 {
+            return Err(anyhow!(
+                "plaintext length is not multiple of 16 bytes: {}",
+                plaintext.len()
+            ));
+        }
+        if associated_data.len() & 16 != 0 {
+            return Err(anyhow!(
+                "associated_data length is not multiple of 16 bytes: {}",
+                associated_data.len()
+            ));
+        }
+
+        Ok(Self {
+            nonce: *nonce,
+            associated_data: associated_data.to_vec(),
+            plaintext: plaintext.to_vec(),
+        })
+    }
 }
 
 impl PrimitiveAlgorithm {
@@ -139,7 +194,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
-    let mut enc: Vec<u8> = [0; 32].to_vec();
+    let mut enc: Vec<u8> = vec![0; data.len() + 16];
     let mut pos: usize;
     pos = crypter.update(data, &mut enc).map_err(|e| {
         eprintln!("! error while encrypting with sea_128: {e:#?}");
@@ -172,7 +227,7 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     len_to_const_arr(&enc)
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+pub fn sea_128_decrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -181,10 +236,10 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
     crypter.pad(false);
 
     if verbose {
-        eprintln!("? enc:\t\t{enc:02x?}");
+        eprintln!("? enc:\t\t{data:02x?}");
         eprintln!("? sea_magic:\t{SEA_128_MAGIC_NUMBER_ARR:02x?}");
     }
-    let mut dxor = enc.to_vec();
+    let mut dxor = data.to_vec();
     // xor with the SEA_128_MAGIC_NUMBER
     for chunk in dxor.chunks_exact_mut(16) {
         assert_eq!(chunk.len(), 16);
@@ -198,7 +253,7 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
     }
 
     // NOTE: openssl panics if the buffer is not at least 32 bytes
-    let mut denc: Vec<u8> = [0; 32].to_vec();
+    let mut denc: Vec<u8> = vec![0; data.len() + 16];
     let mut pos: usize;
     pos = crypter.update(&dxor, &mut denc).map_err(|e| {
         eprintln!("! error while decrypting with sea_128: {e:#?}");
@@ -342,6 +397,25 @@ pub fn sea_128_encrypt_xex(
         veprintln("ciphertext", format_args!("{cipher_text:02x?}"));
     }
     Ok(cipher_text.concat())
+}
+
+pub fn gcm_encrypt(
+    algorithm: PrimitiveAlgorithm,
+    key: &[u8; 16],
+    input: GcmDecrypted,
+) -> Result<GcmEncrypted> {
+    let mut nonce_up = [0; 16];
+    nonce_up[..12].copy_from_slice(&input.nonce);
+    eprintln!("{nonce_up:02x?}");
+    todo!()
+}
+
+pub fn gcm_decrypt(
+    algorithm: PrimitiveAlgorithm,
+    key: &[u8; 16],
+    input: GcmEncrypted,
+) -> Result<GcmDecrypted> {
+    todo!()
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
