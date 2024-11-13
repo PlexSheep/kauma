@@ -537,6 +537,8 @@ mod test {
     use super::*;
     use base64::prelude::*;
 
+    const EMPTY_ARR: [u8; 0] = [0; 0]; // yes it looks funny
+
     fn assert_hex(data: &[u8], correct: &[u8]) {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
     }
@@ -801,5 +803,29 @@ mod test {
 
         assert_hex(&denc.plaintext, &PLAIN);
         assert!(denc.authentic);
+    }
+
+    #[test]
+    fn test_ghash_0() {
+        // Test Case 2 from here: <https:
+        // //luca-giuzzi.unibs.it/corsi/Support/papers-cryptography/gcm-spec.pdf>
+        let h = 0x66e94bd4ef8a2c3b884cfa59ca342b2eu128.to_be_bytes();
+        let c = 0xab6e47d42cec13bdf53a67b21257bddfu128.to_be_bytes();
+        let hash = ghash(&h, &EMPTY_ARR, &c);
+        assert_hex(&hash, &0xf38cbb1ad69223dcc3457ae5b6b0f885u128.to_be_bytes());
+    }
+
+    #[test]
+    fn test_ghash_1() {
+        // A:41442d446174656e
+        // C:113dd19af1ff1dbbb16daeb712e3d1af
+        // L:00000000000000400000000000000080
+        // H:06eeb2c1bb142a5a66657310cae1809e
+
+        const H: [u8; 16] = 0x06eeb2c1bb142a5a66657310cae1809eu128.to_be_bytes();
+        const C: [u8; 16] = 0x113dd19af1ff1dbbb16daeb712e3d1afu128.to_be_bytes();
+        const A: [u8; 8] = 0x41442d446174656eu64.to_be_bytes();
+        let hash = ghash(&H, &A, &C);
+        assert_hex(&hash, &0xDB4F289C6F3FFBB2CCB75B70389BD5E4u128.to_be_bytes());
     }
 }
