@@ -478,6 +478,12 @@ mod test {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
     }
 
+    fn dump_b64(base: &str) -> Vec<u8> {
+        let a = BASE64_STANDARD.decode(base).expect("this is bad base64");
+        eprintln!("{a:#02x?}");
+        a
+    }
+
     #[test]
     fn test_sea_128_encrypt_decrypt() {
         const PLAIN: [u8; 16] = *b"foobarqux amogus";
@@ -671,5 +677,35 @@ mod test {
         let denc = aes_128_decrypt(&KEY, &enc, true).expect("could not decrypt");
 
         assert_hex(&denc, &PLAIN)
+    }
+
+    #[test]
+    fn test_gcm_aes_encrypt() {
+        const NONCE: [u8; 12] = [
+            0xe2, 0x1, 0x7e, 0x6, 0xd4, 0x77, 0x92, 0xef, 0xcf, 0x51, 0x7, 0x22,
+        ];
+        const KEY: [u8; 16] = [
+            0x5e, 0x3a, 0xbf, 0x1a, 0x4a, 0x53, 0x49, 0x6a, 0x1e, 0xdd, 0x91, 0xf4, 0x17, 0xeb,
+            0x63, 0xad,
+        ];
+        const PLAIN: [u8; 16] = [
+            0x44, 0x61, 0x73, 0x20, 0x69, 0x73, 0x74, 0x20, 0x65, 0x69, 0x6e, 0x20, 0x54, 0x65,
+            0x73, 0x74,
+        ];
+        const AD: [u8; 8] = [0x41, 0x44, 0x2d, 0x44, 0x61, 0x74, 0x65, 0x6e];
+        const CIPHER: [u8; 16] = [
+            0x11, 0x3d, 0xd1, 0x9a, 0xf1, 0xff, 0x1d, 0xbb, 0xb1, 0x6d, 0xae, 0xb7, 0x12, 0xe3,
+            0xd1, 0xaf,
+        ];
+        const AUTH: [u8; 16] = [
+            0x32, 0x9d, 0x0, 0x3c, 0x96, 0xff, 0x64, 0x85, 0x11, 0x47, 0x4, 0x25, 0x32, 0x3, 0x4d,
+            0xff,
+        ];
+        let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN).unwrap();
+
+        let enc = gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, input).expect("could not encrypt");
+
+        assert_hex(&enc.ciphertext, &CIPHER);
+        assert_hex(&enc.auth_tag, &AUTH);
     }
 }
