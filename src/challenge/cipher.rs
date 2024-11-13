@@ -44,15 +44,15 @@ pub struct GcmDecrypted {
 impl PrimitiveAlgorithm {
     pub fn encrypt(self, key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
         match self {
-            Self::Sea128 => Ok(sea_128_encrypt(key, data, verbose)?.into()),
-            Self::Aes128 => Ok(aes_128_encrypt(key, data, verbose)?.into()),
+            Self::Sea128 => Ok(sea_128_encrypt(key, data, verbose)?),
+            Self::Aes128 => Ok(aes_128_encrypt(key, data, verbose)?),
         }
     }
 
     pub fn decrypt(self, key: &[u8; 16], ciphertext: &[u8], verbose: bool) -> Result<Vec<u8>> {
         match self {
-            Self::Sea128 => Ok(sea_128_decrypt(key, ciphertext, verbose)?.into()),
-            Self::Aes128 => Ok(aes_128_decrypt(key, ciphertext, verbose)?.into()),
+            Self::Sea128 => Ok(sea_128_decrypt(key, ciphertext, verbose)?),
+            Self::Aes128 => Ok(aes_128_decrypt(key, ciphertext, verbose)?),
         }
     }
 }
