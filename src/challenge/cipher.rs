@@ -40,6 +40,14 @@ impl From<Mode> for OpenSslMode {
 }
 
 pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+
+pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
+    if data.len() % 16 != 0 {
+        return Err(anyhow!(
+            "data length is not a multiple of 16: {}",
+            data.len()
+        ));
+    }
     if verbose {
         veprintln("key", format_args!("{key:02x?}"))
     }
@@ -82,10 +90,10 @@ pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result
     if verbose {
         veprintln("xor", format_args!("{enc:02x?}"));
     }
-    len_to_const_arr(&enc)
+    Ok(enc)
 }
 
-pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<u8>> {
     if verbose {
         eprintln!("? key:\t\t{key:02x?}");
     }
@@ -127,7 +135,7 @@ pub fn sea_128_decrypt(key: &[u8; 16], enc: &[u8; 16], verbose: bool) -> Result<
         eprintln!("? denc:\t\t{denc:02x?}");
     }
 
-    len_to_const_arr(&denc)
+    Ok(denc)
 }
 
 /// Helper function to get the first part for AES-XEX
@@ -138,7 +146,7 @@ fn sea_128_xex_enc0(key: &[u8; 16], tweak: &[u8; 16], verbose: bool) -> Result<[
     if verbose {
         veprintln("enc0", format_args!("{enc0:02x?}"));
     }
-    Ok(enc0)
+    len_to_const_arr(&enc0)
 }
 
 pub fn sea_128_decrypt_xex(
@@ -323,7 +331,6 @@ mod test {
         const KEY: [u8; 16] = *b"1238742fsaflk249";
 
         let enc = sea_128_encrypt(&KEY, &PLAIN, true).expect("encrypt fail");
-        let enc = len_to_const_arr(&enc).expect("could not convert from vec to arr");
         let denc = sea_128_decrypt(&KEY, &enc, true).expect("decrypt fail");
 
         assert_hex(&denc, &PLAIN);
