@@ -21,6 +21,42 @@ pub enum Mode {
     Decrypt,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum PrimitiveAlgorithm {
+    Aes128,
+    Sea128,
+}
+
+pub struct GcmEncrypted {
+    pub nonce: [u8; 12],
+    pub ciphertext: Vec<u8>,
+    pub auth_tag: [u8; 16],
+    pub authentic: bool,
+}
+
+pub struct GcmDecrypted {
+    pub nonce: [u8; 12],
+    pub associated_data: Vec<u8>,
+    pub plaintext: Vec<u8>,
+}
+
+impl PrimitiveAlgorithm {
+    pub fn encrypt(self, key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
+        match self {
+            Self::Sea128 => Ok(sea_128_encrypt(key, data, verbose)?.into()),
+            Self::Aes128 => Ok(aes_128_encrypt(key, data, verbose)?.into()),
+        }
+    }
+
+    pub fn decrypt(self, key: &[u8; 16], ciphertext: &[u8], verbose: bool) -> Result<Vec<u8>> {
+        match self {
+            Self::Sea128 => Ok(sea_128_decrypt(key, ciphertext, verbose)?.into()),
+            Self::Aes128 => Ok(aes_128_decrypt(key, ciphertext, verbose)?.into()),
+        }
+    }
+}
+
 impl From<OpenSslMode> for Mode {
     fn from(value: OpenSslMode) -> Self {
         match value {
@@ -39,7 +75,56 @@ impl From<Mode> for OpenSslMode {
     }
 }
 
-pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8; 16], verbose: bool) -> Result<[u8; 16]> {
+pub fn aes_128_encrypt(key: &[u8; 16], data: &[u8], _verbose: bool) -> Result<Vec<u8>> {
+    if data.len() % 16 != 0 {
+        return Err(anyhow!(
+            "data length is not a multiple of 16: {}",
+            data.len()
+        ));
+    }
+
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Encrypt, key, None)?;
+    crypter.pad(false);
+
+    // NOTE: openssl panics if the buffer is not at least 32 bytes
+    let mut enc: Vec<u8> = [0; 32].to_vec();
+    let mut pos: usize;
+    pos = crypter.update(data, &mut enc).map_err(|e| {
+        eprintln!("! error while encrypting with sea_128: {e:#?}");
+        e
+    })?;
+    pos += crypter.finalize(&mut enc).map_err(|e| {
+        eprintln!("! error while encrypting with sea_128: {e:#?}");
+        e
+    })?;
+    enc.truncate(pos);
+
+    Ok(enc)
+}
+
+pub fn aes_128_decrypt(key: &[u8; 16], enc: &[u8], verbose: bool) -> Result<Vec<u8>> {
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), OpenSslMode::Decrypt, key, None)?;
+    crypter.pad(false);
+
+    // NOTE: openssl panics if the buffer is not at least 32 bytes
+    let mut denc: Vec<u8> = [0; 32].to_vec();
+    let mut pos: usize;
+    pos = crypter.update(enc, &mut denc).map_err(|e| {
+        eprintln!("! error while decrypting with sea_128: {e:#?}");
+        e
+    })?;
+    pos += crypter.finalize(&mut denc[pos..]).map_err(|e| {
+        eprintln!("! error while decrypting with sea_128: {e:#?}");
+        e
+    })?;
+    denc.truncate(pos);
+
+    if verbose {
+        eprintln!("? denc:\t\t{denc:02x?}");
+    }
+
+    Ok(denc)
+}
 
 pub fn sea_128_encrypt(key: &[u8; 16], data: &[u8], verbose: bool) -> Result<Vec<u8>> {
     if data.len() % 16 != 0 {
