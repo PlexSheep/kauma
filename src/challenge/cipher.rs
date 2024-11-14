@@ -50,8 +50,6 @@ impl GcmEncrypted {
         associated_data: &[u8],
         ciphertext: &[u8],
         auth_tag: &[u8; 16],
-        l: u128,
-        h: &[u8; 16],
     ) -> Result<Self> {
         if ciphertext.len() % 16 != 0 {
             return Err(anyhow!(
@@ -71,20 +69,14 @@ impl GcmEncrypted {
             associated_data: associated_data.to_vec(),
             ciphertext: ciphertext.to_vec(),
             auth_tag: *auth_tag,
-            l,
-            h: *h,
+            l: 0,
+            h: [0; 16],
         })
     }
 }
 
 impl GcmDecrypted {
-    pub fn build(
-        nonce: &[u8; 12],
-        associated_data: &[u8],
-        plaintext: &[u8],
-
-        authentic: bool,
-    ) -> Result<Self> {
+    pub fn build(nonce: &[u8; 12], associated_data: &[u8], plaintext: &[u8]) -> Result<Self> {
         if plaintext.len() % 16 != 0 {
             return Err(anyhow!(
                 "plaintext length is not multiple of 16 bytes: {}",
@@ -102,7 +94,7 @@ impl GcmDecrypted {
             nonce: *nonce,
             associated_data: associated_data.to_vec(),
             plaintext: plaintext.to_vec(),
-            authentic,
+            authentic: false,
         })
     }
 }
@@ -471,7 +463,7 @@ fn ghash(
 pub fn gcm_encrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
-    input: GcmDecrypted,
+    input: &GcmDecrypted,
     verbose: bool,
 ) -> Result<GcmEncrypted> {
     let mut ciphertext: Vec<u8> = Vec::with_capacity(input.plaintext.len());
@@ -506,21 +498,21 @@ pub fn gcm_encrypt(
         *ab = xb ^ gb;
     }
 
-    let out = GcmEncrypted::build(
-        &input.nonce,
-        &input.associated_data,
-        &ciphertext,
-        &auth_tag,
-        ghash_out.1,
-        &auth_key,
-    )?;
+    let out = GcmEncrypted {
+        nonce: input.nonce,
+        associated_data: input.associated_data.clone(),
+        ciphertext,
+        auth_tag,
+        l: ghash_out.1,
+        h: auth_key,
+    };
     Ok(out)
 }
 
 pub fn gcm_decrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
-    input: GcmEncrypted,
+    input: &GcmEncrypted,
     verbose: bool,
 ) -> Result<GcmDecrypted> {
     todo!()
@@ -561,6 +553,45 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             };
             put_bytes(&output)?
         }
+        Action::GcmEncrypt => {
+            let algorithm: PrimitiveAlgorithm = get_algorithm(&testcase.arguments)?;
+            let nonce: [u8; 12] =
+                len_to_const_arr(&get_bytes_base64(&testcase.arguments, "nonce")?)?;
+            let key: [u8; 16] = len_to_const_arr(&get_bytes_base64(&testcase.arguments, "key")?)?;
+            let pt = get_bytes_base64(&testcase.arguments, "plaintext")?;
+            let ad = get_bytes_base64(&testcase.arguments, "ad")?;
+
+            let inp = GcmDecrypted::build(&nonce, &ad, &pt)?;
+
+            let dec = gcm_encrypt(algorithm, &key, &inp, settings.verbose)?;
+            serde_json::json!(
+                {
+                    "ciphertext": put_bytes(&dec.ciphertext)?,
+                    "tag": put_bytes(&dec.auth_tag)?,
+                    "L": put_bytes(&dec.l.to_be_bytes())?,
+                    "H": put_bytes(&dec.h)?
+                }
+            )
+        }
+        Action::GcmDecrypt => {
+            let algorithm: PrimitiveAlgorithm = get_algorithm(&testcase.arguments)?;
+            let nonce: [u8; 12] =
+                len_to_const_arr(&get_bytes_base64(&testcase.arguments, "nonce")?)?;
+            let key: [u8; 16] = len_to_const_arr(&get_bytes_base64(&testcase.arguments, "key")?)?;
+            let ct = get_bytes_base64(&testcase.arguments, "ciphertext")?;
+            let ad = get_bytes_base64(&testcase.arguments, "ad")?;
+            let tag: [u8; 16] = len_to_const_arr(&get_bytes_base64(&testcase.arguments, "tag")?)?;
+
+            let inp = GcmEncrypted::build(&nonce, &ad, &ct, &tag)?;
+
+            let ec = gcm_decrypt(algorithm, &key, &inp, settings.verbose)?;
+            serde_json::json!(
+                {
+                    "plaintext": put_bytes(&ec.plaintext)?,
+                    "authentic": ec.authentic
+                }
+            )
+        }
         _ => unreachable!(),
     })
 }
@@ -575,6 +606,18 @@ fn get_mode(args: &serde_json::Value) -> Result<Mode> {
         return Err(anyhow!("mode is not a string"));
     };
     Ok(semantic)
+}
+
+fn get_algorithm(args: &serde_json::Value) -> Result<PrimitiveAlgorithm> {
+    let alg: PrimitiveAlgorithm = if args["algorithm"].is_string() {
+        serde_json::from_value(args["algorithm"].clone()).map_err(|e| {
+            eprintln!("! something went wrong when serializing the mode: {e}");
+            e
+        })?
+    } else {
+        return Err(anyhow!("algorithm is not a string"));
+    };
+    Ok(alg)
 }
 
 #[cfg(test)]
@@ -812,10 +855,10 @@ mod test {
             0x32, 0x9d, 0x0, 0x3c, 0x96, 0xff, 0x64, 0x85, 0x11, 0x47, 0x4, 0x25, 0x32, 0x3, 0x4d,
             0xff,
         ];
-        let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN, true).unwrap();
+        let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN).unwrap();
 
         let enc =
-            gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, input, true).expect("could not encrypt");
+            gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, &input, true).expect("could not encrypt");
 
         assert_hex(&enc.ciphertext, &CIPHER);
         assert_hex(&enc.auth_tag, &AUTH);
@@ -843,11 +886,10 @@ mod test {
             0x32, 0x9d, 0x0, 0x3c, 0x96, 0xff, 0x64, 0x85, 0x11, 0x47, 0x4, 0x25, 0x32, 0x3, 0x4d,
             0xff,
         ];
-        let input: GcmEncrypted =
-            GcmEncrypted::build(&NONCE, &AD, &CIPHER, &AUTH, 0, &[0; 16]).unwrap();
+        let input: GcmEncrypted = GcmEncrypted::build(&NONCE, &AD, &CIPHER, &AUTH).unwrap();
 
         let denc =
-            gcm_decrypt(PrimitiveAlgorithm::Aes128, &KEY, input, true).expect("could not encrypt");
+            gcm_decrypt(PrimitiveAlgorithm::Aes128, &KEY, &input, true).expect("could not encrypt");
 
         assert_hex(&denc.plaintext, &PLAIN);
         assert!(denc.authentic);
