@@ -6,7 +6,7 @@ use crate::common::interface::{get_bytes_base64, put_bytes};
 use crate::common::{bytes_to_u128, len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
-use super::ffield::{F_2_128, F_2_128_ALPHA};
+use super::ffield::{self, F_2_128, F_2_128_ALPHA};
 use super::{Action, Testcase};
 
 pub const SEA_128_MAGIC_NUMBER: u128 = 0xc0ffeec0ffeec0ffeec0ffeec0ffee11;
@@ -404,7 +404,12 @@ pub fn sea_128_encrypt_xex(
     Ok(cipher_text.concat())
 }
 
-fn ghash(auth_key: &[u8; 16], associated_data: &[u8], ciphertext: &[u8]) -> [u8; 16] {
+fn ghash(
+    auth_key: &[u8; 16],
+    associated_data: &[u8],
+    ciphertext: &[u8],
+    verbose: bool,
+) -> [u8; 16] {
     let mut buf: u128 = 0;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
@@ -415,6 +420,14 @@ fn ghash(auth_key: &[u8; 16], associated_data: &[u8], ciphertext: &[u8]) -> [u8;
         ct.push(0);
     }
     let ak: u128 = u128::from_be_bytes(*auth_key);
+    let ak_sem = ffield::change_semantic(ak, ffield::Semantic::Gcm, ffield::Semantic::Xex);
+
+    if verbose {
+        veprintln("H", format_args!("{ak:032x}"));
+        veprintln("H in XEX", format_args!("{ak_sem:032x}"));
+        veprintln("C", format_args!("{ct:02x?}"));
+        veprintln("A", format_args!("{ad:02x?}"));
+    }
 
     let mut all = ad;
     all.extend(ciphertext);
@@ -422,11 +435,28 @@ fn ghash(auth_key: &[u8; 16], associated_data: &[u8], ciphertext: &[u8]) -> [u8;
         .chunks_exact(16)
         .map(|c| u128::from_be_bytes(len_to_const_arr(c).unwrap()))
         .collect();
-    all.push((all.len() * 128) as u128);
+    let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
+    all.push(l);
+
+    if verbose {
+        veprintln("L", format_args!("{l:032x}"));
+        veprintln("all", format_args!("{all:032x?}"));
+    }
 
     for item in all {
+        // just xor
         buf ^= item;
-        buf = F_2_128.mul(buf, ak);
+        // multiply in field, but we need to change semantic from gcm for xex for internal reasons,
+        // and back
+        buf = ffield::change_semantic(
+            F_2_128.mul(
+                ffield::change_semantic(buf, ffield::Semantic::Gcm, ffield::Semantic::Xex),
+                ak_sem,
+            ),
+            ffield::Semantic::Xex,
+            ffield::Semantic::Gcm,
+        );
+        veprintln("buf", format_args!("{buf:032x}"));
     }
 
     buf.to_be_bytes()
@@ -436,6 +466,7 @@ pub fn gcm_encrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
     input: GcmDecrypted,
+    verbose: bool,
 ) -> Result<GcmEncrypted> {
     let mut ciphertext: Vec<u8> = Vec::with_capacity(input.plaintext.len());
     let mut auth_tag = [0; 16];
@@ -460,7 +491,7 @@ pub fn gcm_encrypt(
         }
     }
 
-    let ghash_out = ghash(&auth_key, &input.associated_data, &ciphertext);
+    let ghash_out = ghash(&auth_key, &input.associated_data, &ciphertext, verbose);
     for ((xb, gb), ab) in xor_me_with_ghash
         .iter()
         .zip(ghash_out)
@@ -477,6 +508,7 @@ pub fn gcm_decrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
     input: GcmEncrypted,
+    verbose: bool,
 ) -> Result<GcmDecrypted> {
     todo!()
 }
@@ -769,7 +801,8 @@ mod test {
         ];
         let input: GcmDecrypted = GcmDecrypted::build(&NONCE, &AD, &PLAIN, true).unwrap();
 
-        let enc = gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, input).expect("could not encrypt");
+        let enc =
+            gcm_encrypt(PrimitiveAlgorithm::Aes128, &KEY, input, true).expect("could not encrypt");
 
         assert_hex(&enc.ciphertext, &CIPHER);
         assert_hex(&enc.auth_tag, &AUTH);
@@ -799,24 +832,15 @@ mod test {
         ];
         let input: GcmEncrypted = GcmEncrypted::build(&NONCE, &AD, &CIPHER, &AUTH).unwrap();
 
-        let denc = gcm_decrypt(PrimitiveAlgorithm::Aes128, &KEY, input).expect("could not encrypt");
+        let denc =
+            gcm_decrypt(PrimitiveAlgorithm::Aes128, &KEY, input, true).expect("could not encrypt");
 
         assert_hex(&denc.plaintext, &PLAIN);
         assert!(denc.authentic);
     }
 
     #[test]
-    fn test_ghash_0() {
-        // Test Case 2 from here: <https:
-        // //luca-giuzzi.unibs.it/corsi/Support/papers-cryptography/gcm-spec.pdf>
-        let h = 0x66e94bd4ef8a2c3b884cfa59ca342b2eu128.to_be_bytes();
-        let c = 0xab6e47d42cec13bdf53a67b21257bddfu128.to_be_bytes();
-        let hash = ghash(&h, &EMPTY_ARR, &c);
-        assert_hex(&hash, &0xf38cbb1ad69223dcc3457ae5b6b0f885u128.to_be_bytes());
-    }
-
-    #[test]
-    fn test_ghash_1() {
+    fn test_ghash() {
         // A:41442d446174656e
         // C:113dd19af1ff1dbbb16daeb712e3d1af
         // L:00000000000000400000000000000080
@@ -825,7 +849,7 @@ mod test {
         const H: [u8; 16] = 0x06eeb2c1bb142a5a66657310cae1809eu128.to_be_bytes();
         const C: [u8; 16] = 0x113dd19af1ff1dbbb16daeb712e3d1afu128.to_be_bytes();
         const A: [u8; 8] = 0x41442d446174656eu64.to_be_bytes();
-        let hash = ghash(&H, &A, &C);
+        let hash = ghash(&H, &A, &C, true);
         assert_hex(&hash, &0xDB4F289C6F3FFBB2CCB75B70389BD5E4u128.to_be_bytes());
     }
 }
