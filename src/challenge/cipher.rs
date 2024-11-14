@@ -33,6 +33,8 @@ pub struct GcmEncrypted {
     pub associated_data: Vec<u8>,
     pub ciphertext: Vec<u8>,
     pub auth_tag: [u8; 16],
+    pub l: u128,
+    pub h: [u8; 16],
 }
 
 pub struct GcmDecrypted {
@@ -48,6 +50,8 @@ impl GcmEncrypted {
         associated_data: &[u8],
         ciphertext: &[u8],
         auth_tag: &[u8; 16],
+        l: u128,
+        h: &[u8; 16],
     ) -> Result<Self> {
         if ciphertext.len() % 16 != 0 {
             return Err(anyhow!(
@@ -67,6 +71,8 @@ impl GcmEncrypted {
             associated_data: associated_data.to_vec(),
             ciphertext: ciphertext.to_vec(),
             auth_tag: *auth_tag,
+            l,
+            h: *h,
         })
     }
 }
@@ -409,7 +415,7 @@ fn ghash(
     associated_data: &[u8],
     ciphertext: &[u8],
     verbose: bool,
-) -> [u8; 16] {
+) -> ([u8; 16], u128) {
     let mut buf: u128 = 0;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
@@ -459,7 +465,7 @@ fn ghash(
         veprintln("buf", format_args!("{buf:032x}"));
     }
 
-    buf.to_be_bytes()
+    (buf.to_be_bytes(), l)
 }
 
 pub fn gcm_encrypt(
@@ -494,13 +500,20 @@ pub fn gcm_encrypt(
     let ghash_out = ghash(&auth_key, &input.associated_data, &ciphertext, verbose);
     for ((xb, gb), ab) in xor_me_with_ghash
         .iter()
-        .zip(ghash_out)
+        .zip(ghash_out.0)
         .zip(auth_tag.iter_mut())
     {
         *ab = xb ^ gb;
     }
 
-    let out = GcmEncrypted::build(&input.nonce, &input.associated_data, &ciphertext, &auth_tag)?;
+    let out = GcmEncrypted::build(
+        &input.nonce,
+        &input.associated_data,
+        &ciphertext,
+        &auth_tag,
+        ghash_out.1,
+        &auth_key,
+    )?;
     Ok(out)
 }
 
@@ -830,7 +843,8 @@ mod test {
             0x32, 0x9d, 0x0, 0x3c, 0x96, 0xff, 0x64, 0x85, 0x11, 0x47, 0x4, 0x25, 0x32, 0x3, 0x4d,
             0xff,
         ];
-        let input: GcmEncrypted = GcmEncrypted::build(&NONCE, &AD, &CIPHER, &AUTH).unwrap();
+        let input: GcmEncrypted =
+            GcmEncrypted::build(&NONCE, &AD, &CIPHER, &AUTH, 0, &[0; 16]).unwrap();
 
         let denc =
             gcm_decrypt(PrimitiveAlgorithm::Aes128, &KEY, input, true).expect("could not encrypt");
@@ -850,6 +864,9 @@ mod test {
         const C: [u8; 16] = 0x113dd19af1ff1dbbb16daeb712e3d1afu128.to_be_bytes();
         const A: [u8; 8] = 0x41442d446174656eu64.to_be_bytes();
         let hash = ghash(&H, &A, &C, true);
-        assert_hex(&hash, &0xDB4F289C6F3FFBB2CCB75B70389BD5E4u128.to_be_bytes());
+        assert_hex(
+            &hash.0,
+            &0xDB4F289C6F3FFBB2CCB75B70389BD5E4u128.to_be_bytes(),
+        );
     }
 }

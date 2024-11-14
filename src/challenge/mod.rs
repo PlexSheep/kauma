@@ -32,7 +32,7 @@ pub struct Testcase {
 /// All [Actions](Action) beginning with `SD_` are **SELF DEFINED** and therefore not part of the assignment.
 /// They are not guaranteed to work correctly, so use them at your own risk.
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[allow(non_camel_case_types)] // allow SD_ANY naming
 #[non_exhaustive] // who knows how many of these buggers there will be
 pub enum Action {
@@ -47,7 +47,6 @@ pub enum Action {
     /// # Returns
     ///
     /// `number1` + `number2` : [i64]
-    #[serde(rename = "add_numbers")]
     AddNumbers,
     /// Subtract one number from another
     ///
@@ -73,6 +72,7 @@ pub enum Action {
     /// # Returns
     ///
     /// Numeric representation of the polynomial described by `coefficients` : [Polynomial](ffield::Polynomial)
+    #[serde(rename = "poly2block")]
     Poly2Block,
     /// given a machine representation of a polynomial and a semantic, convert the polynomial into just
     /// it's coefficients
@@ -85,6 +85,7 @@ pub enum Action {
     /// # Returns
     ///
     ///  Exponents of the α's for the polynomial : [`Vec<u8>`]
+    #[serde(rename = "block2poly")]
     Block2Poly,
     /// Multiply two polynomials in [F_2_128](ffield::F_2_128)
     ///
@@ -97,6 +98,7 @@ pub enum Action {
     /// # Returns
     ///
     ///  `a` * `b` in the finite field for that semantic encoded in Base64 : [String]
+    #[serde(rename = "gfmul")]
     GfMul,
     /// Display a polynomial block with it's math representation
     ///
@@ -109,6 +111,7 @@ pub enum Action {
     ///
     /// The [Polynomial](ffield::Polynomial) defined by `block` in mathematical representation
     /// : [String]
+    #[serde(rename = "sd_displaypolyblock")]
     SD_DisplayPolyBlock,
 
     // cipher items ///////////////////////////////////////////////////////////////////////////////
@@ -137,6 +140,43 @@ pub enum Action {
     ///
     ///  `input` with `tweak` encrypted or decrypted with `key` : Base64 string encoding a [`Vec<u8>`]
     Xex,
+    /// encrypt any amount of blocks with AES-GCM
+    ///
+    /// # Arguments
+    ///
+    /// - `algorithm`: [String] - string representation of the [PrimitiveAlgorithm](cipher::PrimitiveAlgorithm) to use
+    /// - `nonce`: [String] - Base64 string encoding a `[u8;12]`
+    /// - `key`: [String] - Base64 string encoding a `[u8;16]`
+    /// - `plaintext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    /// - `ad`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///
+    /// # Returns
+    ///
+    /// Multiple values.
+    ///
+    /// - `ciphertext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    /// - `tag`: [String] - Base64 string encoding a [`[u8;16]`]
+    /// - `L`: [String] - Base64 string encoding a [`[u8;16]`]
+    /// - `H`: [String] - Base64 string encoding a [`[u8;16]`]
+    GcmEncrypt,
+    /// decrypt any amount of blocks with AES-GCM
+    ///
+    /// # Arguments
+    ///
+    /// - `algorithm`: [String] - string representation of the [PrimitiveAlgorithm](cipher::PrimitiveAlgorithm) to use
+    /// - `nonce`: [String] - Base64 string encoding a `[u8;12]`
+    /// - `key`: [String] - Base64 string encoding a `[u8;16]`
+    /// - `ciphertext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    /// - `ad`: [String] - Base64 string encoding a [`Vec<u8>`]
+    /// - `tag`: [String] - Base64 string encoding a `[u8;16]`
+    ///
+    /// # Returns
+    ///
+    /// Multiple values.
+    ///
+    /// - `plaintext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    /// - `authentic`: [bool] - Was the given input authentic?
+    GcmDecrypt,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -160,8 +200,8 @@ impl Display for Testcase {
 }
 
 impl Action {
-    pub const fn solution_key(self) -> &'static str {
-        match self {
+    pub const fn solution_key(self) -> Option<&'static str> {
+        Some(match self {
             Self::AddNumbers => "sum",
             Self::SubNumbers => "difference",
             Self::Poly2Block => "block",
@@ -170,8 +210,10 @@ impl Action {
             Self::Sea128 => "output",
             Self::SD_DisplayPolyBlock => "poly",
             Self::Xex => "output",
+            Self::GcmEncrypt => return None,
+            Self::GcmDecrypt => return None,
             Self::SD_Timeout => unreachable!(),
-        }
+        })
     }
 }
 
@@ -234,7 +276,9 @@ fn challenge_runner(
         Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {
             ffield::run_testcase(testcase, settings)
         }
-        Action::Sea128 | Action::Xex => cipher::run_testcase(testcase, settings),
+        Action::Sea128 | Action::Xex | Action::GcmEncrypt | Action::GcmDecrypt => {
+            cipher::run_testcase(testcase, settings)
+        }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
@@ -242,7 +286,11 @@ fn challenge_runner(
     }
     answers.lock().unwrap().insert(
         key.clone(),
-        tag_json_value(testcase.action.solution_key(), sol.unwrap()),
+        if let Some(t) = testcase.action.solution_key() {
+            tag_json_value(t, sol.unwrap())
+        } else {
+            sol.unwrap()
+        },
     );
     eprintln!("* finished challenge {key} ({})", testcase.action);
     Ok(())
