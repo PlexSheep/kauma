@@ -268,9 +268,6 @@ fn challenge_runner(
     settings: Settings,
 ) -> Result<()> {
     eprintln!("* starting challenge {key} ({})", testcase.action);
-    if settings.verbose {
-        eprintln!("? dumping challenge {key}\n{testcase:#}");
-    }
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
         Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {

@@ -28,6 +28,7 @@ pub enum PrimitiveAlgorithm {
     Sea128,
 }
 
+#[derive(Debug, Clone)]
 pub struct GcmEncrypted {
     pub nonce: [u8; 12],
     pub associated_data: Vec<u8>,
@@ -37,6 +38,7 @@ pub struct GcmEncrypted {
     pub h: [u8; 16],
 }
 
+#[derive(Debug, Clone)]
 pub struct GcmDecrypted {
     pub nonce: [u8; 12],
     pub associated_data: Vec<u8>,
@@ -624,8 +626,6 @@ fn get_algorithm(args: &serde_json::Value) -> Result<PrimitiveAlgorithm> {
 mod test {
     use super::*;
     use base64::prelude::*;
-
-    const EMPTY_ARR: [u8; 0] = [0; 0]; // yes it looks funny
 
     fn assert_hex(data: &[u8], correct: &[u8]) {
         assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
