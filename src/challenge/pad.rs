@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::common::interface::{get_bytes_maybe_hex, get_int, get_str, put_bytes};
+use crate::common::interface::{get_any, get_bytes_maybe_hex, put_bytes};
 use crate::common::len_to_const_arr;
 use crate::settings::Settings;
 
@@ -8,7 +8,7 @@ use super::{Action, Testcase};
 
 fn abuse_padding_oracle(
     host: &str,
-    port: i64,
+    port: u16,
     iv: &[u8; 16],
     ct: &[u8],
     verbose: bool,
@@ -19,8 +19,8 @@ fn abuse_padding_oracle(
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::PaddingOracle => {
-            let host: String = get_str(&testcase.arguments, "hostname")?;
-            let port: i64 = get_int(&testcase.arguments, "port")?;
+            let host: String = get_any(&testcase.arguments, "hostname")?;
+            let port: u16 = get_any(&testcase.arguments, "port")?;
             let iv: [u8; 16] = len_to_const_arr(&get_bytes_maybe_hex(&testcase.arguments, "iv")?)?;
             let ct: Vec<u8> = get_bytes_maybe_hex(&testcase.arguments, "ciphertext")?;
 

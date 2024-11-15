@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
+use serde::Deserialize;
 
 ///  Hex encoded [String] to [byte](u8) slice
 ///
@@ -83,32 +84,14 @@ pub fn put_bytes(data: &[u8]) -> Result<serde_json::Value> {
     Ok(BASE64_STANDARD.encode(data).into())
 }
 
-/// Ger a [i64] from some json args
+/// Ger a `T` from some json args
 #[inline]
-pub fn get_int(args: &serde_json::Value, key: &str) -> Result<i64> {
-    if args[key].is_i64() {
-        let v: i64 = serde_json::from_value(args[key].clone()).map_err(|e| {
-            eprintln!("! something went wrong when serializing {key}: {e}");
-            e
-        })?;
-        Ok(v)
-    } else {
-        Err(anyhow!("{key} is not a i64"))
-    }
-}
-
-/// Ger a [String] from some json args
-#[inline]
-pub fn get_str(args: &serde_json::Value, key: &str) -> Result<String> {
-    if args[key].is_string() {
-        let v: String = serde_json::from_value(args[key].clone()).map_err(|e| {
-            eprintln!("! something went wrong when serializing {key}: {e}");
-            e
-        })?;
-        Ok(v)
-    } else {
-        Err(anyhow!("{key} is not a string"))
-    }
+pub fn get_any<T: for<'a> Deserialize<'a>>(args: &serde_json::Value, key: &str) -> Result<T> {
+    let v: T = serde_json::from_value(args[key].clone()).map_err(|e| {
+        eprintln!("! something went wrong when serializing {key}: {e}");
+        e
+    })?;
+    Ok(v)
 }
 
 #[cfg(test)]
