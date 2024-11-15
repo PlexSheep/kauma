@@ -1,4 +1,3 @@
-// i hate this crate for using generic_array, just stfu and use a vec like a grown up
 use block_padding::{Pkcs7, RawPadding, UnpadError};
 
 /// pad with pkcs7
@@ -25,21 +24,6 @@ mod test {
     use block_padding::RawPadding;
 
     use super::*;
-
-    #[test]
-    fn test_confirm_block_padding_is_not_total_scam() {
-        use block_padding::{generic_array, Padding, Pkcs7};
-        use generic_array::{typenum::U8, GenericArray};
-
-        let msg = b"test";
-        let pos = msg.len();
-        let mut block: GenericArray<u8, U8> = [0xff; 8].into();
-        block[..pos].copy_from_slice(msg);
-        Pkcs7::pad(&mut block, pos);
-        assert_eq!(&block[..], b"test\x04\x04\x04\x04");
-        let res = Pkcs7::unpad(&block).unwrap();
-        assert_eq!(res, msg);
-    }
 
     #[test]
     fn test_pad_lib() {
