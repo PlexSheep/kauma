@@ -403,7 +403,6 @@ fn ghash(
     verbose: bool,
 ) -> ([u8; 16], u128) {
     // NOTE: just assume right sizes?
-    let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
     let mut buf: u128 = 0;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
@@ -418,20 +417,25 @@ fn ghash(
     while ct.len() % 16 != 0 {
         ct.push(0);
     }
+    assert!(ct.len() % 16 == 0);
+    assert!(ad.len() % 16 == 0);
     let ak: u128 = u128::from_be_bytes(*auth_key);
     let ak_sem = ffield::change_semantic(ak, ffield::Semantic::Gcm, ffield::Semantic::Xex);
+    let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
 
     if verbose {
         veprintln("H", format_args!("{ak:032x}"));
-        veprintln("H in XEX", format_args!("{ak_sem:032x}"));
         veprintln("C", format_args!("{ct:02x?}"));
         veprintln("A", format_args!("{ad:02x?}"));
     }
 
     let mut all = ad;
-    all.extend(ciphertext);
-    let mut all: Vec<u128> = all
-        .chunks_exact(16)
+    assert!(all.len() % 16 == 0);
+    all.extend(ct);
+    assert!(all.len() % 16 == 0);
+    let chunks = all.chunks_exact(16);
+    assert!(chunks.remainder().is_empty());
+    let mut all: Vec<u128> = chunks
         .map(|c| u128::from_be_bytes(len_to_const_arr(c).unwrap()))
         .collect();
     all.push(l);
@@ -460,6 +464,7 @@ fn ghash(
     (buf.to_be_bytes(), l)
 }
 
+/// Makes the auth tag with [ghash]. First return is the tag second is L.
 fn gcm_make_tag(
     auth_key: &[u8; 16],
     associated_data: &[u8],
@@ -469,6 +474,7 @@ fn gcm_make_tag(
 ) -> ([u8; 16], u128) {
     let mut auth_tag = [0; 16];
     let ghash_out = ghash(auth_key, associated_data, ciphertext, verbose);
+    veprintln("ghash tag", format_args!("{:02x?}", ghash_out.0));
     for ((xb, gb), ab) in xor_with_ghash
         .iter()
         .zip(ghash_out.0)
