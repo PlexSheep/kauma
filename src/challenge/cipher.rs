@@ -460,7 +460,7 @@ fn ghash(
     (buf.to_be_bytes(), l)
 }
 
-fn gcn_make_tag(
+fn gcm_make_tag(
     auth_key: &[u8; 16],
     associated_data: &[u8],
     ciphertext: &[u8],
@@ -507,7 +507,7 @@ pub fn gcm_encrypt(
         }
     }
 
-    let (at, l) = gcn_make_tag(
+    let (at, l) = gcm_make_tag(
         &auth_key,
         &input.associated_data,
         &ciphertext,
@@ -553,7 +553,7 @@ pub fn gcm_decrypt(
         }
     }
 
-    let (at, _l) = gcn_make_tag(
+    let (at, _l) = gcm_make_tag(
         &auth_key,
         &input.associated_data,
         &input.ciphertext,
