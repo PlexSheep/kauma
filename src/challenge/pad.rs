@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::common::interface::{get_bytes_maybe_hex, get_int, get_str, put_bytes};
 use crate::common::len_to_const_arr;
-use crate::settings::{self, Settings};
+use crate::settings::Settings;
 
 use super::{Action, Testcase};
 
