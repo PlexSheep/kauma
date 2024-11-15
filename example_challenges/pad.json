@@ -3,7 +3,7 @@
     "sea128_e": {
       "action": "padding_oracle",
       "arguments": {
-        "hostname": "padoraserv",
+        "hostname": "localhost",
         "port": 18652,
         "iv": "dxTwbO/hhIeycOTbTnp8QQ==",
         "ciphertext": "e+Sn+nG28niB8Df++hmjFRTcti07wHsrivmoxnDDBaELOfLS16p/pqvAuz01UPq7"

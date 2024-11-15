@@ -106,6 +106,13 @@ class ServerSimulator:
 
 # I'm not a python user, just let me run the damn script
 def main():
+    if len(sys.argv) > 2 and sys.argv[1] == "--encrypt":
+        data = bytes.fromhex(sys.argv[2])
+        server = ServerSimulator(b"sheise")
+        enc = server.encrypt(data)
+        print(f"{enc.hex()}")
+        exit(0)
+
     if len(sys.argv) != 4:
         print(f"incorrect arguments: {len(sys.argv)}")
         print(f"USAGE: {sys.argv[0]} KEY HOST PORT")
