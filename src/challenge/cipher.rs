@@ -55,12 +55,6 @@ impl GcmEncrypted {
     ) -> Result<Self> {
         let associated_data = associated_data.to_vec();
         let ciphertext = ciphertext.to_vec();
-        // while associated_data.len() % 16 != 0 {
-        //     associated_data.push(0);
-        // }
-        // while ciphertext.len() % 16 != 0 {
-        //     ciphertext.push(0);
-        // }
 
         Ok(Self {
             nonce: *nonce,
@@ -77,12 +71,6 @@ impl GcmDecrypted {
     pub fn build(nonce: &[u8; 12], associated_data: &[u8], plaintext: &[u8]) -> Result<Self> {
         let associated_data = associated_data.to_vec();
         let plaintext = plaintext.to_vec();
-        // while associated_data.len() % 16 != 0 {
-        //     associated_data.push(0);
-        // }
-        // while plaintext.len() % 16 != 0 {
-        //     plaintext.push(0);
-        // }
 
         Ok(Self {
             nonce: *nonce,
@@ -402,7 +390,6 @@ fn ghash(
     ciphertext: &[u8],
     verbose: bool,
 ) -> ([u8; 16], u128) {
-    // NOTE: just assume right sizes?
     let mut buf: u128 = 0;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
@@ -980,11 +967,6 @@ mod test {
 
     #[test]
     fn test_ghash() {
-        // A:41442d446174656e
-        // C:113dd19af1ff1dbbb16daeb712e3d1af
-        // L:00000000000000400000000000000080
-        // H:06eeb2c1bb142a5a66657310cae1809e
-
         const H: [u8; 16] = 0x06eeb2c1bb142a5a66657310cae1809eu128.to_be_bytes();
         const C: [u8; 16] = 0x113dd19af1ff1dbbb16daeb712e3d1afu128.to_be_bytes();
         const A: [u8; 8] = 0x41442d446174656eu64.to_be_bytes();
