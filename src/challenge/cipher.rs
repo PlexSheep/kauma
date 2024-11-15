@@ -53,23 +53,19 @@ impl GcmEncrypted {
         ciphertext: &[u8],
         auth_tag: &[u8; 16],
     ) -> Result<Self> {
-        if ciphertext.len() % 16 != 0 {
-            return Err(anyhow!(
-                "ciphertext length is not multiple of 16 bytes: {}",
-                ciphertext.len()
-            ));
-        }
-        if associated_data.len() & 16 != 0 {
-            return Err(anyhow!(
-                "associated_data length is not multiple of 16 bytes: {}",
-                associated_data.len()
-            ));
-        }
+        let associated_data = associated_data.to_vec();
+        let ciphertext = ciphertext.to_vec();
+        // while associated_data.len() % 16 != 0 {
+        //     associated_data.push(0);
+        // }
+        // while ciphertext.len() % 16 != 0 {
+        //     ciphertext.push(0);
+        // }
 
         Ok(Self {
             nonce: *nonce,
-            associated_data: associated_data.to_vec(),
-            ciphertext: ciphertext.to_vec(),
+            associated_data,
+            ciphertext,
             auth_tag: *auth_tag,
             l: 0,
             h: [0; 16],
@@ -79,23 +75,19 @@ impl GcmEncrypted {
 
 impl GcmDecrypted {
     pub fn build(nonce: &[u8; 12], associated_data: &[u8], plaintext: &[u8]) -> Result<Self> {
-        if plaintext.len() % 16 != 0 {
-            return Err(anyhow!(
-                "plaintext length is not multiple of 16 bytes: {}",
-                plaintext.len()
-            ));
-        }
-        if associated_data.len() & 16 != 0 {
-            return Err(anyhow!(
-                "associated_data length is not multiple of 16 bytes: {}",
-                associated_data.len()
-            ));
-        }
+        let associated_data = associated_data.to_vec();
+        let plaintext = plaintext.to_vec();
+        // while associated_data.len() % 16 != 0 {
+        //     associated_data.push(0);
+        // }
+        // while plaintext.len() % 16 != 0 {
+        //     plaintext.push(0);
+        // }
 
         Ok(Self {
             nonce: *nonce,
-            associated_data: associated_data.to_vec(),
-            plaintext: plaintext.to_vec(),
+            associated_data,
+            plaintext,
             authentic: false,
         })
     }
@@ -410,9 +402,16 @@ fn ghash(
     ciphertext: &[u8],
     verbose: bool,
 ) -> ([u8; 16], u128) {
+    // NOTE: just assume right sizes?
+    let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
     let mut buf: u128 = 0;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
+    if verbose {
+        veprintln("H", format_args!("{auth_key:02x?}"));
+        veprintln("C", format_args!("{ct:02x?}"));
+        veprintln("A", format_args!("{ad:02x?}"));
+    }
     while ad.len() % 16 != 0 {
         ad.push(0);
     }
@@ -435,7 +434,6 @@ fn ghash(
         .chunks_exact(16)
         .map(|c| u128::from_be_bytes(len_to_const_arr(c).unwrap()))
         .collect();
-    let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
     all.push(l);
 
     if verbose {
@@ -462,6 +460,25 @@ fn ghash(
     (buf.to_be_bytes(), l)
 }
 
+fn gcn_make_tag(
+    auth_key: &[u8; 16],
+    associated_data: &[u8],
+    ciphertext: &[u8],
+    xor_with_ghash: [u8; 16],
+    verbose: bool,
+) -> ([u8; 16], u128) {
+    let mut auth_tag = [0; 16];
+    let ghash_out = ghash(auth_key, associated_data, ciphertext, verbose);
+    for ((xb, gb), ab) in xor_with_ghash
+        .iter()
+        .zip(ghash_out.0)
+        .zip(auth_tag.iter_mut())
+    {
+        *ab = xb ^ gb;
+    }
+    (auth_tag, ghash_out.1)
+}
+
 pub fn gcm_encrypt(
     algorithm: PrimitiveAlgorithm,
     key: &[u8; 16],
@@ -469,7 +486,6 @@ pub fn gcm_encrypt(
     verbose: bool,
 ) -> Result<GcmEncrypted> {
     let mut ciphertext: Vec<u8> = Vec::with_capacity(input.plaintext.len());
-    let mut auth_tag = [0; 16];
     let mut counter: u32 = 1;
 
     let mut nonce_up = [0; 16];
@@ -478,10 +494,10 @@ pub fn gcm_encrypt(
 
     let mut y = nonce_up | counter as u128;
 
-    let xor_me_with_ghash = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
+    let xor_with_ghash = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
     let auth_key = algorithm.encrypt(key, &[0; 16], false)?;
 
-    for chunk in input.plaintext.chunks_exact(16) {
+    for chunk in input.plaintext.chunks(16) {
         counter += 1;
         y = nonce_up | counter as u128;
 
@@ -491,21 +507,20 @@ pub fn gcm_encrypt(
         }
     }
 
-    let ghash_out = ghash(&auth_key, &input.associated_data, &ciphertext, verbose);
-    for ((xb, gb), ab) in xor_me_with_ghash
-        .iter()
-        .zip(ghash_out.0)
-        .zip(auth_tag.iter_mut())
-    {
-        *ab = xb ^ gb;
-    }
+    let (at, l) = gcn_make_tag(
+        &auth_key,
+        &input.associated_data,
+        &ciphertext,
+        xor_with_ghash,
+        verbose,
+    );
 
     let out = GcmEncrypted {
         nonce: input.nonce,
         associated_data: input.associated_data.clone(),
         ciphertext,
-        auth_tag,
-        l: ghash_out.1,
+        auth_tag: at,
+        l,
         h: auth_key,
     };
     Ok(out)
@@ -517,7 +532,44 @@ pub fn gcm_decrypt(
     input: &GcmEncrypted,
     verbose: bool,
 ) -> Result<GcmDecrypted> {
-    todo!()
+    let mut plaintext: Vec<u8> = Vec::with_capacity(input.ciphertext.len());
+    let mut nonce_up = [0; 16];
+    let mut counter: u32 = 1;
+
+    nonce_up[..12].copy_from_slice(&input.nonce);
+    let nonce_up: u128 = u128::from_be_bytes(nonce_up);
+
+    let mut y = nonce_up | counter as u128;
+    let xor_with_ghash = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
+    let auth_key = algorithm.encrypt(key, &[0; 16], false)?;
+
+    for chunk in input.ciphertext.chunks(16) {
+        counter += 1;
+        y = nonce_up | counter as u128;
+
+        let k = algorithm.encrypt(key, &y.to_be_bytes(), false)?;
+        for (kb, pb) in k.iter().zip(chunk) {
+            plaintext.push(kb ^ pb);
+        }
+    }
+
+    let (at, _l) = gcn_make_tag(
+        &auth_key,
+        &input.associated_data,
+        &input.ciphertext,
+        xor_with_ghash,
+        verbose,
+    );
+
+    let out = GcmDecrypted {
+        nonce: input.nonce,
+        associated_data: input.associated_data.clone(),
+        plaintext,
+        authentic: at == input.auth_tag,
+    };
+    veprintln("auth_tag given", format_args!("{:02x?}", input.auth_tag));
+    veprintln("auth_tag made", format_args!("{:02x?}", at));
+    Ok(out)
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
