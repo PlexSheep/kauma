@@ -28,4 +28,7 @@ name = "kauma"
 path = "src/main.rs"
 
 [workspace]
-members = ["./crates/bint-easy/", "."]
+members = ["./crates/bint-easy/", ".", "crates/padsim"]
+
+[dev-dependencies]
+padsim = { path = "crates/padsim" }
