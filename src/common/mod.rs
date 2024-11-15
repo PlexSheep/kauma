@@ -5,7 +5,7 @@ pub mod interface;
 use anyhow::{anyhow, Result};
 
 pub fn veprintln(key: &str, format_args: std::fmt::Arguments) {
-    eprintln!("? {key:012}:\t{format_args}");
+    eprintln!("? {key:016}:\t{format_args}");
 }
 
 /// Try to downcast any array of [u8] into an array of constant size
