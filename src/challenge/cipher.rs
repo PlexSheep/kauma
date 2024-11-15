@@ -445,7 +445,9 @@ fn ghash(
             ffield::Semantic::Xex,
             ffield::Semantic::Gcm,
         );
-        veprintln("buf", format_args!("{buf:032x}"));
+        if verbose {
+            veprintln("buf", format_args!("{buf:032x}"));
+        }
     }
 
     (buf.to_be_bytes(), l)
@@ -461,7 +463,6 @@ fn gcm_make_tag(
 ) -> ([u8; 16], u128) {
     let mut auth_tag = [0; 16];
     let ghash_out = ghash(auth_key, associated_data, ciphertext, verbose);
-    veprintln("ghash tag", format_args!("{:02x?}", ghash_out.0));
     for ((xb, gb), ab) in xor_with_ghash
         .iter()
         .zip(ghash_out.0)
@@ -560,8 +561,10 @@ pub fn gcm_decrypt(
         plaintext,
         authentic: at == input.auth_tag,
     };
-    veprintln("auth_tag given", format_args!("{:02x?}", input.auth_tag));
-    veprintln("auth_tag made", format_args!("{:02x?}", at));
+    if verbose {
+        veprintln("auth_tag given", format_args!("{:02x?}", input.auth_tag));
+        veprintln("auth_tag made", format_args!("{:02x?}", at));
+    }
     Ok(out)
 }
 
