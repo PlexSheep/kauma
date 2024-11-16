@@ -7,7 +7,7 @@ use crate::common::interface::{get_any, get_bytes_maybe_hex, put_bytes};
 use crate::common::{len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
-use super::{Action, Testcase};
+use super::{cipher, Action, Testcase};
 
 fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8, Option<u8>)> {
     const MAX: u8 = 255;
@@ -41,23 +41,24 @@ fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8,
             result = (result.0, Some(i as u8));
         }
     }
-    veprintln("result", format_args!("{result:2x?}"));
     Ok(result)
 }
 
 fn abuse_padding_oracle(
     addr: SocketAddr,
     iv: &[u8; 16],
-    ct: &[u8],
+    ciphertext: &[u8],
     verbose: bool,
 ) -> Result<Vec<u8>> {
     let mut sock = TcpStream::connect(addr)?;
     let mut good_q = [0; 16];
-    sock.write_all(ct)?;
+    sock.write_all(ciphertext)?;
 
     for (idx, good_byte) in good_q.into_iter().enumerate().rev() {
         veprintln("guess idx", format_args!("{idx}"));
         let (a, b) = try_all_q(&mut sock, &good_q, idx)?;
+        veprintln("a", format_args!("{a}"));
+        veprintln("b", format_args!("{b:?}"));
         if let Some(b) = b {
             todo!()
         } else
@@ -72,7 +73,7 @@ fn abuse_padding_oracle(
 
     let mut plaintext = [0; 16];
     for i in 0..16 {
-        plaintext[i] = ct[i] ^ good_q[i];
+        plaintext[i] = ciphertext[i] ^ good_q[i];
     }
 
     Ok(vec![0, 1, 1, 3])
