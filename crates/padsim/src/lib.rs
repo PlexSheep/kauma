@@ -75,7 +75,7 @@ impl Server {
 
     pub fn run(mut self, addr: SocketAddr) -> io::Result<()> {
         let listener = TcpListener::bind(addr)?;
-        println!("listening on {addr}");
+        println!("SERV: listening on {addr}");
 
         loop {
             let (stream, peer) = listener.accept()?;
@@ -88,18 +88,21 @@ impl Server {
     }
 
     fn handle_conn(&mut self, mut stream: TcpStream, peer: SocketAddr) -> io::Result<Status> {
-        println!("handling {peer}");
+        println!("SERV: handling {peer}");
+        println!("SERV: awaiting ciphertext");
         let mut qlen_raw = [0; 2];
         stream.read_exact(&mut self.ciphertext)?;
+        println!("SERV: got ciphertext: {:02x?}", self.ciphertext);
 
         loop {
-            println!("expecting qlen next");
+            println!("SERV: expecting qlen next");
             stream.read_exact(&mut qlen_raw)?;
             self.q_wait = u16::from_le_bytes(qlen_raw);
             if self.q_wait == 0 {
+                stream.shutdown(std::net::Shutdown::Both)?;
                 return Ok(Status::Stop);
             }
-            println!("expecting {} Q blocks next", self.q_wait);
+            println!("SERV: expecting {} Q blocks next", self.q_wait);
 
             let mut qbuf: Vec<u8> = vec![0; self.q_wait as usize * 16];
             stream.read_exact(&mut qbuf)?;
@@ -125,6 +128,7 @@ impl Server {
     }
 
     fn evaluate_qs(&self) -> Vec<u8> {
+        println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
         let mut pt: [u8; 16];
         for qb in &self.q_queue {
