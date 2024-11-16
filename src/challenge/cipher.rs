@@ -669,12 +669,10 @@ fn get_algorithm(args: &serde_json::Value) -> Result<PrimitiveAlgorithm> {
 
 #[cfg(test)]
 mod test {
+    use crate::common::assert_hex;
+
     use super::*;
     use base64::prelude::*;
-
-    fn assert_hex(data: &[u8], correct: &[u8]) {
-        assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
-    }
 
     #[allow(unused)] // I use it every once in a while to help debug tests
     fn dump_b64(base: &str) -> Vec<u8> {

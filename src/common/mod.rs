@@ -107,6 +107,10 @@ pub fn run_with_timeout<T: 'static + Send, F: 'static + Send + FnOnce() -> T>(
     receiver.recv_timeout(timeout)
 }
 
+pub fn assert_hex(data: &[u8], correct: &[u8]) {
+    assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
