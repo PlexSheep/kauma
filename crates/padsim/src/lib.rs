@@ -1,14 +1,13 @@
 use block_padding::{Pkcs7, RawPadding, UnpadError};
 
+const KEY: &[u8; 16] = b"genericarraysbad";
+
 /// pad with pkcs7
 pub fn pad(data: &[u8]) -> Vec<u8> {
-    eprintln!("data.len: {}", data.len());
     let mut buf: Vec<u8> = data.to_vec();
     while buf.len() % 16 != 0 || (data.len() % 16 == 0 && buf.len() < data.len() + 16) {
         buf.push(0xff);
     }
-    eprintln!("buf {buf:02x?}");
-    eprintln!("buf.len: {}", buf.len());
 
     Pkcs7::raw_pad(&mut buf, data.len());
     buf
@@ -19,11 +18,85 @@ pub fn unpad(data: &[u8]) -> Result<&[u8], UnpadError> {
     Pkcs7::raw_unpad(data)
 }
 
+pub fn encrypt(plain: &[u8], key: &[u8; 16]) -> Vec<u8> {
+    let padded = pad(plain);
+
+    let blocks: Vec<&[u8]> = padded.chunks(16).collect();
+    let mut ciphertext = Vec::with_capacity(padded.len());
+
+    for block in blocks {
+        ciphertext.extend(xor_blocks(block, key));
+    }
+
+    ciphertext
+}
+
+pub fn decrypt(cipher: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, UnpadError> {
+    let blocks: Vec<&[u8]> = cipher.chunks(16).collect();
+    let mut plaintext = Vec::with_capacity(cipher.len());
+
+    for block in blocks {
+        plaintext.extend(xor_blocks(block, key));
+    }
+
+    unpad(&plaintext).map(|a| a.to_vec())
+}
+
+fn xor_blocks(a: &[u8], b: &[u8]) -> [u8; 16] {
+    assert!(a.len() == 16);
+    assert!(b.len() == 16);
+    let mut buf = [0; 16];
+    for i in 0..16 {
+        buf[i] = a[i] ^ b[i];
+    }
+    buf
+}
+
 #[cfg(test)]
 mod test {
-    use block_padding::RawPadding;
-
     use super::*;
+
+    #[test]
+    fn test_xor_blocks() {
+        let my = [19; 16];
+        let a = xor_blocks(&my, KEY);
+        assert_eq!(
+            a,
+            [116, 118, 125, 118, 97, 122, 112, 114, 97, 97, 114, 106, 96, 113, 114, 119]
+        )
+    }
+
+    #[test]
+    fn test_encrypt() {
+        let my = [19; 16];
+        let a = encrypt(&my, KEY);
+        assert_eq!(
+            a,
+            [
+                116, 118, 125, 118, 97, 122, 112, 114, 97, 97, 114, 106, 96, 113, 114, 119, 119,
+                117, 126, 117, 98, 121, 115, 113, 98, 98, 113, 105, 99, 114, 113, 116
+            ]
+        )
+    }
+
+    #[test]
+    fn test_decrypt() {
+        let my = [19; 16];
+        let enc = [
+            116, 118, 125, 118, 97, 122, 112, 114, 97, 97, 114, 106, 96, 113, 114, 119, 119, 117,
+            126, 117, 98, 121, 115, 113, 98, 98, 113, 105, 99, 114, 113, 116,
+        ];
+        let a = decrypt(&enc, KEY).expect("could not decrypt");
+        assert_eq!(a, my);
+    }
+
+    #[test]
+    fn test_encrypt_decrypt() {
+        let my = [19; 16];
+        let a = encrypt(&my, KEY);
+        let b = decrypt(&a, KEY).expect("could not decrypt");
+        assert_eq!(my.to_vec(), b);
+    }
 
     #[test]
     fn test_pad_lib() {
