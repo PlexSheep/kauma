@@ -23,9 +23,12 @@ fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8,
 
     let flat_buf = buf.as_flattened();
 
+    eprintln!("? Sending Q blocks ({} Bytes)", buf.len() * 16);
     sock.write_all(flat_buf)?;
     sock.flush()?;
+    eprintln!("? reading server response");
     sock.read_exact(&mut results_raw)?;
+    eprintln!("? got server response");
 
     let mut result: (u8, Option<u8>) = (0, None);
     let mut found_one = false;
@@ -47,11 +50,15 @@ fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8,
 fn abuse_padding_oracle(
     addr: SocketAddr,
     iv: &[u8; 16],
-    ciphertext: &[u8],
+    ciphertext: &[u8], // somehow not 16 byte guarantee?, Assume 16 bytes for now
     verbose: bool,
-) -> Result<Vec<u8>> {
-    let mut sock = TcpStream::connect(addr)?;
+) -> Result<[u8; 16]> {
+    let mut sock = TcpStream::connect(addr).map_err(|e| {
+        eprintln!("Could not connect to {addr}: {e}");
+        e
+    })?;
     let mut good_q = [0; 16];
+    let mut plaintext = [0; 16];
     sock.write_all(ciphertext)?;
 
     for (idx, good_byte) in good_q.into_iter().enumerate().rev() {
@@ -65,18 +72,15 @@ fn abuse_padding_oracle(
         // padding must be [..., 0x01]
         {
             good_q[idx] = a;
+            plaintext[idx] = good_q[idx] ^ ciphertext[idx]; // FIXME: this needs to be xored with
+                                                            // the intermediate, not the ciphertext
             todo!()
         }
         veprintln("good_q", format_args!("{good_q:02x?}"));
         todo!()
     }
 
-    let mut plaintext = [0; 16];
-    for i in 0..16 {
-        plaintext[i] = ciphertext[i] ^ good_q[i];
-    }
-
-    Ok(vec![0, 1, 1, 3])
+    Ok(plaintext)
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
