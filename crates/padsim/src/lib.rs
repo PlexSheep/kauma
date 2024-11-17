@@ -49,23 +49,15 @@ pub fn decrypt(cipher: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, UnpadError> {
 }
 
 pub struct Server {
-    solution: Vec<u8>,
     q_queue: VecDeque<[u8; 16]>,
     q_wait: u16,
     key: [u8; 16],
     ciphertext: [u8; 16],
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum Status {
-    Continue,
-    Stop,
-}
-
 impl Server {
-    pub fn new(sol: &[u8], key: &[u8; 16]) -> Self {
+    pub fn new(key: &[u8; 16]) -> Self {
         Self {
-            solution: sol.to_vec(),
             q_queue: VecDeque::new(),
             q_wait: 0,
             key: *key,
@@ -78,16 +70,29 @@ impl Server {
         println!("SERV: listening on {addr}");
 
         loop {
-            let (stream, peer) = listener.accept()?;
-            if self.handle_conn(stream, peer)? == Status::Stop {
-                println!("server stops...");
-                break;
-            }
+            let (stream, peer) = match listener.accept() {
+                Err(e) => {
+                    eprintln!("SERV: could not accept peer: {e}");
+                    continue;
+                }
+                Ok(a) => a,
+            };
+
+            match self.handle_conn(stream, peer) {
+                Ok(_) => {
+                    println!("server stops...");
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("SERV: error while handling connection with {peer}: {e}");
+                    continue;
+                }
+            };
         }
         Ok(())
     }
 
-    fn handle_conn(&mut self, mut stream: TcpStream, peer: SocketAddr) -> io::Result<Status> {
+    fn handle_conn(&mut self, mut stream: TcpStream, peer: SocketAddr) -> io::Result<()> {
         println!("SERV: handling {peer}");
         println!("SERV: awaiting ciphertext");
         let mut qlen_raw = [0; 2];
@@ -100,7 +105,7 @@ impl Server {
             self.q_wait = u16::from_le_bytes(qlen_raw);
             if self.q_wait == 0 {
                 stream.shutdown(std::net::Shutdown::Both)?;
-                return Ok(Status::Stop);
+                return Ok(());
             }
             println!("SERV: expecting {} Q blocks next", self.q_wait);
 
@@ -121,6 +126,7 @@ impl Server {
         self.q_queue.push_front(*qb);
         self.q_wait -= 1;
         if self.q_wait == 0 {
+            assert_eq!(self.q_queue.len(), 256);
             Some(self.evaluate_qs())
         } else {
             None
@@ -130,6 +136,7 @@ impl Server {
     fn evaluate_qs(&self) -> Vec<u8> {
         println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
+        println!("SERV: Q blocks: {:032x?}", self.q_queue);
         let mut pt: [u8; 16];
         for qb in &self.q_queue {
             pt = xor_blocks(&self.ciphertext, &self.key);
@@ -140,7 +147,16 @@ impl Server {
                 Err(_unpad_err) => answers.push(0x00),
             }
         }
-
+        assert!(answers.len() < u8::MAX as usize); // why should it ever be more?
+        assert!(answers.iter().fold(false, |a, f| a | (*f == 1))); // check that at least one is 1
+        let correct: Vec<_> = answers
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| **v == 1)
+            .map(|(i, _)| i)
+            .collect();
+        println!("SERV: correct ones were: {correct:02x?}");
+        println!("SERV: Full dump of response: {answers:01x?}");
         answers
     }
 }

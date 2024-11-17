@@ -17,7 +17,6 @@ fn main() -> Result<(), anyhow::Error> {
         &format!("print the version of {}", env!("CARGO_PKG_NAME")),
     );
     opts.optopt("k", "key", "key to use, 16 bytes", "KEY");
-    opts.optopt("s", "solution", "plaintext that is to be guessed", "SOL");
     opts.optopt("a", "addr", "Hostname and port to run on", "HOST:PORT");
 
     let matches = match opts.parse(&args[1..]) {
@@ -37,21 +36,17 @@ fn main() -> Result<(), anyhow::Error> {
         std::process::exit(0);
     }
 
-    if !(matches.opt_present("key")
-        && matches.opt_present("solution")
-        && matches.opt_present("addr"))
-    {
-        eprintln!("key, solution and/or addr not defined");
+    if !(matches.opt_present("key") && matches.opt_present("addr")) {
+        eprintln!("key, and/or addr not defined");
         usage_and_exit(&opts, &program);
     }
 
-    let sol: Vec<u8> = decode_hex(&get_str(&matches, "solution"))?;
     let key: [u8; 16] = len_to_const_arr(&decode_hex(&get_str(&matches, "key"))?)
         .inspect_err(|_| eprintln!("error while loading the key"))?;
     let addr_raw = get_str(&matches, "addr");
     let addr = addr_raw.to_socket_addrs()?.next().expect("no socket addr");
 
-    let serv = Server::new(&sol, &key);
+    let serv = Server::new(&key);
     Ok(serv.run(addr)?)
 }
 
