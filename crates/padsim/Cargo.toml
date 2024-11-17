@@ -9,4 +9,6 @@ description = "Simulates a server with a padding oracle side channel vulnerabili
 repository = "https://github.com/PlexSheep/kauma"
 
 [dependencies]
+anyhow = "1.0.93"
 block-padding = "0.3.3"
+getopts = "0.2"

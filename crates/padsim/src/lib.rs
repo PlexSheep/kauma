@@ -156,12 +156,12 @@ fn xor_blocks(a: &[u8], b: &[u8]) -> [u8; 16] {
 }
 
 /// Try to downcast any array of [u8] into an array of constant size
-fn len_to_const_arr<const N: usize>(data: &[u8]) -> io::Result<[u8; N]> {
+pub fn len_to_const_arr<const N: usize>(data: &[u8]) -> io::Result<[u8; N]> {
     let arr: [u8; N] = match data.try_into() {
         Ok(v) => v,
         Err(e) => {
             let e = io::Error::other(format!(
-                "! Data is of bad length {}: {:02x?} ; {e:#?}",
+                "Data is of bad length {}: {:02x?} ; {e:#?}",
                 data.len(),
                 data
             ));
