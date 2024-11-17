@@ -8,6 +8,15 @@
         "iv": "dxTwbO/hhIeycOTbTnp8QQ==",
         "ciphertext": "e+Sn+nG28niB8Df++hmjFRTcti07wHsrivmoxnDDBaELOfLS16p/pqvAuz01UPq7"
       }
+    },
+    "pad1": {
+      "action": "padding_oracle",
+      "arguments": {
+        "hostname": "127.0.0.1",
+        "port": 18652,
+        "iv": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
     }
   }
 }
