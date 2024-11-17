@@ -1,9 +1,9 @@
 {
   "testcases": {
-    "sea128_e": {
+    "pad0": {
       "action": "padding_oracle",
       "arguments": {
-        "hostname": "localhost",
+        "hostname": "127.0.0.1",
         "port": 18652,
         "iv": "dxTwbO/hhIeycOTbTnp8QQ==",
         "ciphertext": "e+Sn+nG28niB8Df++hmjFRTcti07wHsrivmoxnDDBaELOfLS16p/pqvAuz01UPq7"
