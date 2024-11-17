@@ -82,7 +82,7 @@ class ServerSimulator:
                         if not q_count_data:
                             break
                         self.excepted_q_blocks = int.from_bytes(q_count_data, byteorder='little')
-                        print("Q blocks expected received:", self.excepted_q_blocks)
+                        print("Q blocks expected received:", hex(self.excepted_q_blocks))
 
                         if self.excepted_q_blocks == 0:
                             break
@@ -91,15 +91,14 @@ class ServerSimulator:
                         bytes_received = self.recv_all(conn, total_bytes_expected)
                         if not bytes_received:
                             break
-                        #print("bytes_received received:", bytes_received)
 
                         for i in range(0, total_bytes_expected, 16):
                             q_block = bytes_received[i:i + 16]
-                            print("q_block received:", q_block)
+                            print("q_block received:", q_block.hex())
                             response = self.add_q_block(q_block)
 
                             if response:
-                                print("response:", response)
+                                print("response:", response.hex())
                                 conn.sendall(response)
 
 
