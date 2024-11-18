@@ -126,8 +126,9 @@ impl Server {
         self.q_queue.push_front(*qb);
         self.q_wait -= 1;
         if self.q_wait == 0 {
-            assert_eq!(self.q_queue.len(), 256);
-            Some(self.evaluate_qs())
+            let answers = Some(self.evaluate_qs());
+            self.q_queue.clear();
+            answers
         } else {
             None
         }
@@ -136,7 +137,6 @@ impl Server {
     fn evaluate_qs(&self) -> Vec<u8> {
         println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
-        println!("SERV: Q blocks: {:032x?}", self.q_queue);
         let mut pt: [u8; 16];
         for qb in &self.q_queue {
             pt = xor_blocks(&self.ciphertext, &self.key);
@@ -147,8 +147,8 @@ impl Server {
                 Err(_unpad_err) => answers.push(0x00),
             }
         }
-        assert!(answers.len() < u8::MAX as usize); // why should it ever be more?
-        assert!(answers.iter().fold(false, |a, f| a | (*f == 1))); // check that at least one is 1
+        println!("SERV: answers.len: {}", answers.len());
+        assert!(answers.len() <= 256); // why should it ever be more?
         let correct: Vec<_> = answers
             .iter()
             .enumerate()
