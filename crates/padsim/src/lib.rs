@@ -37,7 +37,13 @@ pub fn encrypt(plain: &[u8], key: &[u8; 16]) -> Vec<u8> {
 }
 
 /// decrypt with pcks7 and xor
-pub fn decrypt(cipher: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, UnpadError> {
+pub fn decrypt_and_unpad(cipher: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, UnpadError> {
+    let pt = decrypt(cipher, key);
+
+    unpad(&pt).map(|a| a.to_vec())
+}
+
+pub fn decrypt(cipher: &[u8], key: &[u8; 16]) -> Vec<u8> {
     let blocks: Vec<&[u8]> = cipher.chunks(16).collect();
     let mut plaintext = Vec::with_capacity(cipher.len());
 
@@ -45,7 +51,7 @@ pub fn decrypt(cipher: &[u8], key: &[u8; 16]) -> Result<Vec<u8>, UnpadError> {
         plaintext.extend(xor_blocks(block, key));
     }
 
-    unpad(&plaintext).map(|a| a.to_vec())
+    plaintext
 }
 
 pub struct Server {
@@ -98,6 +104,10 @@ impl Server {
         let mut qlen_raw = [0; 2];
         stream.read_exact(&mut self.ciphertext)?;
         println!("SERV: got ciphertext: {:02x?}", self.ciphertext);
+        println!(
+            "SERV: decrypted: {:02x?}",
+            decrypt(&self.ciphertext, &self.key)
+        );
 
         loop {
             println!("SERV: expecting qlen next");
@@ -138,9 +148,13 @@ impl Server {
         println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
         let mut pt: [u8; 16];
-        for qb in &self.q_queue {
-            pt = xor_blocks(&self.ciphertext, &self.key);
+        for qb in self.q_queue.iter().rev() {
+            pt = len_to_const_arr(&decrypt(&self.ciphertext, &self.key))
+                .expect("down casting from vec to [u8;16] error");
             pt = xor_blocks(&pt, qb);
+
+            println!("SERV: Q block: {qb:02x?}");
+            println!("SERV: Plaintext for Q block: {pt:02x?}");
 
             match unpad(&pt) {
                 Ok(_) => answers.push(0x01),
@@ -155,8 +169,11 @@ impl Server {
             .filter(|(_, v)| **v == 1)
             .map(|(i, _)| i)
             .collect();
-        println!("SERV: correct ones were: {correct:02x?}");
-        println!("SERV: Full dump of response: {answers:01x?}");
+        if !correct.is_empty() {
+            println!("v for correct0: {:x?}", self.q_queue[correct[0]]);
+        }
+        println!("SERV: correct ones were: {correct:02?}");
+        println!("SERV: Full dump of response: {answers:01?}");
         answers
     }
 }
@@ -221,7 +238,7 @@ mod test {
             116, 118, 125, 118, 97, 122, 112, 114, 97, 97, 114, 106, 96, 113, 114, 119, 119, 117,
             126, 117, 98, 121, 115, 113, 98, 98, 113, 105, 99, 114, 113, 116,
         ];
-        let a = decrypt(&enc, DEFAULT_KEY).expect("could not decrypt");
+        let a = decrypt_and_unpad(&enc, DEFAULT_KEY).expect("could not decrypt");
         assert_eq!(a, my);
     }
 
@@ -229,7 +246,7 @@ mod test {
     fn test_encrypt_decrypt() {
         let my = [19; 16];
         let a = encrypt(&my, DEFAULT_KEY);
-        let b = decrypt(&a, DEFAULT_KEY).expect("could not decrypt");
+        let b = decrypt_and_unpad(&a, DEFAULT_KEY).expect("could not decrypt");
         assert_eq!(my.to_vec(), b);
     }
 
