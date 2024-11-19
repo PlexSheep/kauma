@@ -5,8 +5,8 @@
       "arguments": {
         "hostname": "127.0.0.1",
         "port": 18652,
-        "iv": "dxTwbO/hhIeycOTbTnp8QQ==",
-        "ciphertext": "e+Sn+nG28niB8Df++hmjFRTcti07wHsrivmoxnDDBaELOfLS16p/pqvAuz01UPq7"
+        "iv": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "ciphertext": "VRFVAFURVQBVEVUAVRFVug=="
       }
     },
     "pad1": {
