@@ -7,7 +7,7 @@ use crate::common::interface::{get_any, get_bytes_maybe_hex, put_bytes};
 use crate::common::{len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
-use super::{cipher, Action, Testcase};
+use super::{Action, Testcase};
 
 fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8, Option<u8>)> {
     const MAX: u8 = 255;
