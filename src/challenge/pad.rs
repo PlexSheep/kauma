@@ -116,14 +116,13 @@ mod test {
     use super::*;
     use padsim::Server;
 
-    const TIMEOUT: Duration = Duration::from_millis(3000);
+    const TIMEOUT: Duration = Duration::from_millis(300);
     const HOST: &str = "localhost";
 
-    fn start_serv(sol: &[u8], key: &[u8; 16], addr: SocketAddr) {
-        let sol = sol.to_owned();
+    fn start_serv(key: &[u8; 16], addr: SocketAddr) {
         let key = key.to_owned();
         std::thread::spawn(move || {
-            let s = Server::new(&sol, &key);
+            let s = Server::new(&key);
             s.run(addr).expect("server fail");
         });
         std::thread::sleep(Duration::from_millis(20));
@@ -131,13 +130,19 @@ mod test {
 
     #[test]
     fn test_crack_easy() {
-        const KEY: &[u8; 16] = b"safkjsaflasgAAAA";
-        const PT: &[u8; 14] = b"aaaaaaaaaaaaaa";
+        const KEY: &[u8; 16] = &[
+            0xbb, 0xaa, 0xbb, 0xaa, 0xbb, 0xaa, 0xbb, 0xaa, 0xbb, 0xaa, 0xbb, 0xaa, 0xbb, 0xaa,
+            0xbb, 0xaa,
+        ];
+        const PT: &[u8; 15] = &[
+            0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa,
+            0xff, // padding: 0x01
+        ];
         const PORT: u16 = 44000;
 
         let sol = run_with_timeout(TIMEOUT, || {
             let addr = to_addr(HOST, PORT)?;
-            start_serv(PT, KEY, addr);
+            start_serv(KEY, addr);
             let enc = padsim::encrypt(PT, KEY);
             abuse_padding_oracle(addr, &[0; 16], &enc, true)
         })
