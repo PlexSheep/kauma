@@ -133,7 +133,7 @@ impl Server {
     }
 
     fn push_q(&mut self, qb: &[u8; 16]) -> Option<Vec<u8>> {
-        self.q_queue.push_front(*qb);
+        self.q_queue.push_back(*qb);
         self.q_wait -= 1;
         if self.q_wait == 0 {
             let answers = Some(self.evaluate_qs());
@@ -144,20 +144,23 @@ impl Server {
         }
     }
 
+    #[allow(clippy::identity_op)] // helps readability
     fn evaluate_qs(&self) -> Vec<u8> {
         println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
         let mut pt: [u8; 16];
-        for qb in self.q_queue.iter().rev() {
+
+        for qb in &self.q_queue {
             pt = len_to_const_arr(&decrypt(&self.ciphertext, &self.key))
                 .expect("down casting from vec to [u8;16] error");
             pt = xor_blocks(&pt, qb);
 
-            println!("SERV: Q block: {qb:02x?}");
-            println!("SERV: Plaintext for Q block: {pt:02x?}");
-
             match unpad(&pt) {
-                Ok(_) => answers.push(0x01),
+                Ok(_) => {
+                    answers.push(0x01);
+                    println!("SERV: correct q: {qb:02x?}");
+                    println!("SERV: leads to: {pt:02x?}");
+                }
                 Err(_unpad_err) => answers.push(0x00),
             }
         }
@@ -170,10 +173,12 @@ impl Server {
             .map(|(i, _)| i)
             .collect();
         if !correct.is_empty() {
-            println!("v for correct0: {:x?}", self.q_queue[correct[0]]);
+            println!("first correct q: {:x?}", self.q_queue[correct[0]]);
+        }
+        if correct.len() == 2 {
+            println!("seconds correct q: {:x?}", self.q_queue[correct[1]]);
         }
         println!("SERV: correct ones were: {correct:02?}");
-        println!("SERV: Full dump of response: {answers:01?}");
         answers
     }
 }
