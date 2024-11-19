@@ -1,8 +1,9 @@
+use std::fmt::Write;
 use std::net::ToSocketAddrs;
 
 use getopts::{Matches, Options};
 
-use padsim::{len_to_const_arr, Server};
+use padsim::{decrypt_and_unpad, len_to_const_arr, Server};
 
 fn main() -> Result<(), anyhow::Error> {
     let args: Vec<_> = std::env::args().collect();
@@ -18,6 +19,7 @@ fn main() -> Result<(), anyhow::Error> {
     );
     opts.optopt("k", "key", "key to use, 16 bytes", "KEY");
     opts.optopt("a", "addr", "Hostname and port to run on", "HOST:PORT");
+    opts.optopt("e", "encrypt", "Encrypt something", "BYTES");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -36,13 +38,32 @@ fn main() -> Result<(), anyhow::Error> {
         std::process::exit(0);
     }
 
-    if !(matches.opt_present("key") && matches.opt_present("addr")) {
-        eprintln!("key, and/or addr not defined");
+    if !matches.opt_present("key") {
+        eprintln!("key, not defined");
         usage_and_exit(&opts, &program);
     }
 
     let key: [u8; 16] = len_to_const_arr(&decode_hex(&get_str(&matches, "key"))?)
         .inspect_err(|_| eprintln!("error while loading the key"))?;
+
+    if matches.opt_present("encrypt") {
+        let pt: Vec<u8> = decode_hex(&get_str(&matches, "encrypt"))
+            .inspect_err(|_| eprintln!("error while loading the plaintext"))?;
+        let a = padsim::encrypt(&pt, &key);
+        assert_eq!(
+            pt.to_vec(),
+            decrypt_and_unpad(&a, &key).expect("fuck cant decrypt")
+        );
+        assert!(a.len() == 16 || a.len() == 32);
+        println!("{}", encode_hex(&a));
+        std::process::exit(0);
+    }
+
+    if !matches.opt_present("addr") {
+        eprintln!("addr not defined");
+        usage_and_exit(&opts, &program);
+    }
+
     let addr_raw = get_str(&matches, "addr");
     let addr = addr_raw.to_socket_addrs()?.next().expect("no socket addr");
 
@@ -73,6 +94,15 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
         .collect()
+}
+
+/// [Byte](u8) slice to hex encoded [String]
+fn encode_hex(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        write!(&mut s, "{:02x}", b).unwrap();
+    }
+    s
 }
 
 // `!` is a pseudo type and means the function will never return
