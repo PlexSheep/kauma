@@ -173,12 +173,17 @@ impl Server {
             .map(|(i, _)| i)
             .collect();
         if !correct.is_empty() {
-            println!("first correct q: {:x?}", self.q_queue[correct[0]]);
+            println!(
+                "SERV: first correct q: {:x?} (at {})",
+                self.q_queue[correct[0]], correct[0]
+            );
         }
         if correct.len() == 2 {
-            println!("seconds correct q: {:x?}", self.q_queue[correct[1]]);
+            println!(
+                "SERV: seconds correct q: {:x?} (at {})",
+                self.q_queue[correct[1]], correct[1]
+            );
         }
-        println!("SERV: correct ones were: {correct:02?}");
         answers
     }
 }
