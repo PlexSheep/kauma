@@ -149,19 +149,27 @@ impl Server {
         println!("SERV: got all Q's, evaluating...");
         let mut answers: Vec<u8> = Vec::with_capacity(self.q_queue.len());
         let mut pt: [u8; 16];
+        let mut one_correct = false;
 
-        for qb in &self.q_queue {
+        for (idx, qb) in self.q_queue.iter().enumerate() {
             pt = len_to_const_arr(&decrypt(&self.ciphertext, &self.key))
                 .expect("down casting from vec to [u8;16] error");
             pt = xor_blocks(&pt, qb);
 
             match unpad(&pt) {
                 Ok(_) => {
+                    one_correct = true;
                     answers.push(0x01);
                     println!("SERV: correct q: {qb:02x?}");
                     println!("SERV: leads to: {pt:02x?}");
                 }
                 Err(_unpad_err) => answers.push(0x00),
+            }
+
+            if !one_correct && idx == self.q_queue.len() - 1 {
+                println!("SERV: No matches. Giving Example");
+                println!("SERV: q: {qb:02x?}");
+                println!("SERV: leads to: {pt:02x?}");
             }
         }
         println!("SERV: answers.len: {}", answers.len());
@@ -177,8 +185,7 @@ impl Server {
                 "SERV: first correct q: {:x?} (at {})",
                 self.q_queue[correct[0]], correct[0]
             );
-        }
-        if correct.len() == 2 {
+        } else if correct.len() == 2 {
             println!(
                 "SERV: seconds correct q: {:x?} (at {})",
                 self.q_queue[correct[1]], correct[1]
