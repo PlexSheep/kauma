@@ -113,7 +113,7 @@ fn abuse_padding_oracle(
         sock.write_all(&block)?;
 
         // iterate last byte to first byte
-        for (byte_idx) in (0usize..16usize).rev() {
+        for byte_idx in (0usize..16usize).rev() {
             eprintln!("? ==== Next Byte");
             veprintln("byte_idx", format_args!("{byte_idx}"));
 
