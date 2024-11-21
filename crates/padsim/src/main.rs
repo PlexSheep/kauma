@@ -54,7 +54,6 @@ fn main() -> Result<(), anyhow::Error> {
             pt.to_vec(),
             decrypt_and_unpad(&a, &key).expect("fuck cant decrypt")
         );
-        assert!(a.len() == 16 || a.len() == 32);
         println!("{}", encode_hex(&a));
         std::process::exit(0);
     }
