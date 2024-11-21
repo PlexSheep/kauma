@@ -61,7 +61,7 @@ fn verify_candidate(
     buf.extend((candidates.len() as u16).to_le_bytes());
 
     for candidate in candidates {
-        let mut q = base_q.clone();
+        let mut q = *base_q;
         q[idx] = *candidate;
         q[idx - 1] = 0xff;
         veprintln("q for {candidate:02x}", format_args!("{q:02x?}"));
