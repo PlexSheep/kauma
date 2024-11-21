@@ -46,10 +46,45 @@ fn verify_candidate(
     idx: usize,
     candidates: &[u8],
 ) -> Result<u8> {
+    if idx < 1 {
+        return Err(anyhow!(
+            "Can't verify if the idx is < 1, as we need to prepend something to verify"
+        ));
+    }
     if candidates.is_empty() {
         return Err(anyhow!("No candidates at all given!"));
     }
-    todo!()
+    if candidates.len() > 2 {
+        return Err(anyhow!("Too many candidates than should be possible"));
+    }
+    let mut buf = Vec::with_capacity(2 + candidates.len() * 16);
+    buf.extend((candidates.len() as u16).to_le_bytes());
+
+    for candidate in candidates {
+        let mut q = base_q.clone();
+        q[idx] = *candidate;
+        q[idx - 1] = 0xff;
+        veprintln("q for {candidate:02x}", format_args!("{q:02x?}"));
+        buf.extend(q);
+    }
+
+    sock.write_all(&buf)?;
+    let mut responses: Vec<u8> = vec![0; candidates.len()];
+    sock.read_exact(&mut responses)?;
+    veprintln("response", format_args!("{responses:02x?}"));
+
+    if responses.len() != candidates.len() {
+        return Err(anyhow!("Server sent bad amount of response bytes"));
+    }
+
+    // logic only needs to work for len==2
+    if candidates[0] == 1 {
+        Ok(candidates[0])
+    } else if candidates[1] == 1 {
+        Ok(candidates[1])
+    } else {
+        return Err(anyhow!("Server says none of the candidates were correct"));
+    }
 }
 
 fn abuse_padding_oracle(
