@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use crate::common::interface::{get_any, get_bytes_maybe_hex, put_bytes};
 use crate::common::{len_to_const_arr, veprintln};
@@ -9,14 +9,14 @@ use crate::settings::Settings;
 
 use super::{Action, Testcase};
 
-fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8, Option<u8>)> {
-    const MAX: u8 = 255;
-    let mut results_raw = [0; MAX as usize];
-    let mut buf: Vec<[u8; 16]> = Vec::with_capacity(MAX as usize);
-    sock.write_all(&(MAX as u16).to_le_bytes())?;
+fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<u8>> {
+    let mut candidates = Vec::with_capacity(2);
+    let mut results_raw = [0; u8::MAX as usize];
+    let mut buf: Vec<[u8; 16]> = Vec::with_capacity(u8::MAX as usize);
+    sock.write_all(&(u8::MAX as u16).to_le_bytes())?;
 
-    for o in 0..MAX {
-        let mut q = *good_q;
+    for o in 0..u8::MAX {
+        let mut q = *base_q;
         q[idx] = o;
         buf.push(q);
     }
@@ -30,21 +30,26 @@ fn try_all_q(sock: &mut TcpStream, good_q: &[u8; 16], idx: usize) -> Result<(u8,
     sock.read_exact(&mut results_raw)?;
     eprintln!("? got server response");
 
-    let mut result: (u8, Option<u8>) = (0, None);
-    let mut found_one = false;
-    veprintln("results_raw", format_args!("{results_raw:01x?}"));
     for (i, r) in results_raw.iter().enumerate() {
         if *r == 0 {
             continue;
-        }
-        if !found_one {
-            result = (i as u8, result.1);
-            found_one = true;
         } else {
-            result = (result.0, Some(i as u8));
+            candidates.push(i as u8);
         }
     }
-    Ok(result)
+    Ok(candidates)
+}
+
+fn verify_candidate(
+    sock: &mut TcpStream,
+    base_q: &[u8; 16],
+    idx: usize,
+    candidates: &[u8],
+) -> Result<u8> {
+    if candidates.is_empty() {
+        return Err(anyhow!("No candidates at all given!"));
+    }
+    todo!()
 }
 
 fn abuse_padding_oracle(
@@ -52,32 +57,60 @@ fn abuse_padding_oracle(
     iv: &[u8; 16],
     ciphertext: &[u8], // somehow not 16 byte guarantee?, Assume 16 bytes for now
     verbose: bool,
-) -> Result<[u8; 16]> {
-    let mut sock = TcpStream::connect(addr).map_err(|e| {
-        eprintln!("Could not connect to {addr}: {e}");
-        e
-    })?;
-    let mut good_q = [0; 16];
-    let mut plaintext = [0; 16];
-    sock.write_all(ciphertext)?;
+) -> Result<Vec<u8>> {
+    let mut plaintext: Vec<u8> = Vec::with_capacity(ciphertext.len());
+    let mut counter = 1;
+    let chunks = ciphertext.chunks_exact(16);
+    assert!(chunks.remainder().is_empty());
+    let ciphertext_blocks: Vec<[u8; 16]> = chunks
+        .map(|a| len_to_const_arr(a).expect("bad length of array despite chunks_exact"))
+        .collect();
 
-    for (idx, good_byte) in good_q.into_iter().enumerate().rev() {
-        veprintln("guess idx", format_args!("{idx}"));
-        let (a, b) = try_all_q(&mut sock, &good_q, idx)?;
-        veprintln("a", format_args!("{a}"));
-        veprintln("b", format_args!("{b:?}"));
-        if let Some(b) = b {
-            todo!()
-        } else
-        // padding must be [..., 0x01]
-        {
-            good_q[idx] = a;
-            plaintext[idx] = good_q[idx] ^ ciphertext[idx]; // FIXME: this needs to be xored with
-                                                            // the intermediate, not the ciphertext
-            todo!()
+    for block in ciphertext_blocks.iter() {
+        eprintln!("? ======= New Block");
+        let block: [u8; 16] = len_to_const_arr(block)?;
+        let mut intermediate_block: [u8; 16] = [0; 16];
+        let mut plain_block: [u8; 16] = [0; 16];
+        let mut sock = TcpStream::connect(addr).map_err(|e| {
+            eprintln!("Could not connect to {addr}: {e}");
+            e
+        })?;
+        sock.write_all(&block)?;
+
+        // iterate last byte to first byte
+        for (byte_idx) in (0usize..16usize).rev() {
+            eprintln!("? ==== Next Byte");
+            veprintln("byte_idx", format_args!("{byte_idx}"));
+
+            let padding: u8 = 16 - byte_idx as u8;
+            let mut q: [u8; 16] = [0; 16];
+
+            for g in 0..16 {
+                q[g] = intermediate_block[g] ^ padding;
+            }
+            veprintln("base q", format_args!("{q:02x?}"));
+
+            let candidates = try_all_q(&mut sock, &q, byte_idx)?;
+            veprintln("candidates", format_args!("{candidates:02x?}"));
+
+            let correct_candidate = if candidates.len() == 1 {
+                candidates[0]
+            } else {
+                verify_candidate(&mut sock, &q, byte_idx, &candidates)?
+            };
+            veprintln("correct", format_args!("{correct_candidate:02x}"));
+
+            intermediate_block[byte_idx] = correct_candidate ^ padding;
+            if counter == 0 {
+                plain_block[byte_idx] = intermediate_block[byte_idx] ^ iv[byte_idx];
+            } else {
+                plain_block[byte_idx] =
+                    intermediate_block[byte_idx] ^ ciphertext_blocks[counter - 1][byte_idx];
+            }
         }
-        veprintln("good_q", format_args!("{good_q:02x?}"));
-        todo!()
+
+        plaintext.extend(plain_block);
+        counter += 1;
     }
 
     Ok(plaintext)
@@ -116,7 +149,7 @@ mod test {
     use super::*;
     use padsim::Server;
 
-    const TIMEOUT: Duration = Duration::from_millis(300);
+    const TIMEOUT: Duration = Duration::from_millis(3000);
     const HOST: &str = "localhost";
 
     fn start_serv(key: &[u8; 16], addr: SocketAddr) {
