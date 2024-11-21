@@ -13,9 +13,9 @@ fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<
     let mut candidates = Vec::with_capacity(2);
     let mut results_raw = [0; u8::MAX as usize];
     let mut buf: Vec<[u8; 16]> = Vec::with_capacity(u8::MAX as usize);
-    sock.write_all(&(u8::MAX as u16).to_le_bytes())?;
+    sock.write_all(&(u8::MAX as u16 + 1).to_le_bytes())?;
 
-    for o in 0..u8::MAX {
+    for o in 0..=u8::MAX {
         let mut q = *base_q;
         q[idx] = o;
         buf.push(q);
