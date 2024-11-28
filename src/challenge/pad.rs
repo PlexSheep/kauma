@@ -10,10 +10,11 @@ use crate::settings::Settings;
 use super::{Action, Testcase};
 
 fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<u8>> {
+    const Q_AMOUNT: u16 = 256;
     let mut candidates = Vec::with_capacity(2);
-    let mut results_raw = [0; u8::MAX as usize];
+    let mut results_raw = [0; Q_AMOUNT as usize];
     let mut buf: Vec<[u8; 16]> = Vec::with_capacity(u8::MAX as usize);
-    sock.write_all(&(u8::MAX as u16 + 1).to_le_bytes())?;
+    sock.write_all(&Q_AMOUNT.to_le_bytes())?;
 
     for o in 0..=u8::MAX {
         let mut q = *base_q;
@@ -134,10 +135,11 @@ fn abuse_padding_oracle(
                 correct_candidate = verify_candidate(&mut sock, &q, byte_idx, &candidates)?;
                 veprintln("correct", format_args!("{correct_candidate:02x}"));
             } else {
+                // FIXME: Sometimes, the q block becomes wrong here!
                 for g in (byte_idx + 1)..16 {
                     q[g] = intermediate_block[g] ^ padding;
                     eprintln!(
-                        "g={g}\tint={:02x}\tpad={:02x}\tq={}",
+                        "g={g}\tint={:02x}\tpad={:02x}\t=>q={:02x}",
                         intermediate_block[g], padding, q[g]
                     );
                 }
@@ -194,7 +196,7 @@ mod test {
     use crate::common::{assert_hex, run_with_timeout};
 
     use super::*;
-    use padsim::Server;
+    use padsim::{unpad, Server};
 
     const TIMEOUT: Duration = Duration::from_millis(3000);
     const HOST: &str = "localhost";
@@ -263,7 +265,7 @@ mod test {
         ];
         const PT: &[u8; 15] = &[
             0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa,
-            0xff, // padding: 0x01
+            0xff,
         ];
         const PORT: u16 = 44001;
 
@@ -276,7 +278,9 @@ mod test {
         .expect("timed out")
         .expect("abusing the oracle failed");
 
-        assert_hex(&sol, PT);
+        let unpadded = unpad(&sol).expect("could not unpad the solution");
+
+        assert_hex(&unpadded, PT);
     }
 
     #[test]
