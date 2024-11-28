@@ -306,7 +306,7 @@ mod test {
     }
 
     #[test]
-    fn test_crack_long() {
+    fn test_crack_long_0() {
         const KEY: &[u8; 16] = &[
             0x4c, 0xcf, 0x70, 0x83, 0xed, 0x85, 0x28, 0xf5, 0x11, 0xc2, 0x48, 0x5c, 0xf0, 0xa9,
             0x90, 0x13,
@@ -331,6 +331,34 @@ mod test {
         .expect("timed out")
         .expect("abusing the oracle failed");
 
+        eprintln!("padded solution: {sol:02x?}");
+        let unpadded = unpad(&sol).expect("could not unpad the solution");
+
+        assert_hex(unpadded, PT);
+    }
+
+    #[test]
+    fn test_crack_long_1() {
+        const KEY: &[u8; 16] = &[
+            0x4c, 0xcf, 0x70, 0x83, 0xed, 0x85, 0x28, 0xf5, 0x11, 0xc2, 0x48, 0x5c, 0xf0, 0xa9,
+            0x90, 0x13,
+        ];
+        const PT: &[u8; 28] = &[
+            0xb3, 0x65, 0x8f, 0x38, 0x12, 0x2f, 0xd7, 0x4e, 0xee, 0x68, 0xb7, 0xe7, 0x0f, 0x03,
+            0x6f, 0xec, 0xe6, 0x30, 0xcb, 0x7c, 0x47, 0x7a, 0x93, 0x0a, 0xbb, 0x3d, 0xf3, 0xa3,
+        ];
+        const PORT: u16 = 44011;
+
+        let sol = run_with_timeout(TIMEOUT, || {
+            let addr = to_addr(HOST, PORT)?;
+            start_serv(KEY, addr);
+            let enc = padsim::encrypt(PT, KEY);
+            abuse_padding_oracle(addr, &[0; 16], &enc, true)
+        })
+        .expect("timed out")
+        .expect("abusing the oracle failed");
+
+        eprintln!("padded solution: {sol:02x?}");
         let unpadded = unpad(&sol).expect("could not unpad the solution");
 
         assert_hex(unpadded, PT);
