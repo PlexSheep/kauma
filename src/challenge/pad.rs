@@ -194,7 +194,7 @@ mod test {
     use super::*;
     use padsim::{unpad, Server};
 
-    const TIMEOUT: Duration = Duration::from_millis(3000);
+    const TIMEOUT: Duration = Duration::from_millis(5000);
     const HOST: &str = "localhost";
 
     fn start_serv(key: &[u8; 16], addr: SocketAddr) {
@@ -267,7 +267,7 @@ mod test {
             0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa, 0xff, 0xbb, 0xff, 0xaa,
             0xff,
         ];
-        const PORT: u16 = 44001;
+        const PORT: u16 = 44002;
 
         let sol = run_with_timeout(TIMEOUT, || {
             let addr = to_addr(HOST, PORT)?;
@@ -298,7 +298,7 @@ mod test {
             0xd7, 0x4e, 0xee, 0x68, 0xb7, 0xa3, 0x5a, 0x56, 0x2b, 0xec, 0xe6, 0x30, 0xcb, 0x7c,
             0x47, 0x7a, 0x93, 0x0a, 0xbb, 0x3d, 0x4e, 0x5a, 0xf6, 0xaf, 0x96, 0x15, 0xAA, 0xBB,
         ];
-        const PORT: u16 = 44001;
+        const PORT: u16 = 44010;
 
         let sol = run_with_timeout(TIMEOUT, || {
             let addr = to_addr(HOST, PORT)?;
