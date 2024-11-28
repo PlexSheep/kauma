@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
+use serde::Deserialize;
 
 ///  Hex encoded [String] to [byte](u8) slice
 ///
@@ -81,6 +82,16 @@ pub fn get_bytes_base64(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> 
 #[inline]
 pub fn put_bytes(data: &[u8]) -> Result<serde_json::Value> {
     Ok(BASE64_STANDARD.encode(data).into())
+}
+
+/// Ger a `T` from some json args
+#[inline]
+pub fn get_any<T: for<'a> Deserialize<'a>>(args: &serde_json::Value, key: &str) -> Result<T> {
+    let v: T = serde_json::from_value(args[key].clone()).map_err(|e| {
+        eprintln!("! something went wrong when serializing {key}: {e}");
+        e
+    })?;
+    Ok(v)
 }
 
 #[cfg(test)]

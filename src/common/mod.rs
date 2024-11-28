@@ -2,6 +2,9 @@
 
 pub mod interface;
 
+use std::sync::mpsc::{self, RecvTimeoutError};
+use std::thread;
+
 use anyhow::{anyhow, Result};
 
 pub fn veprintln(key: &str, format_args: std::fmt::Arguments) {
@@ -92,6 +95,20 @@ pub fn bit_at_i(num: u128, i: usize) -> bool {
 pub fn bit_at_i_inverted_order(num: u128, i: usize) -> bool {
     let i = 127 - i;
     bit_at_i(num, i)
+}
+
+/// Run a task with a timeout, return [Err] if it takes longer than `timeout`
+pub fn run_with_timeout<T: 'static + Send, F: 'static + Send + FnOnce() -> T>(
+    timeout: std::time::Duration,
+    f: F,
+) -> Result<T, RecvTimeoutError> {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || sender.send(f()));
+    receiver.recv_timeout(timeout)
+}
+
+pub fn assert_hex(data: &[u8], correct: &[u8]) {
+    assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
 }
 
 #[cfg(test)]

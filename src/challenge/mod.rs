@@ -2,6 +2,7 @@ pub mod cipher;
 pub mod debug;
 pub mod example;
 pub mod ffield;
+pub mod pad;
 
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
@@ -178,6 +179,20 @@ pub enum Action {
     /// - `authentic`: [bool] - Was the given input authentic?
     GcmDecrypt,
 
+    /// Make a side channel attack with a padding oracle
+    ///
+    /// # Arguments
+    ///
+    /// - `hostname`: [String] - the host where the custom server is hosted
+    /// - `port`: [i32] - network port of the other host
+    /// - `iv`: [String] - Base64 string encoding a [`[u8;16]`]
+    /// - `ciphertext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///
+    /// # Returns
+    ///
+    ///  `plaintext` that can be exfiltrated by abusing the padding oracle : Base64 string encoding a [`Vec<u8>`]
+    PaddingOracle,
+
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
     SD_Timeout,
@@ -213,6 +228,7 @@ impl Action {
             Self::GcmEncrypt => return None,
             Self::GcmDecrypt => return None,
             Self::SD_Timeout => unreachable!(),
+            Self::PaddingOracle => "plaintext",
         })
     }
 }
@@ -277,6 +293,7 @@ fn challenge_runner(
             cipher::run_testcase(testcase, settings)
         }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
+        Action::PaddingOracle => pad::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));

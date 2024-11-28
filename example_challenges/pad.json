@@ -1,0 +1,22 @@
+{
+  "testcases": {
+    "pad0": {
+      "action": "padding_oracle",
+      "arguments": {
+        "hostname": "127.0.0.1",
+        "port": 18652,
+        "iv": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "ciphertext": "VRFVAFURVQBVEVUAVRFVug=="
+      }
+    },
+    "pad1": {
+      "action": "padding_oracle",
+      "arguments": {
+        "hostname": "127.0.0.1",
+        "port": 18652,
+        "iv": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "ciphertext": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    }
+  }
+}

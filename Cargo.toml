@@ -22,10 +22,15 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 threadpool = "1.8"
 bint-easy = { path = "./crates/bint-easy/" }
+num = "0.4"
+rand = "0.8"
 
 [[bin]]
 name = "kauma"
 path = "src/main.rs"
 
 [workspace]
-members = ["./crates/bint-easy/", "."]
+members = ["./crates/bint-easy/", ".", "crates/padsim"]
+
+[dev-dependencies]
+padsim = { path = "crates/padsim" }
