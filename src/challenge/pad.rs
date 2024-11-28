@@ -22,10 +22,10 @@ fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<
         buf.push(q);
     }
 
-    let flat_buf = buf.as_flattened();
+    let flat_buf: Vec<u8> = buf.clone().into_iter().flatten().collect();
 
     eprintln!("? Sending Q blocks ({} Bytes)", buf.len() * 16);
-    sock.write_all(flat_buf)?;
+    sock.write_all(&flat_buf)?;
     sock.flush()?;
     eprintln!("? reading server response");
     sock.read_exact(&mut results_raw)?;
