@@ -68,7 +68,7 @@ fn verify_candidate(
         let mut q = *base_q;
         q[idx] = *candidate;
         q[idx - 1] = 0xff;
-        veprintln("q for {candidate:02x}", format_args!("{q:02x?}"));
+        veprintln("q", format_args!("candidate {candidate:02x} => {q:02x?}"));
         buf.extend(q);
     }
 
@@ -82,9 +82,9 @@ fn verify_candidate(
     }
 
     // logic only needs to work for len==2
-    if candidates[0] == 1 {
+    if responses[0] == 1 {
         Ok(candidates[0])
-    } else if candidates[1] == 1 {
+    } else if responses[1] == 1 {
         Ok(candidates[1])
     } else {
         return Err(anyhow!("Server says none of the candidates were correct"));
