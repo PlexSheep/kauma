@@ -9,7 +9,12 @@ use crate::settings::Settings;
 
 use super::{Action, Testcase};
 
-fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<u8>> {
+fn try_all_q(
+    sock: &mut TcpStream,
+    base_q: &[u8; 16],
+    idx: usize,
+    verbose: bool,
+) -> Result<Vec<u8>> {
     const Q_AMOUNT: u16 = 256;
     let mut candidates = Vec::with_capacity(2);
     let mut results_raw = [0; Q_AMOUNT as usize];
@@ -24,13 +29,19 @@ fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<
 
     let flat_buf: Vec<u8> = buf.clone().into_iter().flatten().collect();
 
-    eprintln!("? Sending Q blocks ({} Bytes)", buf.len() * 16);
+    if verbose {
+        eprintln!("? Sending Q blocks ({} Bytes)", buf.len() * 16);
+    }
     sock.write_all(&flat_buf)?;
     sock.flush()?;
-    eprintln!("? reading server response");
+    if verbose {
+        eprintln!("? reading server response");
+    }
     sock.read_exact(&mut results_raw)?;
-    eprintln!("? got server response");
-    veprintln("response", format_args!("{results_raw:02x?}"));
+    if verbose {
+        eprintln!("? got server response");
+        veprintln("response", format_args!("{results_raw:02x?}"));
+    }
 
     for (i, r) in results_raw.iter().enumerate() {
         if *r == 0 {
@@ -48,6 +59,7 @@ fn verify_candidate(
     base_q: &[u8; 16],
     idx: usize,
     candidates: &[u8],
+    verbose: bool,
 ) -> Result<u8> {
     if idx < 1 {
         return Err(anyhow!(
@@ -68,14 +80,18 @@ fn verify_candidate(
         let mut q = *base_q;
         q[idx] = *candidate;
         q[idx - 1] = 0xff;
-        veprintln("q", format_args!("candidate {candidate:02x} => {q:02x?}"));
+        if verbose {
+            veprintln("q", format_args!("candidate {candidate:02x} => {q:02x?}"));
+        }
         buf.extend(q);
     }
 
     sock.write_all(&buf)?;
     let mut responses: Vec<u8> = vec![0; candidates.len()];
     sock.read_exact(&mut responses)?;
-    veprintln("response", format_args!("{responses:02x?}"));
+    if verbose {
+        veprintln("response", format_args!("{responses:02x?}"));
+    }
 
     if responses.len() != candidates.len() {
         return Err(anyhow!("Server sent bad amount of response bytes"));
@@ -105,22 +121,23 @@ fn abuse_padding_oracle(
         .collect();
 
     for (block_idx, block) in ciphertext_blocks.iter().enumerate() {
-        eprintln!("? ======= New Block");
+        if verbose {
+            eprintln!("? ======= New Block");
+        }
         let cipher_block: [u8; 16] = len_to_const_arr(block)?;
         let mut intermediate_block: [u8; 16] = [0; 16];
         let mut plain_block: [u8; 16] = [0; 16];
-        let mut sock = TcpStream::connect(addr).map_err(|e| {
-            eprintln!("Could not connect to {addr}: {e}");
-            e
-        })?;
+        let mut sock = TcpStream::connect(addr)?;
         sock.write_all(&cipher_block)?;
 
         // iterate last byte to first byte
         for byte_idx in (0usize..16usize).rev() {
-            eprintln!("? ==== Next Byte");
-            veprintln("byte_idx", format_args!("{byte_idx}"));
-            veprintln("intermediate", format_args!("{intermediate_block:02x?}"));
-            veprintln("plain", format_args!("{plain_block:02x?}"));
+            if verbose {
+                eprintln!("? ==== Next Byte");
+                veprintln("byte_idx", format_args!("{byte_idx}"));
+                veprintln("intermediate", format_args!("{intermediate_block:02x?}"));
+                veprintln("plain", format_args!("{plain_block:02x?}"));
+            }
 
             let padding: u8 = 16 - byte_idx as u8;
             let mut q: [u8; 16] = [0; 16];
@@ -128,21 +145,26 @@ fn abuse_padding_oracle(
             let correct_candidate: u8;
 
             if byte_idx == 15 {
-                veprintln("base q", format_args!("{q:02x?}"));
-                candidates = try_all_q(&mut sock, &q, byte_idx)?;
-                veprintln("candidates", format_args!("{candidates:02x?}"));
+                candidates = try_all_q(&mut sock, &q, byte_idx, verbose)?;
                 assert!(candidates.len() <= 2);
 
-                correct_candidate = verify_candidate(&mut sock, &q, byte_idx, &candidates)?;
-                veprintln("correct", format_args!("{correct_candidate:02x}"));
+                correct_candidate =
+                    verify_candidate(&mut sock, &q, byte_idx, &candidates, verbose)?;
+                if verbose {
+                    veprintln("base q", format_args!("{q:02x?}"));
+                    veprintln("candidates", format_args!("{candidates:02x?}"));
+                    veprintln("correct", format_args!("{correct_candidate:02x}"));
+                }
             } else {
                 for g in (byte_idx + 1)..16 {
                     q[g] = intermediate_block[g] ^ padding;
                 }
-                veprintln("base q", format_args!("{q:02x?}"));
 
-                candidates = try_all_q(&mut sock, &q, byte_idx)?;
-                veprintln("candidates", format_args!("{candidates:02x?}"));
+                candidates = try_all_q(&mut sock, &q, byte_idx, verbose)?;
+                if verbose {
+                    veprintln("base q", format_args!("{q:02x?}"));
+                    veprintln("candidates", format_args!("{candidates:02x?}"));
+                }
                 assert_eq!(candidates.len(), 1);
                 correct_candidate = candidates[0];
             }
