@@ -29,6 +29,7 @@ fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<
     eprintln!("? reading server response");
     sock.read_exact(&mut results_raw)?;
     eprintln!("? got server response");
+    veprintln("response", format_args!("{results_raw:02x?}"));
 
     for (i, r) in results_raw.iter().enumerate() {
         if *r == 0 {
@@ -53,9 +54,10 @@ fn verify_candidate(
     }
     if candidates.is_empty() {
         return Err(anyhow!("No candidates at all given!"));
-    }
-    if candidates.len() > 2 {
+    } else if candidates.len() > 2 {
         return Err(anyhow!("Too many candidates than should be possible"));
+    } else if candidates.len() == 1 {
+        return Ok(candidates[0]);
     }
     let mut buf = Vec::with_capacity(2 + candidates.len() * 16);
     buf.extend((candidates.len() as u16).to_le_bytes());
@@ -94,58 +96,68 @@ fn abuse_padding_oracle(
     verbose: bool,
 ) -> Result<Vec<u8>> {
     let mut plaintext: Vec<u8> = Vec::with_capacity(ciphertext.len());
-    let mut counter = 1;
     let chunks = ciphertext.chunks_exact(16);
     assert!(chunks.remainder().is_empty());
     let ciphertext_blocks: Vec<[u8; 16]> = chunks
         .map(|a| len_to_const_arr(a).expect("bad length of array despite chunks_exact"))
         .collect();
 
-    for block in ciphertext_blocks.iter() {
+    for (block_idx, block) in ciphertext_blocks.iter().enumerate() {
         eprintln!("? ======= New Block");
-        let block: [u8; 16] = len_to_const_arr(block)?;
+        let cipher_block: [u8; 16] = len_to_const_arr(block)?;
         let mut intermediate_block: [u8; 16] = [0; 16];
         let mut plain_block: [u8; 16] = [0; 16];
         let mut sock = TcpStream::connect(addr).map_err(|e| {
             eprintln!("Could not connect to {addr}: {e}");
             e
         })?;
-        sock.write_all(&block)?;
+        sock.write_all(&cipher_block)?;
 
         // iterate last byte to first byte
         for byte_idx in (0usize..16usize).rev() {
             eprintln!("? ==== Next Byte");
             veprintln("byte_idx", format_args!("{byte_idx}"));
+            veprintln("intermediate", format_args!("{intermediate_block:02x?}"));
+            veprintln("plain", format_args!("{plain_block:02x?}"));
 
             let padding: u8 = 16 - byte_idx as u8;
             let mut q: [u8; 16] = [0; 16];
+            let candidates;
+            let correct_candidate: u8;
 
-            for g in 0..16 {
-                q[g] = intermediate_block[g] ^ padding;
-            }
-            veprintln("base q", format_args!("{q:02x?}"));
+            if byte_idx == 15 {
+                veprintln("base q", format_args!("{q:02x?}"));
+                candidates = try_all_q(&mut sock, &q, byte_idx)?;
+                veprintln("candidates", format_args!("{candidates:02x?}"));
+                assert!(candidates.len() <= 2);
 
-            let candidates = try_all_q(&mut sock, &q, byte_idx)?;
-            veprintln("candidates", format_args!("{candidates:02x?}"));
-
-            let correct_candidate = if candidates.len() == 1 {
-                candidates[0]
+                correct_candidate = verify_candidate(&mut sock, &q, byte_idx, &candidates)?;
+                veprintln("correct", format_args!("{correct_candidate:02x}"));
             } else {
-                verify_candidate(&mut sock, &q, byte_idx, &candidates)?
-            };
-            veprintln("correct", format_args!("{correct_candidate:02x}"));
+                for g in (byte_idx + 1)..16 {
+                    q[g] = intermediate_block[g] ^ padding;
+                    eprintln!(
+                        "g={g}\tint={:02x}\tpad={:02x}\tq={}",
+                        intermediate_block[g], padding, q[g]
+                    );
+                }
+                veprintln("base q", format_args!("{q:02x?}"));
 
+                candidates = try_all_q(&mut sock, &q, byte_idx)?;
+                veprintln("candidates", format_args!("{candidates:02x?}"));
+                assert_eq!(candidates.len(), 1);
+                correct_candidate = candidates[0];
+            }
             intermediate_block[byte_idx] = correct_candidate ^ padding;
-            if counter == 0 {
+            if block_idx == 0 {
                 plain_block[byte_idx] = intermediate_block[byte_idx] ^ iv[byte_idx];
             } else {
                 plain_block[byte_idx] =
-                    intermediate_block[byte_idx] ^ ciphertext_blocks[counter - 1][byte_idx];
+                    intermediate_block[byte_idx] ^ ciphertext_blocks[block_idx - 1][byte_idx];
             }
         }
 
         plaintext.extend(plain_block);
-        counter += 1;
     }
 
     Ok(plaintext)
