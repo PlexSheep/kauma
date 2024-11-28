@@ -42,6 +42,7 @@ fn try_all_q(sock: &mut TcpStream, base_q: &[u8; 16], idx: usize) -> Result<Vec<
     Ok(candidates)
 }
 
+// FIXME: this crap is buggy
 fn verify_candidate(
     sock: &mut TcpStream,
     base_q: &[u8; 16],
@@ -135,13 +136,8 @@ fn abuse_padding_oracle(
                 correct_candidate = verify_candidate(&mut sock, &q, byte_idx, &candidates)?;
                 veprintln("correct", format_args!("{correct_candidate:02x}"));
             } else {
-                // FIXME: Sometimes, the q block becomes wrong here!
                 for g in (byte_idx + 1)..16 {
                     q[g] = intermediate_block[g] ^ padding;
-                    eprintln!(
-                        "g={g}\tint={:02x}\tpad={:02x}\t=>q={:02x}",
-                        intermediate_block[g], padding, q[g]
-                    );
                 }
                 veprintln("base q", format_args!("{q:02x?}"));
 
@@ -231,7 +227,9 @@ mod test {
         .expect("timed out")
         .expect("abusing the oracle failed");
 
-        assert_hex(&sol, PT);
+        let unpadded = unpad(&sol).expect("could not unpad the solution");
+
+        assert_hex(&unpadded, PT);
     }
 
     #[test]
@@ -254,7 +252,9 @@ mod test {
         .expect("timed out")
         .expect("abusing the oracle failed");
 
-        assert_hex(&sol, PT);
+        let unpadded = unpad(&sol).expect("could not unpad the solution");
+
+        assert_hex(&unpadded, PT);
     }
 
     #[test]
@@ -309,6 +309,8 @@ mod test {
         .expect("timed out")
         .expect("abusing the oracle failed");
 
-        assert_hex(&sol, PT);
+        let unpadded = unpad(&sol).expect("could not unpad the solution");
+
+        assert_hex(&unpadded, PT);
     }
 }
