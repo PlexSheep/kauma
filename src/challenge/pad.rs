@@ -229,7 +229,7 @@ mod test {
 
         let unpadded = unpad(&sol).expect("could not unpad the solution");
 
-        assert_hex(&unpadded, PT);
+        assert_hex(unpadded, PT);
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod test {
 
         let unpadded = unpad(&sol).expect("could not unpad the solution");
 
-        assert_hex(&unpadded, PT);
+        assert_hex(unpadded, PT);
     }
 
     #[test]
@@ -280,7 +280,7 @@ mod test {
 
         let unpadded = unpad(&sol).expect("could not unpad the solution");
 
-        assert_hex(&unpadded, PT);
+        assert_hex(unpadded, PT);
     }
 
     #[test]
@@ -311,6 +311,6 @@ mod test {
 
         let unpadded = unpad(&sol).expect("could not unpad the solution");
 
-        assert_hex(&unpadded, PT);
+        assert_hex(unpadded, PT);
     }
 }
