@@ -24,6 +24,11 @@ threadpool = "1.8"
 bint-easy = { path = "./crates/bint-easy/" }
 num = "0.4"
 rand = "0.8"
+num_cpus = "1.16.0"
+
+[profile.profiling]
+inherits = "release"
+debug = true
 
 [[bin]]
 name = "kauma"

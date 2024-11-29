@@ -233,13 +233,20 @@ impl Action {
     }
 }
 
-pub fn run_challenges(
-    raw_json: &serde_json::Value,
-    settings: Settings,
-) -> Result<serde_json::Value> {
-    let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
-    let answers = Arc::new(Mutex::new(ManyResponses::new()));
+fn run_challenges_st(testcases: &ManyTestcases, settings: Settings) -> Result<serde_json::Value> {
+    let mut answers = ManyResponses::new();
+    for (key, testcase) in testcases {
+        answers.insert(
+            key.to_string(),
+            challenge_runner(testcase, key, settings)?.1,
+        );
+    }
 
+    Ok(tag_json_value("responses", serde_json::to_value(&answers)?))
+}
+
+fn run_challenges_mt(testcases: &ManyTestcases, settings: Settings) -> Result<serde_json::Value> {
+    let mut answers = ManyResponses::new();
     let pool = match settings.threads {
         Some(threads) => threadpool::ThreadPool::new(threads),
         None => threadpool::ThreadPool::default(),
@@ -248,10 +255,9 @@ pub fn run_challenges(
     let (tx, rx) = std::sync::mpsc::channel();
     for (key, testcase) in testcases.clone() {
         let tx = tx.clone();
-        let answers_clone = answers.clone();
         let testcase = testcase.clone();
         pool.execute(move || {
-            tx.send(challenge_runner(&testcase, answers_clone, &key, settings))
+            tx.send(challenge_runner(&testcase, &key, settings))
                 .expect("could not send return value of thread to main thread")
         });
     }
@@ -265,24 +271,39 @@ pub fn run_challenges(
             }
         };
         match result {
-            Ok(_) => (),
-            Err(e) => eprintln!("! failed to solve a challenge: {e:#}"),
+            Ok(v) => {
+                let _ = answers.insert(v.0.to_string(), v.1);
+            }
+            Err(e) => {
+                eprintln!("! failed to solve a challenge: {e:#}");
+                continue;
+            }
         }
     }
 
-    let responses = answers.lock().unwrap().clone();
-    Ok(tag_json_value(
-        "responses",
-        serde_json::to_value(&responses)?,
-    ))
+    Ok(tag_json_value("responses", serde_json::to_value(&answers)?))
+}
+
+pub fn run_challenges(
+    raw_json: &serde_json::Value,
+    settings: Settings,
+) -> Result<serde_json::Value> {
+    let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
+
+    let cpus = num_cpus::get();
+    if cpus > 1 || settings.threads.is_some_and(|t| t != 1) {
+        run_challenges_mt(&testcases, settings)
+    } else {
+        eprintln!("* This system has only one CPU, running in singlethreaded mode");
+        run_challenges_st(&testcases, settings)
+    }
 }
 
 fn challenge_runner(
     testcase: &Testcase,
-    answers: Arc<Mutex<HashMap<ChallengeKey, serde_json::Value>>>,
     key: &ChallengeKey,
     settings: Settings,
-) -> Result<()> {
+) -> Result<(ChallengeKey, Response)> {
     eprintln!("* starting challenge {key} ({})", testcase.action);
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
@@ -298,14 +319,14 @@ fn challenge_runner(
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
     }
-    answers.lock().unwrap().insert(
-        key.clone(),
+    eprintln!("* finished challenge {key} ({})", testcase.action);
+
+    Ok((
+        key.to_string(),
         if let Some(t) = testcase.action.solution_key() {
             tag_json_value(t, sol.unwrap())
         } else {
             sol.unwrap()
         },
-    );
-    eprintln!("* finished challenge {key} ({})", testcase.action);
-    Ok(())
+    ))
 }
