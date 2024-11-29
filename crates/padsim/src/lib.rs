@@ -2,9 +2,53 @@ use std::collections::VecDeque;
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 
-use block_padding::{Pkcs7, RawPadding, UnpadError};
+use block_padding::{Pkcs7, UnpadError};
 
 pub const DEFAULT_KEY: &[u8; 16] = b"genericarraysbad";
+
+/// stolen from the block_padding crate
+///
+/// kauma-analyzer runs in a very constrained environment, where I can not add arbitrary
+/// dependencies. Padsim is just a dev-dependency for testing, but cargo needs to resolve all
+/// dependencies, so I cannot use block_padding directly.
+mod block_padding {
+    #[derive(Debug)]
+    pub struct UnpadError;
+    #[derive(Debug)]
+    pub struct Pkcs7;
+    impl Pkcs7 {
+        #[inline]
+        pub fn raw_pad(block: &mut [u8], pos: usize) {
+            if block.len() > 255 {
+                panic!("block size is too big for PKCS#7");
+            }
+            if pos >= block.len() {
+                panic!("`pos` is bigger or equal to block size");
+            }
+            let n = (block.len() - pos) as u8;
+            for b in &mut block[pos..] {
+                *b = n;
+            }
+        }
+
+        #[inline]
+        pub fn raw_unpad(block: &[u8], strict: bool) -> Result<&[u8], UnpadError> {
+            if block.len() > 255 {
+                panic!("block size is too big for PKCS#7");
+            }
+            let bs = block.len();
+            let n = block[bs - 1];
+            if n == 0 || n as usize > bs {
+                return Err(UnpadError);
+            }
+            let s = bs - n as usize;
+            if strict && block[s..bs - 1].iter().any(|&v| v != n) {
+                return Err(UnpadError);
+            }
+            Ok(&block[..s])
+        }
+    }
+}
 
 /// pad with pkcs7
 pub fn pad(data: &[u8]) -> Vec<u8> {
@@ -19,7 +63,7 @@ pub fn pad(data: &[u8]) -> Vec<u8> {
 
 /// unpad with pkcs7
 pub fn unpad(data: &[u8]) -> Result<&[u8], UnpadError> {
-    Pkcs7::raw_unpad(data)
+    Pkcs7::raw_unpad(data, true)
 }
 
 /// encrypt with pcks7 and xor
