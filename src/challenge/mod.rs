@@ -304,7 +304,9 @@ fn challenge_runner(
     key: &ChallengeKey,
     settings: Settings,
 ) -> Result<(ChallengeKey, Response)> {
-    eprintln!("* starting challenge {key} ({})", testcase.action);
+    if settings.verbose {
+        eprintln!("* starting challenge {key} ({})", testcase.action);
+    }
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
         Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {
@@ -319,7 +321,9 @@ fn challenge_runner(
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
     }
-    eprintln!("* finished challenge {key} ({})", testcase.action);
+    if settings.verbose {
+        eprintln!("* finished challenge {key} ({})", testcase.action);
+    }
 
     Ok((
         key.to_string(),
