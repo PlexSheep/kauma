@@ -290,7 +290,8 @@ pub fn run_challenges(
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
 
     let cpus = num_cpus::get();
-    if cpus > 1 || settings.threads.is_some_and(|t| t != 1) {
+    eprintln!("cpus: {cpus}");
+    if cpus > 1 && settings.threads.map(|t| t != 1).unwrap_or(true) {
         run_challenges_mt(&testcases, settings)
     } else {
         eprintln!("* This system has only one CPU, running in singlethreaded mode");
