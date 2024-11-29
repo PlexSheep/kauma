@@ -185,7 +185,6 @@ impl FField {
                 z ^= x;
             }
             y >>= 1;
-            self.dbg_mul("step", x, y, z);
         }
 
         self.dbg_mul("final", x, y, z);
@@ -207,6 +206,7 @@ impl FField {
     }
 
     /// helper function for debug prints in [Self::mul].
+    #[inline]
     fn dbg_mul(&self, title: &str, x: U256, y: U256, z: U256) {
         if self.verbose() {
             eprintln!("? {title}");
@@ -304,7 +304,6 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let semantic: Semantic = get_semantic(&testcase.arguments)?;
             let a: Polynomial = get_poly(&testcase.arguments, "a", semantic)?;
             let b: Polynomial = get_poly(&testcase.arguments, "b", semantic)?;
-            eprintln!("{a:032x}");
 
             let sol = change_semantic(field.mul(a, b), Semantic::Xex, semantic);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
