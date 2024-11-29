@@ -348,7 +348,7 @@ mod test {
     fn test_unpad_lib() {
         const MSG: &[u8] = b"this is msg";
         const PADDED: &[u8; 16] = b"this is msg\x05\x05\x05\x05\x05";
-        let unpadded = Pkcs7::raw_unpad(PADDED).expect("could not unpad");
+        let unpadded = Pkcs7::raw_unpad(PADDED, true).expect("could not unpad");
         assert_eq!(unpadded, MSG)
     }
 
@@ -357,7 +357,7 @@ mod test {
     fn test_unpad_lib_crap() {
         const MSG: &[u8] = b"this is msg";
         const PADDED: &[u8; 16] = b"this is msg\x05\x06\x06\x06\x06";
-        let unpadded = Pkcs7::raw_unpad(PADDED).expect("could not unpad");
+        let unpadded = Pkcs7::raw_unpad(PADDED, true).expect("could not unpad");
         assert_eq!(unpadded, MSG)
     }
 
