@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.2.0](https://github.com/PlexSheep/kauma/compare/v0.1.0...v0.2.0) (2024-11-29)
+
+
+### Features
+
+* **bint:** convert u256 to bytes ([a270c86](https://github.com/PlexSheep/kauma/commit/a270c8697e7eebfe468217d5c2a91fa6b0b53a13))
+* **bint:** create easy-bint crate ([7a72202](https://github.com/PlexSheep/kauma/commit/7a722024b8206f1ce78ba3d9e0c01e2a4c4b321c))
+* **bint:** more implementation for bint (xor, conversion, accessing parts) ([c9f3210](https://github.com/PlexSheep/kauma/commit/c9f3210c19c2fe7939aacb200a9ba165fe902402))
+* **bint:** more trait impls for u256 ([bdc3716](https://github.com/PlexSheep/kauma/commit/bdc37165c3777b4f208a7d0da27bd3296dde3894))
+* **bint:** reverse_bits for u256 + doc and debug improvements ([c39483b](https://github.com/PlexSheep/kauma/commit/c39483bf92bfad37975b84ecf4ba874ea31b9c22))
+* **bint:** shift left and right by one ([bbae096](https://github.com/PlexSheep/kauma/commit/bbae0964bf25f62cd063ce83883d007f8d2d401d))
+* **bint:** swap parts and swap bytes for u256 ([45c4303](https://github.com/PlexSheep/kauma/commit/45c43033f4e98ef54c194ccebd6490171e859616))
+* **bint:** u256 displays and order ([b41454a](https://github.com/PlexSheep/kauma/commit/b41454a19485c6fea027e5c5ab314eead02f466c))
+* **bint:** u256 with add and shl ([86fad87](https://github.com/PlexSheep/kauma/commit/86fad87ab687d2a5a3385b1767d128572e8c49ea))
+* **cipher:** build gcm datatypes and function definitions ([b329608](https://github.com/PlexSheep/kauma/commit/b3296083c147944f3cceed75f8c72a557d7e0ea5))
+* **cipher:** ghash ([e7fbe19](https://github.com/PlexSheep/kauma/commit/e7fbe19e0cb3d61fff43fe7ee55f55dac6f7c086))
+* **cipher:** implement parts of gcm_encrypt ([f70af0c](https://github.com/PlexSheep/kauma/commit/f70af0c25f31f31cc8f08eea364a056b3a5e2ca3))
+* **cipher:** make gcm encrypt and decrypt work ([984effe](https://github.com/PlexSheep/kauma/commit/984effe26c8b2d8083431da85c1825fa84312026))
+* **cipher:** make GcmEncrypt action work ([18133f9](https://github.com/PlexSheep/kauma/commit/18133f9379cdd881cccffd3d77ed10781fdec141))
+* **cipher:** PrimitiveAlgorithm enum ([1af49e2](https://github.com/PlexSheep/kauma/commit/1af49e2398592a33d4327adde8ecd74c6e5484d3))
+* **common:** run with timeout ([8db1e80](https://github.com/PlexSheep/kauma/commit/8db1e800063f34668f696478318f9428b0b75d93))
+* **ffield:** acccept gcm semantic polynomials ([6ebce72](https://github.com/PlexSheep/kauma/commit/6ebce72c8032c813c19caaba58adb31894d04f99))
+* **ffield:** general gfmul but with bugs ([26345b1](https://github.com/PlexSheep/kauma/commit/26345b190036434bf370f00092d3a3715b3316cb))
+* **ffield:** mul any polynom ([dad38a1](https://github.com/PlexSheep/kauma/commit/dad38a157fc5956310f0ac4ffd512c0d498f6c4e))
+* **ffield:** poly2block can do gcm sem now ([eb33d5d](https://github.com/PlexSheep/kauma/commit/eb33d5dfaab10c752d29aedee25ab6ead9315d0e))
+* **oracle:** guess the last 13 byte for the test ([4e7a2f3](https://github.com/PlexSheep/kauma/commit/4e7a2f3acd8ae0c9c8cfd4883a75dddc161002c8))
+* **oracle:** make some requests that don't yet lead anywhere ([a800db6](https://github.com/PlexSheep/kauma/commit/a800db6bd330a1ab3e18db1f872a00ae8d6f1dda))
+* **oracle:** verify candidate function ([c9b73bf](https://github.com/PlexSheep/kauma/commit/c9b73bf9142ea95d76fc3fe776e312c3fb20fb53))
+* **pad:** pad structure ([7a3cd0c](https://github.com/PlexSheep/kauma/commit/7a3cd0c215c1c307f26add9626fad34a2830dc1b))
+* **padsim:** add padding with pkcs7 in a new crate ([4f4969b](https://github.com/PlexSheep/kauma/commit/4f4969b5e146924bbcc5486ca6028035f9bc4361))
+* **padsim:** allow printing out an encrypted block ([f400df6](https://github.com/PlexSheep/kauma/commit/f400df6db208d7c890fd42db944367d3f80bc52d))
+* **padsim:** encrypt and decrypt with pkcs7 and xor ([9410137](https://github.com/PlexSheep/kauma/commit/9410137eee5524fea6b7b79c38abdef3cee665ad))
+* **padsim:** make it an executable ([2b1f0ed](https://github.com/PlexSheep/kauma/commit/2b1f0edbe9d0ff56619f3665c5714a08f10bd2f1))
+* **padsim:** server maybe works ([5db304e](https://github.com/PlexSheep/kauma/commit/5db304ecfe1db75946f243204d7b37b63266f714))
+* **padsim:** show example q and plaintext when no q was correct ([cb615b5](https://github.com/PlexSheep/kauma/commit/cb615b5b130057904c3e7449e8148ff2961c80fd))
+
+
+### Bug Fixes
+
+* **cipher:** ghash calculated L badly ([6a54805](https://github.com/PlexSheep/kauma/commit/6a54805f82d358d252dbf7ab4fc7d32023f41504))
+* **cipher:** ghash didn't append the modified ciphertext to `all` ([93156ef](https://github.com/PlexSheep/kauma/commit/93156ef42c9cb84e638ca5cc4ceea7578b8c56e9))
+* **cipher:** only do the verbose prints if verbose is actually set ([0d118bf](https://github.com/PlexSheep/kauma/commit/0d118bf986ab5de71aa5878803740b5c57c8a85d))
+* did not use run_challenges_mt when available ([5b1d67f](https://github.com/PlexSheep/kauma/commit/5b1d67f5c0b5027fce662dbbe20714822af3655c))
+* **ffield:** convert back to the requested semantic for gfmul ([037e21e](https://github.com/PlexSheep/kauma/commit/037e21ea5241c6bdac372f95e8bb5331cb816de5))
+* **ffield:** convert to the requested semantic, instead of just gcm ([214cf58](https://github.com/PlexSheep/kauma/commit/214cf58a5c6ac2056455644bae3d6e98dfd221f6))
+* **oracle:** include 0xff case, which for somereason is the 256th byte ([a5220e0](https://github.com/PlexSheep/kauma/commit/a5220e0d7e9275b2cd6b9a4e27b208ae54b77b06))
+* **oracle:** make the padding oracle abuse work ([47d6721](https://github.com/PlexSheep/kauma/commit/47d67211e02717f8ed17133b03769fc6deb59cfe))
+* **oracle:** verify function was bad ([5606b86](https://github.com/PlexSheep/kauma/commit/5606b86e384c2337f218a853033715f72b2078f0))
+* **padsim:** answers were given in wrong sorting ([707b5ad](https://github.com/PlexSheep/kauma/commit/707b5ad30c75936963969a0b0b649b9e56ca35c8))
+* **padsim:** clear answers after evaluation, remove bad assert ([ef4f6f5](https://github.com/PlexSheep/kauma/commit/ef4f6f54cd0fc8946d3363d1d2b4432bf4c44ef6))
+* **padsim:** remove unnecessary input length for --encrypt ([2eaac05](https://github.com/PlexSheep/kauma/commit/2eaac05f18d707cdc833fe403751a96d148d1355))
+* **padsim:** some logs were not prefixed correctly, print indexes of correct q's ([2c68c00](https://github.com/PlexSheep/kauma/commit/2c68c0077527b5bd21b985fed637e24b7bded960))
+* **padsim:** test for lib used wrong signatures ([72e24ec](https://github.com/PlexSheep/kauma/commit/72e24ec13475d59f6ae378ee82d94c120d15bf0c))
+
 ## 0.1.0 (2024-10-30)
 
 
