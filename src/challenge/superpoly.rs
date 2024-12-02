@@ -73,7 +73,21 @@ impl PartialEq for SuperPoly {
 }
 
 impl Add for SuperPoly {
-    type Output = Self;
+    type Output = SuperPoly;
+    fn add(self, rhs: Self) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl BitXor for SuperPoly {
+    type Output = SuperPoly;
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        &self ^ &rhs
+    }
+}
+
+impl Add for &SuperPoly {
+    type Output = SuperPoly;
     #[allow(clippy::suspicious_arithmetic_impl)] // it's mathmatically the same, I study this shit
     fn add(self, rhs: Self) -> Self::Output {
         self ^ rhs
@@ -87,8 +101,8 @@ impl AddAssign for SuperPoly {
     }
 }
 
-impl BitXor for SuperPoly {
-    type Output = Self;
+impl BitXor for &SuperPoly {
+    type Output = SuperPoly;
     fn bitxor(self, rhs: Self) -> Self::Output {
         let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
         let mut new_coefficients: Vec<Polynomial> = Vec::with_capacity(max_idx);
@@ -97,7 +111,7 @@ impl BitXor for SuperPoly {
                 self.coefficients.get(i).unwrap_or(&0) ^ rhs.coefficients.get(i).unwrap_or(&0),
             );
         }
-        Self::from(new_coefficients.as_slice())
+        SuperPoly::from(new_coefficients.as_slice())
     }
 }
 
