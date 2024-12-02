@@ -47,6 +47,7 @@ impl SuperPoly {
     /// If the coefficients are all zero, make sure that the inner [Vec] actually only has one
     /// coefficient
     pub fn normalize(&mut self) {
+        // TODO: remove leading zero's
         while self.coefficients.len() > 1 && self.is_zero() {
             self.coefficients.pop();
         }
@@ -281,6 +282,10 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 
 #[cfg(test)]
 mod test {
+    use serde_json::json;
+
+    use crate::challenge::superpoly;
+
     use super::*;
 
     #[test]
@@ -394,5 +399,47 @@ mod test {
         let a = SuperPoly::zero();
         let b = SuperPoly::one();
         assert!(a == b);
+    }
+
+    #[test]
+    fn test_mul_zero() {
+        let a = SuperPoly::one();
+        let b = SuperPoly::from([1337, 19, 29, 1131, 0, 0, 0, 0, 0, 121]);
+        let z = SuperPoly::zero();
+        assert!(&a * &z == SuperPoly::zero());
+        assert!(&b * &z == SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_mul_identity() {
+        assert!(SuperPoly::one() * SuperPoly::one() == SuperPoly::one());
+    }
+
+    #[test]
+    fn test_mul_something() {
+        let fake_args = json!(
+        {
+            "A": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+            ],
+            "B": [
+                "0AAAAAAAAAAAAAAAAAAAAA==",
+                "IQAAAAAAAAAAAAAAAAAAAA=="
+            ],
+            "P": [
+                "MoAAAAAAAAAAAAAAAAAAAA==",
+                "sUgAAAAAAAAAAAAAAAAAAA==",
+                "MbQAAAAAAAAAAAAAAAAAAA==",
+                "AAhAAAAAAAAAAAAAAAAAAA=="
+            ]
+        }
+        );
+        let a = get_spoly(&fake_args, "A").expect("could not parse args");
+        let b = get_spoly(&fake_args, "B").expect("could not parse args");
+        let p = get_spoly(&fake_args, "P").expect("could not parse args");
+
+        assert!(a * b == p);
     }
 }
