@@ -1,8 +1,11 @@
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign};
 
 use anyhow::Result;
+use base64::prelude::*;
+use num::traits::ToBytes;
+use serde::{Serialize, Serializer};
 
-use crate::common::interface::{get_bytes_maybe_hex, maybe_hex};
+use crate::common::interface::maybe_hex;
 use crate::common::{bytes_to_u128, len_to_const_arr};
 use crate::settings::Settings;
 
@@ -21,11 +24,20 @@ impl SuperPoly {
     pub fn one() -> Self {
         SuperPoly::from([1])
     }
+}
 
-    // implementing serialize but saying the Polynomials are to be base64 encoded is weird, so just
-    // make it a method.
-    pub fn serialize(self) -> Result<serde_json::Value> {
-        todo!()
+impl Serialize for SuperPoly {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let coefficients: Vec<String> = self
+            .coefficients
+            .iter()
+            .map(|coeff| BASE64_STANDARD.encode(coeff.to_be_bytes()))
+            .collect();
+
+        coefficients.serialize(serializer)
     }
 }
 
@@ -186,7 +198,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
 
             let s = a + b;
-            s.serialize()?
+            serde_json::to_value(&s)?
         }
         _ => unreachable!(),
     })
