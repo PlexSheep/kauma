@@ -45,7 +45,22 @@ impl Serialize for SuperPoly {
 
 impl Add for SuperPoly {
     type Output = Self;
+    #[allow(clippy::suspicious_arithmetic_impl)] // it's mathmatically the same, I study this shit
     fn add(self, rhs: Self) -> Self::Output {
+        self ^ rhs
+    }
+}
+
+impl AddAssign for SuperPoly {
+    #[allow(clippy::suspicious_op_assign_impl)] // it's mathmatically the same, I study this shit
+    fn add_assign(&mut self, rhs: Self) {
+        *self ^= rhs;
+    }
+}
+
+impl BitXor for SuperPoly {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self::Output {
         let mut new_coefficients: Vec<Polynomial> =
             Vec::with_capacity(self.coefficients.len().max(rhs.coefficients.len()));
         for (ap, bp) in self.coefficients.iter().zip(rhs.coefficients.iter()) {
@@ -55,24 +70,11 @@ impl Add for SuperPoly {
     }
 }
 
-impl AddAssign for SuperPoly {
-    fn add_assign(&mut self, rhs: Self) {
+impl BitXorAssign for SuperPoly {
+    fn bitxor_assign(&mut self, rhs: Self) {
         for (ap, bp) in self.coefficients.iter_mut().zip(rhs.coefficients) {
             *ap ^= bp;
         }
-    }
-}
-
-impl BitXor for SuperPoly {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        self + rhs
-    }
-}
-
-impl BitXorAssign for SuperPoly {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self += rhs;
     }
 }
 
