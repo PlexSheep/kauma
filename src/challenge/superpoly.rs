@@ -293,6 +293,21 @@ mod test {
     }
 
     #[test]
+    fn test_add_and_add_assign_produce_same_result() {
+        let a = SuperPoly::from([0b1, 0b10, 0b11]);
+        let b = SuperPoly::from([0b100, 0b101]);
+
+        // Test Add
+        let c1 = &a + &b;
+
+        // Test AddAssign
+        let mut c2 = a.clone();
+        c2 += b;
+
+        assert_eq!(c1, c2);
+    }
+
+    #[test]
     fn test_add_empty_polynomials() {
         let a = SuperPoly::zero();
         let b = SuperPoly::zero();
