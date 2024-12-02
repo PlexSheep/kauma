@@ -61,10 +61,12 @@ impl AddAssign for SuperPoly {
 impl BitXor for SuperPoly {
     type Output = Self;
     fn bitxor(self, rhs: Self) -> Self::Output {
-        let mut new_coefficients: Vec<Polynomial> =
-            Vec::with_capacity(self.coefficients.len().max(rhs.coefficients.len()));
-        for (ap, bp) in self.coefficients.iter().zip(rhs.coefficients.iter()) {
-            new_coefficients.push(ap ^ bp);
+        let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
+        let mut new_coefficients: Vec<Polynomial> = Vec::with_capacity(max_idx);
+        for i in 0..max_idx {
+            new_coefficients.push(
+                self.coefficients.get(i).unwrap_or(&0) ^ rhs.coefficients.get(i).unwrap_or(&0),
+            );
         }
         Self::from(new_coefficients.as_slice())
     }
@@ -72,8 +74,9 @@ impl BitXor for SuperPoly {
 
 impl BitXorAssign for SuperPoly {
     fn bitxor_assign(&mut self, rhs: Self) {
-        for (ap, bp) in self.coefficients.iter_mut().zip(rhs.coefficients) {
-            *ap ^= bp;
+        let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
+        for i in 0..max_idx {
+            self.coefficients[i] ^= rhs.coefficients.get(i).unwrap_or(&0);
         }
     }
 }
