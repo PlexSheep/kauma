@@ -3,6 +3,7 @@ pub mod debug;
 pub mod example;
 pub mod ffield;
 pub mod pad;
+pub mod superpoly;
 
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
