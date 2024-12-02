@@ -241,7 +241,7 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 
 #[cfg(test)]
 mod test {
-    use super::SuperPoly;
+    use super::*;
 
     #[test]
     fn test_construct_superpoly() {
@@ -262,5 +262,82 @@ mod test {
             a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,
             a, a, a, a, a, a, a, a, a, a, a, a, a,
         ]);
+    }
+
+    #[test]
+    fn test_add_empty_polynomials() {
+        let a = SuperPoly::zero();
+        let b = SuperPoly::zero();
+        let c = a + b;
+        assert_eq!(c, SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_add_identical_polynomials() {
+        let a = SuperPoly::from([1, 2, 3]);
+        let b = SuperPoly::from([1, 2, 3]);
+        let c = a + b;
+        assert_eq!(c, SuperPoly::zero());
+
+        let a = SuperPoly::one();
+        let b = SuperPoly::one();
+        let c = a + b;
+        assert_eq!(c, SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_add_is_just_xor() {
+        let a = SuperPoly::from([0b001]);
+        let b = SuperPoly::from([0b101]);
+        let c = a + b;
+        assert_eq!(c, SuperPoly::from([0b100]));
+    }
+
+    #[test]
+    fn test_add_is_just_xor_but_with_more_coefficients() {
+        let a = SuperPoly::from([0b001, 0b001]);
+        let b = SuperPoly::from([0b101, 0b101]);
+        let c = a + b;
+        assert_eq!(c, SuperPoly::from([0b100, 0b100]));
+    }
+
+    #[test]
+    fn test_add_different_sized_polynomials() {
+        let a = SuperPoly::from([0b001, 0b001]);
+        let b = SuperPoly::from([0b101 /* 0 */]);
+        let c = a + b;
+        assert_eq!(c, SuperPoly::from([0b100, 0b001]));
+    }
+
+    #[test]
+    fn test_add_different_sized_polynomials_but_cooler() {
+        let a = SuperPoly::from([0b001, 0b010, 0b11]);
+        let b = SuperPoly::from([0b100, 0b101 /* 0 */]);
+        let c = a + b;
+        assert_eq!(c, SuperPoly::from([0b101, 0b111, 0b11]));
+    }
+
+    #[test]
+    fn test_add_with_zero_polynomial() {
+        let a = SuperPoly::from([1, 2, 3]);
+        let b = SuperPoly::zero();
+        let c = a + b;
+        assert_eq!(c, SuperPoly::from([1, 2, 3]));
+    }
+
+    #[test]
+    fn test_eq_zero_is_zero() {
+        let a = SuperPoly::from([0, 0, 0]);
+        let b = SuperPoly::from([0, 0, 0, 0, 0, 0, 0, 0]);
+        let c = SuperPoly::zero();
+        assert!(a == b && b == c);
+    }
+
+    #[should_panic(expected = "assertion failed: a == b")]
+    #[test]
+    fn test_eq_zero_is_one() {
+        let a = SuperPoly::zero();
+        let b = SuperPoly::one();
+        assert!(a == b);
     }
 }
