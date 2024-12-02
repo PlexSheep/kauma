@@ -1,3 +1,8 @@
+//! # superpoly
+//!
+//! The `superpoly` module provides an implementation of "super polynomials" - polynomials with coefficients that are also polynomials in a finite field.
+//! This type has uses in cryptography and other advanced mathematical applications.
+
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign};
 
 use anyhow::Result;
@@ -17,13 +22,21 @@ pub struct SuperPoly {
     coefficients: Vec<Polynomial>,
 }
 
+/// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
 impl SuperPoly {
+    /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
     pub fn zero() -> Self {
         SuperPoly::from([0])
     }
+    /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
     pub fn one() -> Self {
         SuperPoly::from([1])
     }
+    /// Check if this [`SuperPoly`] is actually [zero](Self::zero).
+    ///
+    /// This is not as trivial as it sounds, because the inner [Vec] holding the coefficients might
+    /// have multiple coefficients with the value 0 saved, but that does not actually make
+    /// a difference mathmatically.
     #[inline]
     pub fn is_zero(&self) -> bool {
         // A SuperPoly is zero <=> all it's coefficients are zero
@@ -225,6 +238,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
     })
 }
 
+/// Retrieves a [`SuperPoly`] from the provided arguments.
 fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
     let raw_parts: Vec<String> = serde_json::from_value(args[key].clone()).map_err(|e| {
         eprintln!("Error while serializing '{key}': {e}");
