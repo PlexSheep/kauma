@@ -25,10 +25,12 @@ pub struct SuperPoly {
 /// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
 impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
+    #[inline]
     pub fn zero() -> Self {
         SuperPoly::from([0])
     }
     /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
+    #[inline]
     pub fn one() -> Self {
         SuperPoly::from([1])
     }
@@ -41,6 +43,13 @@ impl SuperPoly {
     pub fn is_zero(&self) -> bool {
         // A SuperPoly is zero <=> all it's coefficients are zero
         self.coefficients.iter().all(|p| *p == 0)
+    }
+    /// If the coefficients are all zero, make sure that the inner [Vec] actually only has one
+    /// coefficient
+    pub fn normalize(&mut self) {
+        while self.coefficients.len() > 1 && self.is_zero() {
+            self.coefficients.pop();
+        }
     }
 }
 
@@ -111,7 +120,9 @@ impl BitXor for &SuperPoly {
                 self.coefficients.get(i).unwrap_or(&0) ^ rhs.coefficients.get(i).unwrap_or(&0),
             );
         }
-        SuperPoly::from(new_coefficients.as_slice())
+        let mut p = SuperPoly::from(new_coefficients.as_slice());
+        p.normalize();
+        p
     }
 }
 
@@ -121,6 +132,7 @@ impl BitXorAssign for SuperPoly {
         for i in 0..max_idx {
             self.coefficients[i] ^= rhs.coefficients.get(i).unwrap_or(&0);
         }
+        self.normalize();
     }
 }
 
