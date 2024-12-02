@@ -12,7 +12,7 @@ use crate::settings::Settings;
 use super::{ffield, Action, Testcase};
 use ffield::Polynomial;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialOrd, Eq, Ord)]
 pub struct SuperPoly {
     coefficients: Vec<Polynomial>,
 }
@@ -23,6 +23,11 @@ impl SuperPoly {
     }
     pub fn one() -> Self {
         SuperPoly::from([1])
+    }
+    #[inline]
+    pub fn is_zero(&self) -> bool {
+        // A SuperPoly is zero <=> all it's coefficients are zero
+        self.coefficients.iter().all(|p| *p == 0)
     }
 }
 
@@ -42,6 +47,17 @@ impl Serialize for SuperPoly {
 }
 
 /** Calculation stuff ********************************************************/
+
+impl PartialEq for SuperPoly {
+    fn eq(&self, other: &Self) -> bool {
+        if self.coefficients.len() == other.coefficients.len() {
+            self.coefficients == other.coefficients
+        } else {
+            // could only be equal if both are zero, but the vec is larger in one
+            self.is_zero() && other.is_zero()
+        }
+    }
+}
 
 impl Add for SuperPoly {
     type Output = Self;
