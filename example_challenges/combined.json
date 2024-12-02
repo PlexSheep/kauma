@@ -88,6 +88,48 @@
         "tweak": "6VXORr+YYHrd2nVe0OlA+Q==",
         "input": "lr/ItaYGFXCtHhdPndE65yg7u/GIdM9wscABiiFOUH2Sbyc2UFMlIRSMnZrYCW1a"
       }
+    },
+    "gcm_aes_e": {
+      "action": "gcm_encrypt",
+      "arguments": {
+        "algorithm": "aes128",
+        "nonce": "4gF+BtR3ku/PUQci",
+        "key": "Xjq/GkpTSWoe3ZH0F+tjrQ==",
+        "plaintext": "RGFzIGlzdCBlaW4gVGVzdA==",
+        "ad": "QUQtRGF0ZW4="
+      }
+    },
+    "gcm_sea_e": {
+      "action": "gcm_encrypt",
+      "arguments": {
+        "algorithm": "sea128",
+        "nonce": "4gF+BtR3ku/PUQci",
+        "key": "Xjq/GkpTSWoe3ZH0F+tjrQ==",
+        "plaintext": "RGFzIGlzdCBlaW4gVGVzdA==",
+        "ad": "QUQtRGF0ZW4="
+      }
+    },
+    "gcm_aes_d": {
+      "action": "gcm_decrypt",
+      "arguments": {
+        "algorithm": "aes128",
+        "nonce": "SwVYf3IJ2p/VTiyz",
+        "key": "bYfxz4zIS8NGWT55xSGy7Q==",
+        "ciphertext": "ltCrCEYjUCHd",
+        "ad": "w8pc8/yCt2zxERPVcsnOMx8/HmrfAfGUQtD+vyMMpJ5lrF2S",
+        "tag": "d4Z2uVRSmpVE1TEa/Zhx9A=="
+      }
+    },
+    "gcm_sea_d": {
+      "action": "gcm_decrypt",
+      "arguments": {
+        "algorithm": "sea128",
+        "nonce": "VOkKCCnH4EYE1z4L",
+        "key": "ByMrTiLP7isfBDL7vsKkOQ==",
+        "ciphertext": "UdpDzPAafM+y",
+        "ad": "UknNF3AKBaF/8GUnFUw=",
+        "tag": "sN0+1fG+WSOHMswF7IBnZA=="
+      }
     }
   }
 }
