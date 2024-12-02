@@ -197,17 +197,32 @@ pub enum Action {
     ///
     /// # Arguments
     ///
-    /// - `a`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
     ///   making a [SuperPoly](superpoly::SuperPoly)
-    /// - `b`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    /// - `B`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
     ///    making a [SuperPoly](superpoly::SuperPoly)
     ///
     /// # Returns
     ///
     /// - `S`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
-    ///   making a [SuperPoly](superpoly::SuperPoly)
+    ///   making a [SuperPoly](superpoly::SuperPoly), sum of `A` and `B`
     #[serde(rename = "gfpoly_add")]
     GfpolyAdd,
+    /// Multiply two [`SuperPoly`](superpoly::SuperPoly)s
+    ///
+    /// # Arguments
+    ///
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    /// - `B`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///    making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `S`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), product of `A` and `B`
+    #[serde(rename = "gfpoly_mul")]
+    GfpolyMul,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -246,6 +261,7 @@ impl Action {
             Self::SD_Timeout => unreachable!(),
             Self::PaddingOracle => "plaintext",
             Self::GfpolyAdd => "S",
+            Self::GfpolyMul => "P",
         })
     }
 }
@@ -335,7 +351,7 @@ fn challenge_runner(
         }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
         Action::PaddingOracle => pad::run_testcase(testcase, settings),
-        Action::GfpolyAdd => superpoly::run_testcase(testcase, settings),
+        Action::GfpolyAdd | Action::GfpolyMul => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
