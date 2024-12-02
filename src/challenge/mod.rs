@@ -308,7 +308,7 @@ pub fn run_challenges(
     let testcases: ManyTestcases = serde_json::from_value(raw_json["testcases"].clone())?;
 
     let cpus = num_cpus::get();
-    eprintln!("cpus: {cpus}");
+    eprintln!("* cpus: {cpus}");
     if cpus > 1 && settings.threads.map(|t| t != 1).unwrap_or(true) {
         run_challenges_mt(&testcases, settings)
     } else {
