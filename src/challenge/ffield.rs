@@ -320,7 +320,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
     })
 }
 
-fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
+pub(crate) fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
     let semantic: Semantic = if args["semantic"].is_string() {
         serde_json::from_value(args["semantic"].clone()).map_err(|e| {
             eprintln!("! something went wrong when serializing the semantinc: {e}");
@@ -332,12 +332,16 @@ fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
     Ok(semantic)
 }
 
-fn get_poly_from_bytes(bytes: &[u8], semantic: Semantic) -> Result<Polynomial> {
+pub(crate) fn get_poly_from_bytes(bytes: &[u8], semantic: Semantic) -> Result<Polynomial> {
     let v = crate::common::bytes_to_u128(bytes)?;
     Ok(change_semantic(v, semantic, Semantic::Xex))
 }
 
-fn get_poly(args: &serde_json::Value, key: &str, semantic: Semantic) -> Result<Polynomial> {
+pub(crate) fn get_poly(
+    args: &serde_json::Value,
+    key: &str,
+    semantic: Semantic,
+) -> Result<Polynomial> {
     let bytes = get_bytes_maybe_hex(args, key)?;
     let v = get_poly_from_bytes(&bytes, semantic)?;
     Ok(v)
