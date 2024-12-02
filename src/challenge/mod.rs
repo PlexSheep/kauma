@@ -193,6 +193,22 @@ pub enum Action {
     ///  `plaintext` that can be exfiltrated by abusing the padding oracle : Base64 string encoding a [`Vec<u8>`]
     PaddingOracle,
 
+    /// Add two [`SuperPoly`](superpoly::SuperPoly)s
+    ///
+    /// # Arguments
+    ///
+    /// - `a`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    /// - `b`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///    making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `S`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    #[serde(rename = "gfpoly_add")]
+    GfpolyAdd,
+
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
     SD_Timeout,
@@ -229,6 +245,7 @@ impl Action {
             Self::GcmDecrypt => return None,
             Self::SD_Timeout => unreachable!(),
             Self::PaddingOracle => "plaintext",
+            Self::GfpolyAdd => "S",
         })
     }
 }
@@ -318,6 +335,7 @@ fn challenge_runner(
         }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
         Action::PaddingOracle => pad::run_testcase(testcase, settings),
+        Action::GfpolyAdd => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
