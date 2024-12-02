@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, BitXor, BitXorAssign};
 
 use anyhow::Result;
 
@@ -34,17 +34,53 @@ impl SuperPoly {
 impl Add for SuperPoly {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
-        todo!()
+        let mut new_coefficients: Vec<Polynomial> =
+            Vec::with_capacity(self.coefficients.len().max(rhs.coefficients.len()));
+        for (ap, bp) in self.coefficients.iter().zip(rhs.coefficients.iter()) {
+            new_coefficients.push(ap ^ bp);
+        }
+        Self::from(new_coefficients.as_slice())
     }
 }
 
 impl AddAssign for SuperPoly {
     fn add_assign(&mut self, rhs: Self) {
-        todo!()
+        for (ap, bp) in self.coefficients.iter_mut().zip(rhs.coefficients) {
+            *ap ^= bp;
+        }
+    }
+}
+
+impl BitXor for SuperPoly {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        self + rhs
+    }
+}
+
+impl BitXorAssign for SuperPoly {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self += rhs;
     }
 }
 
 /** From *********************************************************************/
+
+impl From<&[Polynomial]> for SuperPoly {
+    fn from(value: &[Polynomial]) -> Self {
+        SuperPoly {
+            coefficients: value.to_vec(),
+        }
+    }
+}
+
+impl From<&[&Polynomial]> for SuperPoly {
+    fn from(value: &[&Polynomial]) -> Self {
+        SuperPoly {
+            coefficients: value.iter().map(|v| **v).collect(),
+        }
+    }
+}
 
 impl<const N: usize> From<&[Polynomial; N]> for SuperPoly {
     fn from(value: &[Polynomial; N]) -> Self {
@@ -57,7 +93,7 @@ impl<const N: usize> From<&[Polynomial; N]> for SuperPoly {
 impl<const N: usize> From<&[&Polynomial; N]> for SuperPoly {
     fn from(value: &[&Polynomial; N]) -> Self {
         SuperPoly {
-            coefficients: value.map(|v| v.to_owned()).to_vec(),
+            coefficients: value.map(|v| *v).to_vec(),
         }
     }
 }
@@ -146,8 +182,8 @@ impl From<&[&[u8; 16]]> for SuperPoly {
 pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_json::Value> {
     Ok(match testcase.action {
         Action::GfpolyAdd => {
-            let a: SuperPoly = get_spoly(&testcase.arguments, "a")?;
-            let b: SuperPoly = get_spoly(&testcase.arguments, "b")?;
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
 
             let s = a + b;
             s.serialize()?
@@ -157,14 +193,17 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
 }
 
 fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
-    let raw_parts: Vec<String> = serde_json::from_value(args[key].clone())?;
+    let raw_parts: Vec<String> = serde_json::from_value(args[key].clone()).map_err(|e| {
+        eprintln!("Error while serializing '{key}': {e}");
+        e
+    })?;
 
     let mut coefficients: Vec<[u8; 16]> = Vec::with_capacity(raw_parts.len());
     for raw_part in raw_parts {
         coefficients.push(len_to_const_arr(&maybe_hex(&raw_part)?)?);
     }
 
-    Ok(SuperPoly::from(coefficients.as_slice())) // here error
+    Ok(SuperPoly::from(coefficients.as_slice()))
 }
 
 #[cfg(test)]
