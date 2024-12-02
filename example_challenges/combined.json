@@ -130,6 +130,21 @@
         "ad": "UknNF3AKBaF/8GUnFUw=",
         "tag": "sN0+1fG+WSOHMswF7IBnZA=="
       }
+    },
+    "gfpoly_add": {
+      "action": "gfpoly_add",
+      "arguments": {
+        "A": [
+          "NeverGonnaGiveYouUpAAA==",
+          "NeverGonnaLetYouDownAA==",
+          "NeverGonnaRunAroundAAA==",
+          "AndDesertYouAAAAAAAAAA=="
+        ],
+        "B": [
+          "KryptoanalyseAAAAAAAAA==",
+          "DHBWMannheimAAAAAAAAAA=="
+        ]
+      }
     }
   }
 }
