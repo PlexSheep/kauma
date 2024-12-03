@@ -155,8 +155,8 @@ impl Mul for &SuperPoly {
 
         for i in 0..self.coefficients.len() {
             for j in 0..rhs.coefficients.len() {
-                result[i + j] = &result[i + j]
-                    + &(self.coefficients.get(i).unwrap() * rhs.coefficients.get(j).unwrap());
+                result[i + j] +=
+                    (self.coefficients.get(i).unwrap() * rhs.coefficients.get(j).unwrap());
             }
         }
 
