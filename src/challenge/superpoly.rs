@@ -14,6 +14,7 @@ use crate::common::interface::maybe_hex;
 use crate::common::{bytes_to_u128, len_to_const_arr};
 use crate::settings::Settings;
 
+use super::ffield::{change_semantic, F_2_128};
 use super::{ffield, Action, Testcase};
 use ffield::Polynomial;
 
@@ -155,8 +156,24 @@ impl Mul for &SuperPoly {
 
         for i in 0..self.coefficients.len() {
             for j in 0..rhs.coefficients.len() {
-                result[i + j] = &result[i + j]
-                    + &(self.coefficients.get(i).unwrap() * rhs.coefficients.get(j).unwrap());
+                result[i + j] += {
+                    change_semantic(
+                        F_2_128.mul(
+                            change_semantic(
+                                self.coefficients[i],
+                                ffield::Semantic::Gcm,
+                                ffield::Semantic::Xex,
+                            ),
+                            change_semantic(
+                                rhs.coefficients[j],
+                                ffield::Semantic::Gcm,
+                                ffield::Semantic::Xex,
+                            ),
+                        ),
+                        ffield::Semantic::Xex,
+                        ffield::Semantic::Gcm,
+                    )
+                };
             }
         }
 
@@ -286,6 +303,13 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
 
             let s = a + b;
+            serde_json::to_value(&s)?
+        }
+        Action::GfpolyMul => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
+
+            let s = a * b;
             serde_json::to_value(&s)?
         }
         _ => unreachable!(),
@@ -465,6 +489,6 @@ mod test {
         let b = get_spoly(&fake_args, "B").expect("could not parse args");
         let p = get_spoly(&fake_args, "P").expect("could not parse args");
 
-        assert!(a * b == p);
+        assert!(&a * &b == p, "{a:x?}\n{b:x?}\n{p:x?}");
     }
 }
