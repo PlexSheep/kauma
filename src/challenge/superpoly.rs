@@ -3,7 +3,7 @@
 //! The `superpoly` module provides an implementation of "super polynomials" - polynomials with coefficients that are also polynomials in a finite field.
 //! This type has uses in cryptography and other advanced mathematical applications.
 
-use std::ops::{Add, AddAssign, BitXor, BitXorAssign};
+use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul};
 
 use anyhow::Result;
 use base64::prelude::*;
@@ -134,6 +134,33 @@ impl BitXorAssign for SuperPoly {
             self.coefficients[i] ^= rhs.coefficients.get(i).unwrap_or(&0);
         }
         self.normalize();
+    }
+}
+
+impl Mul for SuperPoly {
+    type Output = SuperPoly;
+    fn mul(self, rhs: Self) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul for &SuperPoly {
+    type Output = SuperPoly;
+    fn mul(self, rhs: Self) -> Self::Output {
+        if self.is_zero() || rhs.is_zero() {
+            return SuperPoly::zero();
+        }
+        let mut result: Vec<Polynomial> =
+            vec![0; self.coefficients.len() + rhs.coefficients.len() - 1];
+
+        for i in 0..self.coefficients.len() {
+            for j in 0..rhs.coefficients.len() {
+                result[i + j] = &result[i + j]
+                    + &(self.coefficients.get(i).unwrap() * rhs.coefficients.get(j).unwrap());
+            }
+        }
+
+        SuperPoly::from(result.as_slice())
     }
 }
 
@@ -284,12 +311,10 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 mod test {
     use serde_json::json;
 
-    use crate::challenge::superpoly;
-
     use super::*;
 
     #[test]
-    fn test_construct_superpoly() {
+    fn test_spoly_construct_superpoly() {
         const C: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let _p: SuperPoly = SuperPoly::from(&[&C, &C]);
         let _p: SuperPoly = SuperPoly::from(&[C, C]);
@@ -310,7 +335,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_and_add_assign_produce_same_result() {
+    fn test_spoly_add_and_add_assign_produce_same_result() {
         let a = SuperPoly::from([0b1, 0b10, 0b11]);
         let b = SuperPoly::from([0b100, 0b101]);
 
@@ -325,7 +350,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_empty_polynomials() {
+    fn test_spoly_add_empty_polynomials() {
         let a = SuperPoly::zero();
         let b = SuperPoly::zero();
         let c = a + b;
@@ -333,7 +358,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_identical_polynomials() {
+    fn test_spoly_add_identical_polynomials() {
         let a = SuperPoly::from([1, 2, 3]);
         let b = SuperPoly::from([1, 2, 3]);
         let c = a + b;
@@ -346,7 +371,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_is_just_xor() {
+    fn test_spoly_add_is_just_xor() {
         let a = SuperPoly::from([0b001]);
         let b = SuperPoly::from([0b101]);
         let c = a + b;
@@ -354,7 +379,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_is_just_xor_but_with_more_coefficients() {
+    fn test_spoly_add_is_just_xor_but_with_more_coefficients() {
         let a = SuperPoly::from([0b001, 0b001]);
         let b = SuperPoly::from([0b101, 0b101]);
         let c = a + b;
@@ -362,7 +387,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_different_sized_polynomials() {
+    fn test_spoly_add_different_sized_polynomials() {
         let a = SuperPoly::from([0b001, 0b001]);
         let b = SuperPoly::from([0b101 /* 0 */]);
         let c = a + b;
@@ -370,7 +395,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_different_sized_polynomials_but_cooler() {
+    fn test_spoly_add_different_sized_polynomials_but_cooler() {
         let a = SuperPoly::from([0b001, 0b010, 0b11]);
         let b = SuperPoly::from([0b100, 0b101 /* 0 */]);
         let c = a + b;
@@ -378,7 +403,7 @@ mod test {
     }
 
     #[test]
-    fn test_add_with_zero_polynomial() {
+    fn test_spoly_add_with_zero_polynomial() {
         let a = SuperPoly::from([1, 2, 3]);
         let b = SuperPoly::zero();
         let c = a + b;
@@ -386,7 +411,7 @@ mod test {
     }
 
     #[test]
-    fn test_eq_zero_is_zero() {
+    fn test_spoly_eq_zero_is_zero() {
         let a = SuperPoly::from([0, 0, 0]);
         let b = SuperPoly::from([0, 0, 0, 0, 0, 0, 0, 0]);
         let c = SuperPoly::zero();
@@ -395,14 +420,14 @@ mod test {
 
     #[should_panic(expected = "assertion failed: a == b")]
     #[test]
-    fn test_eq_zero_is_one() {
+    fn test_spoly_eq_zero_is_one() {
         let a = SuperPoly::zero();
         let b = SuperPoly::one();
         assert!(a == b);
     }
 
     #[test]
-    fn test_mul_zero() {
+    fn test_spoly_mul_zero() {
         let a = SuperPoly::one();
         let b = SuperPoly::from([1337, 19, 29, 1131, 0, 0, 0, 0, 0, 121]);
         let z = SuperPoly::zero();
@@ -411,12 +436,12 @@ mod test {
     }
 
     #[test]
-    fn test_mul_identity() {
+    fn test_spoly_mul_identity() {
         assert!(SuperPoly::one() * SuperPoly::one() == SuperPoly::one());
     }
 
     #[test]
-    fn test_mul_something() {
+    fn test_spoly_mul_something() {
         let fake_args = json!(
         {
             "A": [
