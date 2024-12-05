@@ -30,15 +30,15 @@ pub fn len_to_const_arr<const N: usize>(data: &[u8]) -> Result<[u8; N]> {
 /// Combine a number of [u8] into a [u128]
 ///
 /// Fails if the [Vec] is too long to fit into a [u128].
-pub fn bytes_to_u128(bytes: &[u8]) -> Result<u128> {
-    if bytes.len() > (u128::BITS.div_ceil(8)) as usize {
-        return Err(anyhow!("input bytes are too long!"));
-    }
-    let mut ri: u128 = 0;
-    for (i, e) in bytes.iter().rev().enumerate() {
-        ri += (*e as u128) * 256u128.pow(i as u32);
-    }
-    Ok(ri)
+#[inline]
+pub fn bytes_to_u128_unknown_size(bytes: &[u8]) -> Result<u128> {
+    Ok(bytes_to_u128(&len_to_const_arr::<16>(bytes)?))
+}
+
+/// Combine a 16 [u8] into a [u128]
+#[inline]
+pub fn bytes_to_u128(bytes: &[u8; 16]) -> u128 {
+    unsafe { std::mem::transmute::<[u8; 16], u128>(*bytes).swap_bytes() }
 }
 
 /// Wraps a value in an object with some title
@@ -111,6 +111,15 @@ pub fn assert_hex(data: &[u8], correct: &[u8]) {
     assert_eq!(data, correct, "\n{data:02X?}\nshould be\n{correct:02X?}");
 }
 
+pub fn assert_int<T>(a: T, b: T)
+where
+    T: std::fmt::UpperHex,
+    T: std::fmt::Debug,
+    T: PartialEq,
+{
+    assert_eq!(a, b, "\na: {a:X}\nb: {b:X}");
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -151,6 +160,16 @@ mod test {
         assert_eq!(
             byte_to_bits(0b11010110),
             [true, true, false, true, false, true, true, false]
+        );
+    }
+    #[test]
+    fn test_bytes_to_u128() {
+        assert_int(bytes_to_u128(&[0; 16]), 0);
+        assert_int(bytes_to_u128(&[0xff; 16]), u128::MAX);
+        assert_int(bytes_to_u128(&[1; 16]), 0x1010101010101010101010101010101);
+        assert_int(
+            bytes_to_u128(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]),
+            0x102030405060708090A0B0C0D0E0F,
         );
     }
 }
