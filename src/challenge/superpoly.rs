@@ -312,9 +312,9 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         }
         Action::GfpolyPow => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
-            let z: i64 = get_any(&testcase.arguments, "z")?;
+            let k: i64 = get_any(&testcase.arguments, "k")?;
 
-            let s = a.pow(z);
+            let s = a.pow(k);
             serde_json::to_value(&s)?
         }
         _ => unreachable!(),
