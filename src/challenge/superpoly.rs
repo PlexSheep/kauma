@@ -204,11 +204,11 @@ impl Pow<u32> for &SuperPoly {
         }
 
         let mut power: u32 = rhs;
-        let mut t: SuperPoly = self.clone();
+        let mut t: SuperPoly = SuperPoly::one();
         let mut base: SuperPoly = self.clone();
 
         while power > 0 {
-            if power % 2 == 1 {
+            if power & 1 == 1 {
                 t *= base.clone();
             }
             base *= base.clone();
