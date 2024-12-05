@@ -7,11 +7,12 @@ use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul};
 
 use anyhow::Result;
 use base64::prelude::*;
+use num::pow::Pow;
 use num::traits::ToBytes;
 use serde::{Serialize, Serializer};
 
 use crate::common::bytes_to_u128_unknown_size;
-use crate::common::interface::maybe_hex;
+use crate::common::interface::{get_any, maybe_hex};
 use crate::settings::Settings;
 
 use super::ffield::{change_semantic, F_2_128};
@@ -168,6 +169,16 @@ impl Mul for &SuperPoly {
     }
 }
 
+impl<T> Pow<T> for &SuperPoly
+where
+    T: num::Num,
+{
+    type Output = SuperPoly;
+    fn pow(self, rhs: T) -> Self::Output {
+        todo!()
+    }
+}
+
 /** From *********************************************************************/
 
 impl From<&[Polynomial]> for SuperPoly {
@@ -297,6 +308,13 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
 
             let s = a * b;
+            serde_json::to_value(&s)?
+        }
+        Action::GfpolyPow => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let z: i64 = get_any(&testcase.arguments, "z")?;
+
+            let s = a.pow(z);
             serde_json::to_value(&s)?
         }
         _ => unreachable!(),
