@@ -156,24 +156,7 @@ impl Mul for &SuperPoly {
 
         for i in 0..self.coefficients.len() {
             for j in 0..rhs.coefficients.len() {
-                result[i + j] += {
-                    change_semantic(
-                        F_2_128.mul(
-                            change_semantic(
-                                self.coefficients[i],
-                                ffield::Semantic::Gcm,
-                                ffield::Semantic::Xex,
-                            ),
-                            change_semantic(
-                                rhs.coefficients[j],
-                                ffield::Semantic::Gcm,
-                                ffield::Semantic::Xex,
-                            ),
-                        ),
-                        ffield::Semantic::Xex,
-                        ffield::Semantic::Gcm,
-                    )
-                };
+                result[i + j] ^= F_2_128.mul(self.coefficients[i], rhs.coefficients[j]);
             }
         }
 
@@ -323,9 +306,13 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
         e
     })?;
 
-    let mut coefficients: Vec<[u8; 16]> = Vec::with_capacity(raw_parts.len());
+    let mut coefficients: Vec<_> = Vec::with_capacity(raw_parts.len());
     for raw_part in raw_parts {
-        coefficients.push(len_to_const_arr(&maybe_hex(&raw_part)?)?);
+        coefficients.push(change_semantic(
+            bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?,
+            ffield::Semantic::Gcm,
+            ffield::Semantic::Xex,
+        ));
     }
 
     Ok(SuperPoly::from(coefficients.as_slice()))
@@ -491,6 +478,6 @@ mod test {
         let p = get_spoly(&fake_args, "P").expect("could not parse args");
         let c = &a * &b;
 
-        assert_eq!(c, p, "\n{c:#x?}\n{p:#x?}");
+        assert_eq!(c, p, "\nA: {c:#x?}\nS: {p:#x?}");
     }
 }
