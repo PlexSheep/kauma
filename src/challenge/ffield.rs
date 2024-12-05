@@ -9,7 +9,7 @@ use bint_easy::u256::U256;
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
-use crate::common::{bit_at_i, byte_to_bits, bytes_to_u128, veprintln};
+use crate::common::{bit_at_i, byte_to_bits, bytes_to_u128_unknown_size, veprintln};
 use crate::settings::{Settings, DEFAULT_SETTINGS};
 
 use super::{Action, Testcase};
@@ -333,7 +333,7 @@ pub(crate) fn get_semantic(args: &serde_json::Value) -> Result<Semantic> {
 }
 
 pub(crate) fn get_poly_from_bytes(bytes: &[u8], semantic: Semantic) -> Result<Polynomial> {
-    let v = crate::common::bytes_to_u128(bytes)?;
+    let v = crate::common::bytes_to_u128_unknown_size(bytes)?;
     Ok(change_semantic(v, semantic, Semantic::Xex))
 }
 
@@ -351,7 +351,7 @@ pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Pol
     match (source, target) {
         (Semantic::Xex, Semantic::Gcm) | (Semantic::Gcm, Semantic::Xex) => {
             let by: Vec<u8> = p.to_be_bytes().iter().map(|v| v.reverse_bits()).collect();
-            bytes_to_u128(&by).expect("same size u128 is not same size")
+            bytes_to_u128_unknown_size(&by).expect("same size u128 is not same size")
         }
         (Semantic::Gcm, Semantic::Gcm) => p,
         (Semantic::Xex, Semantic::Xex) => p,

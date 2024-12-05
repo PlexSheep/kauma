@@ -11,7 +11,7 @@ use num::traits::ToBytes;
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::maybe_hex;
-use crate::common::{bytes_to_u128, len_to_const_arr};
+use crate::common::{bytes_to_u128_unknown_size, len_to_const_arr};
 use crate::settings::Settings;
 
 use super::ffield::{change_semantic, F_2_128};
@@ -229,7 +229,7 @@ impl<const N: usize> From<&[&[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128(*v)
+                    bytes_to_u128_unknown_size(*v)
                         .expect("bytes are correct length but u128 can still not be made")
                 })
                 .collect(),
@@ -243,7 +243,7 @@ impl<const N: usize> From<&[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128(v)
+                    bytes_to_u128_unknown_size(v)
                         .expect("bytes are correct length but u128 can still not be made")
                 })
                 .collect(),
@@ -257,7 +257,7 @@ impl<const N: usize> From<[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128(v)
+                    bytes_to_u128_unknown_size(v)
                         .expect("bytes are correct length but u128 can still not be made")
                 })
                 .collect(),
@@ -271,7 +271,7 @@ impl From<&[[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128(v)
+                    bytes_to_u128_unknown_size(v)
                         .expect("bytes are correct length but u128 can still not be made")
                 })
                 .collect(),
@@ -285,7 +285,7 @@ impl From<&[&[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128(*v)
+                    bytes_to_u128_unknown_size(*v)
                         .expect("bytes are correct length but u128 can still not be made")
                 })
                 .collect(),

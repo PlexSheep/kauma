@@ -3,7 +3,7 @@ use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::{get_bytes_base64, put_bytes};
-use crate::common::{bytes_to_u128, len_to_const_arr, veprintln};
+use crate::common::{bytes_to_u128_unknown_size, len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
 use super::ffield::{self, F_2_128, F_2_128_ALPHA};
@@ -317,7 +317,7 @@ pub fn sea_128_decrypt_xex(
         plain_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA)
+            .mul(bytes_to_u128_unknown_size(&xorval)?, F_2_128_ALPHA)
             .to_be_bytes();
     }
     if verbose {
@@ -375,7 +375,7 @@ pub fn sea_128_encrypt_xex(
         cipher_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128(&xorval)?, F_2_128_ALPHA)
+            .mul(bytes_to_u128_unknown_size(&xorval)?, F_2_128_ALPHA)
             .to_be_bytes();
     }
     if verbose {
