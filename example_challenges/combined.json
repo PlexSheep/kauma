@@ -146,19 +146,15 @@
         ]
       }
     },
-    "gfpoly_add": {
-      "action": "gfpoly_add",
+    "gfpoly_pow": {
+      "action": "gfpoly_pow",
       "arguments": {
         "A": [
-          "NeverGonnaGiveYouUpAAA==",
-          "NeverGonnaLetYouDownAA==",
-          "NeverGonnaRunAroundAAA==",
-          "AndDesertYouAAAAAAAAAA=="
+          "JAAAAAAAAAAAAAAAAAAAAA==",
+          "wAAAAAAAAAAAAAAAAAAAAA==",
+          "ACAAAAAAAAAAAAAAAAAAAA=="
         ],
-        "B": [
-          "KryptoanalyseAAAAAAAAA==",
-          "DHBWMannheimAAAAAAAAAA=="
-        ]
+        "k": 3
       }
     }
   }
