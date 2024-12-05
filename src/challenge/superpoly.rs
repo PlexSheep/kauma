@@ -189,33 +189,29 @@ impl Pow<u32> for SuperPoly {
 
 impl Pow<u32> for &SuperPoly {
     type Output = SuperPoly;
-    fn pow(self, rhs: u32) -> Self::Output {
+    fn pow(self, mut power: u32) -> Self::Output {
         if *self == SuperPoly::zero() {
             return SuperPoly::zero();
         }
         if *self == SuperPoly::one() {
             return SuperPoly::one();
         }
-        if rhs == 0 {
+        if power == 0 {
             return SuperPoly::one();
         }
-        if rhs == 1 {
+        if power == 1 {
             return self.clone();
         }
 
-        let mut power: u32 = rhs;
-        let mut t: SuperPoly = SuperPoly::one();
-        let mut base: SuperPoly = self.clone();
+        let base: SuperPoly = self.clone();
+        let mut result: SuperPoly = base.clone();
 
-        while power > 0 {
-            if power & 1 == 1 {
-                t *= base.clone();
-            }
-            base *= base.clone();
-            power >>= 1;
+        while power > 1 {
+            result *= base.clone();
+            power -= 1;
         }
 
-        t
+        result
     }
 }
 
@@ -570,5 +566,31 @@ mod test {
         let c = a.pow(k);
 
         assert_eq!(c, z, "\nA: {c:#x?}\nS: {z:#x?}");
+    }
+
+    #[test]
+    fn test_spoly_pow_is_mul() {
+        let fake_args = json!(
+        {
+            "A": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+            ],
+        });
+        let a = get_spoly(&fake_args, "A").expect("could not parse args");
+        let a2 = &a * &a;
+        let a2p = a.pow(2);
+        assert_eq!(a2p, a2, "\na2p\t: {a2p:#x?}\na2\t: {a2:#x?}");
+    }
+
+    #[test]
+    fn test_spoly_pow_edge() {
+        assert_eq!(SuperPoly::one().pow(0), SuperPoly::one());
+        assert_eq!(SuperPoly::one().pow(1), SuperPoly::one());
+        assert_eq!(SuperPoly::one().pow(2), SuperPoly::one());
+        assert_eq!(SuperPoly::one().pow(200), SuperPoly::one());
+        assert_eq!(SuperPoly::zero().pow(1), SuperPoly::zero());
+        assert_eq!(SuperPoly::zero().pow(20), SuperPoly::zero());
     }
 }
