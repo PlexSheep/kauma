@@ -180,6 +180,13 @@ impl MulAssign<&SuperPoly> for SuperPoly {
     }
 }
 
+impl Pow<u32> for SuperPoly {
+    type Output = SuperPoly;
+    fn pow(self, rhs: u32) -> Self::Output {
+        (&self).pow(rhs)
+    }
+}
+
 impl Pow<u32> for &SuperPoly {
     type Output = SuperPoly;
     fn pow(self, rhs: u32) -> Self::Output {
