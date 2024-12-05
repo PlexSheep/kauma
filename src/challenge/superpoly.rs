@@ -3,12 +3,11 @@
 //! The `superpoly` module provides an implementation of "super polynomials" - polynomials with coefficients that are also polynomials in a finite field.
 //! This type has uses in cryptography and other advanced mathematical applications.
 
-use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul};
+use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign};
 
 use anyhow::Result;
 use base64::prelude::*;
 use num::pow::Pow;
-use num::traits::ToBytes;
 use serde::{Serialize, Serializer};
 
 use crate::common::bytes_to_u128_unknown_size;
@@ -169,13 +168,47 @@ impl Mul for &SuperPoly {
     }
 }
 
-impl<T> Pow<T> for &SuperPoly
-where
-    T: num::Num,
-{
+impl MulAssign for SuperPoly {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self *= &rhs;
+    }
+}
+
+impl MulAssign<&SuperPoly> for SuperPoly {
+    fn mul_assign(&mut self, rhs: &SuperPoly) {
+        *self = &(*self) * rhs;
+    }
+}
+
+impl Pow<u32> for &SuperPoly {
     type Output = SuperPoly;
-    fn pow(self, rhs: T) -> Self::Output {
-        todo!()
+    fn pow(self, rhs: u32) -> Self::Output {
+        if *self == SuperPoly::zero() {
+            return SuperPoly::zero();
+        }
+        if *self == SuperPoly::one() {
+            return SuperPoly::one();
+        }
+        if rhs == 0 {
+            return SuperPoly::one();
+        }
+        if rhs == 1 {
+            return self.clone();
+        }
+
+        let mut power: u32 = rhs;
+        let mut t: SuperPoly = self.clone();
+        let mut base: SuperPoly = self.clone();
+
+        while power > 0 {
+            if power % 2 == 1 {
+                t *= base.clone();
+            }
+            base *= base.clone();
+            power >>= 1;
+        }
+
+        t
     }
 }
 
@@ -312,7 +345,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         }
         Action::GfpolyPow => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
-            let k: i64 = get_any(&testcase.arguments, "k")?;
+            let k: u32 = get_any(&testcase.arguments, "k")?;
 
             let s = a.pow(k);
             serde_json::to_value(&s)?
