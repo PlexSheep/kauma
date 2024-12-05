@@ -10,8 +10,8 @@ use base64::prelude::*;
 use num::traits::ToBytes;
 use serde::{Serialize, Serializer};
 
+use crate::common::bytes_to_u128_unknown_size;
 use crate::common::interface::maybe_hex;
-use crate::common::{bytes_to_u128_unknown_size, len_to_const_arr};
 use crate::settings::Settings;
 
 use super::ffield::{change_semantic, F_2_128};
