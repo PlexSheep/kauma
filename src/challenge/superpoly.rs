@@ -461,7 +461,8 @@ mod test {
 
     #[test]
     fn test_spoly_mul_identity() {
-        assert!(SuperPoly::one() * SuperPoly::one() == SuperPoly::one());
+        let a = SuperPoly::one() * SuperPoly::one();
+        assert_eq!(a, SuperPoly::one(), "\n{a:#x?}\n{:#x?}", SuperPoly::one());
     }
 
     #[test]
@@ -488,7 +489,8 @@ mod test {
         let a = get_spoly(&fake_args, "A").expect("could not parse args");
         let b = get_spoly(&fake_args, "B").expect("could not parse args");
         let p = get_spoly(&fake_args, "P").expect("could not parse args");
+        let c = &a * &b;
 
-        assert!(&a * &b == p, "{a:x?}\n{b:x?}\n{p:x?}");
+        assert_eq!(c, p, "\n{c:#x?}\n{p:#x?}");
     }
 }
