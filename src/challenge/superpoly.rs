@@ -63,6 +63,7 @@ impl Serialize for SuperPoly {
         let coefficients: Vec<String> = self
             .coefficients
             .iter()
+            .map(|coeff| change_semantic(*coeff, ffield::Semantic::Xex, ffield::Semantic::Gcm))
             .map(|coeff| BASE64_STANDARD.encode(coeff.to_be_bytes()))
             .collect();
 
