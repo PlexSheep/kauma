@@ -346,7 +346,7 @@ pub fn run_challenges(
 
     let cpus = num_cpus::get();
     eprintln!("* cpus: {cpus}");
-    if cpus > 1 && settings.threads.map(|t| t != 1).unwrap_or(true) {
+    if cpus > 1 && settings.threads.map(|t| t != 1).unwrap_or(true) && testcases.len() > 1 {
         run_challenges_mt(&testcases, settings)
     } else {
         eprintln!("* This system has only one CPU, running in singlethreaded mode");
