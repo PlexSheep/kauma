@@ -148,6 +148,9 @@ impl Mul for SuperPoly {
 impl Mul for &SuperPoly {
     type Output = SuperPoly;
     fn mul(self, rhs: Self) -> Self::Output {
+        if *self == SuperPoly::one() && *rhs == SuperPoly::one() {
+            return SuperPoly::one();
+        }
         if self.is_zero() || rhs.is_zero() {
             return SuperPoly::zero();
         }
