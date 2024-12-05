@@ -362,6 +362,8 @@ pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Pol
 mod test {
     use std::collections::HashSet;
 
+    use crate::common::assert_int;
+
     use super::*;
 
     fn field() -> FField {
@@ -518,5 +520,16 @@ mod test {
             get_poly_from_bytes(&xex, Semantic::Xex).unwrap(),
             get_poly_from_bytes(&gcm, Semantic::Gcm).unwrap(),
         )
+    }
+
+    #[test]
+    fn test_change_sem_lossles() {
+        let p: Polynomial = 0xb1480000000000000000000000000000;
+        let mut t = p;
+        for _ in 0..5000 {
+            t = change_semantic(t, Semantic::Xex, Semantic::Gcm);
+            t = change_semantic(t, Semantic::Gcm, Semantic::Xex);
+            assert_int(p, t);
+        }
     }
 }
