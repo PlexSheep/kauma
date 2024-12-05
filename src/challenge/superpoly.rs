@@ -542,4 +542,33 @@ mod test {
 
         assert_eq!(c, p, "\nA: {c:#x?}\nS: {p:#x?}");
     }
+
+    #[test]
+    fn test_spoly_pow_something() {
+        let fake_args = json!(
+        {
+            "A": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+            ],
+            "k": 3,
+            "Z": [
+                "AkkAAAAAAAAAAAAAAAAAAA==",
+                "DDAAAAAAAAAAAAAAAAAAAA==",
+                "LQIIAAAAAAAAAAAAAAAAAA==",
+                "8AAAAAAAAAAAAAAAAAAAAA==",
+                "ACgCQAAAAAAAAAAAAAAAAA==",
+                "AAAMAAAAAAAAAAAAAAAAAA==",
+                "AAAAAgAAAAAAAAAAAAAAAA=="
+            ]
+        });
+        let a = get_spoly(&fake_args, "A").expect("could not parse args");
+        let z = get_spoly(&fake_args, "Z").expect("could not parse args");
+        let k: u32 = get_any(&fake_args, "k").expect("could not parse args");
+
+        let c = a.pow(k);
+
+        assert_eq!(c, z, "\nA: {c:#x?}\nS: {z:#x?}");
+    }
 }
