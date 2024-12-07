@@ -52,6 +52,12 @@ impl SuperPoly {
         while self.coefficients.len() > 1 && self.is_zero() {
             self.coefficients.pop();
         }
+        for coeff in self.coefficients.clone() {
+            if coeff != 0 {
+                break;
+            }
+            self.coefficients.pop();
+        }
     }
 }
 
