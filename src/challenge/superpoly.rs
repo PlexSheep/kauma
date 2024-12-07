@@ -45,18 +45,13 @@ impl SuperPoly {
         // A SuperPoly is zero <=> all it's coefficients are zero
         self.coefficients.iter().all(|p| *p == 0)
     }
-    /// If the coefficients are all zero, make sure that the inner [Vec] actually only has one
-    /// coefficient
+    /// remove leading zeros
     pub fn normalize(&mut self) {
-        // TODO: remove leading zero's
-        while self.coefficients.len() > 1 && self.is_zero() {
-            self.coefficients.pop();
-        }
-        for coeff in self.coefficients.clone() {
-            if coeff != 0 {
+        while let Some(coeff) = self.coefficients.first() {
+            if *coeff != 0 {
                 break;
             }
-            self.coefficients.pop();
+            self.coefficients.remove(0);
         }
     }
 }
@@ -170,7 +165,9 @@ impl Mul for &SuperPoly {
             }
         }
 
-        SuperPoly::from(result.as_slice())
+        let mut a = SuperPoly::from(result.as_slice());
+        a.normalize();
+        a
     }
 }
 
@@ -210,14 +207,15 @@ impl Pow<u32> for &SuperPoly {
         }
 
         let base: SuperPoly = self.clone();
-        let mut result: SuperPoly = base.clone();
+        let mut accu: SuperPoly = base.clone();
 
         while power > 1 {
-            result *= base.clone();
+            accu *= base.clone();
             power -= 1;
         }
 
-        result
+        accu.normalize();
+        accu
     }
 }
 
