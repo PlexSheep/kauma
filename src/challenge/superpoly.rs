@@ -210,7 +210,7 @@ impl Pow<u32> for &SuperPoly {
         let mut accu: SuperPoly = base.clone();
 
         while power > 1 {
-            accu *= base.clone();
+            accu *= &base;
             power -= 1;
         }
 
