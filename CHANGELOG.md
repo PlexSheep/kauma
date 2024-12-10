@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.3.0](https://github.com/PlexSheep/kauma/compare/v0.2.0...v0.3.0) (2024-12-10)
+
+
+### Features
+
+* **interface:** add a maybe_hex function ([a31f842](https://github.com/PlexSheep/kauma/commit/a31f8424a4c272c04b67be8e4e2c8e75d1fe32ee))
+* only use multithreading if there are more challenges than one ([87713c0](https://github.com/PlexSheep/kauma/commit/87713c0748699e2c058369707b147d8c5366bc52))
+* **superpoly:** add gfpoly_add action ([bcc3398](https://github.com/PlexSheep/kauma/commit/bcc33984c05838aba9f535daea2cadf514799556))
+* **superpoly:** add with cutoff ([0cebfb2](https://github.com/PlexSheep/kauma/commit/0cebfb2535b877400f80228cae61174c31a98e5f))
+* **superpoly:** basic mul ([5b959ee](https://github.com/PlexSheep/kauma/commit/5b959eee34dfba17a25f9674e6e88c8db9c858bc))
+* **superpoly:** impl add and addassign (and xor, thats the same) ([dce6547](https://github.com/PlexSheep/kauma/commit/dce6547dfa1e15e25eaa308caf2aad77382a5e10))
+* **superpoly:** impl pow, but incorrectly ([1a7774c](https://github.com/PlexSheep/kauma/commit/1a7774c8cc4509b314cb07b10821af3a92882702))
+* **superpoly:** implement Eq ([f69cd28](https://github.com/PlexSheep/kauma/commit/f69cd283585017554f0ae8c29a98645fa0a955ea))
+* **superpoly:** initial struct ([7516f75](https://github.com/PlexSheep/kauma/commit/7516f75197b2e5eb0274f5f67e5b4031c942cec8))
+* **superpoly:** structure done for add ([650e582](https://github.com/PlexSheep/kauma/commit/650e5820897282c36b4a20d2b912954ae06a819a))
+* **superpoly:** structure for gfpoly_pow ([8e8ab7c](https://github.com/PlexSheep/kauma/commit/8e8ab7c90be551dc3048bccc5d8d509c8e9511f8))
+
+
+### Bug Fixes
+
+* bad formatting for the cpu num log ([74093ce](https://github.com/PlexSheep/kauma/commit/74093ceb5c16572cf56ebd6900c3b6bcf1931787))
+* **superpoly:** change the semantic back when serializing ([e73f9b9](https://github.com/PlexSheep/kauma/commit/e73f9b925201c8e1fc77d6b16d10a99cfe845f97))
+* **superpoly:** cover the identity operation ([16de7a1](https://github.com/PlexSheep/kauma/commit/16de7a1d01ec489026aaf17a69c88f7b907a3cae))
+* **superpoly:** did not add all coefficients together ([d807bfc](https://github.com/PlexSheep/kauma/commit/d807bfc02a4b841a856f9fe751d08f5d23e03b98))
+* **superpoly:** I think normalize causes bugs? ([ba5698e](https://github.com/PlexSheep/kauma/commit/ba5698e764e1d3213f8e8505fd53c887c6f31140))
+* **superpoly:** make gfpoly_mul almost correct ([2fef758](https://github.com/PlexSheep/kauma/commit/2fef758225d2a3e5e8f79281a027dbfd5d9d4175))
+* **superpoly:** make multiplication work ([21a0443](https://github.com/PlexSheep/kauma/commit/21a0443977820d44a07f9bd683745eaec290922b))
+* **superpoly:** make pow work ([c6951ca](https://github.com/PlexSheep/kauma/commit/c6951caa2af7f45050fd119b06b642486eceaae5))
+* **superpoly:** normalize down to 0 after operations, to make sure I don't output multiple zero coefficients ([3498c5d](https://github.com/PlexSheep/kauma/commit/3498c5de3f315847f5c1995df05230a4d177d943))
+* **superpoly:** read from wrong key ([35c7b96](https://github.com/PlexSheep/kauma/commit/35c7b96955c54c385e785937910a2c0c484d898f))
+* **superpoly:** remove leading zeros ([ac98eb5](https://github.com/PlexSheep/kauma/commit/ac98eb55d04d4db97f606bb72ab9659b6e25f4da))
+* **superpoly:** try to make pow work ([7b5c053](https://github.com/PlexSheep/kauma/commit/7b5c0532fe0782f6e8eb9d63ba9ce02bb45b1c90))
+
 ## [0.2.0](https://github.com/PlexSheep/kauma/compare/v0.1.0...v0.2.0) (2024-11-29)
 
 
