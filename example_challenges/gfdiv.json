@@ -1,0 +1,11 @@
+{
+  "testcases": {
+    "gfdiv_0": {
+      "action": "gfdiv",
+      "arguments": {
+        "a": "JAAAAAAAAAAAAAAAAAAAAA==",
+        "b": "wAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    }
+  }
+}
