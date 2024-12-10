@@ -101,6 +101,20 @@ pub enum Action {
     ///  `a` * `b` in the finite field for that semantic encoded in Base64 : [String]
     #[serde(rename = "gfmul")]
     GfMul,
+    /// Divide two polynomials in [F_2_128](ffield::F_2_128)
+    ///
+    /// # Arguments
+    ///
+    /// - `a`: [String] - Base64 string encoding a [Polynomial](ffield::Polynomial)
+    /// - `b`: [String] - Base64 string encoding a [Polynomial](ffield::Polynomial) (never 0)
+    ///
+    /// Both in [ffield::Semantic::Gcm].
+    ///
+    /// # Returns
+    ///
+    ///  `a` / `b` in the finite field for that semantic encoded in Base64 : [String]
+    #[serde(rename = "gfdiv")]
+    GfDiv,
     /// Display a polynomial block with it's math representation
     ///
     /// # Arguments
@@ -273,6 +287,7 @@ impl Action {
             Self::Poly2Block => "block",
             Self::Block2Poly => "coefficients",
             Self::GfMul => "product",
+            Self::GfDiv => "q",
             Self::Sea128 => "output",
             Self::SD_DisplayPolyBlock => "poly",
             Self::Xex => "output",
@@ -364,9 +379,11 @@ fn challenge_runner(
     }
     let sol = match testcase.action {
         Action::AddNumbers | Action::SubNumbers => example::run_testcase(testcase, settings),
-        Action::Poly2Block | Action::Block2Poly | Action::GfMul | Action::SD_DisplayPolyBlock => {
-            ffield::run_testcase(testcase, settings)
-        }
+        Action::Poly2Block
+        | Action::Block2Poly
+        | Action::GfMul
+        | Action::GfDiv
+        | Action::SD_DisplayPolyBlock => ffield::run_testcase(testcase, settings),
         Action::Sea128 | Action::Xex | Action::GcmEncrypt | Action::GcmDecrypt => {
             cipher::run_testcase(testcase, settings)
         }

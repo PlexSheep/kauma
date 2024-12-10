@@ -247,6 +247,10 @@ impl FField {
     pub(crate) fn dbg_poly(&self, p: Polynomial) -> String {
         format!("{p:032X} => {}", self.display_poly(p))
     }
+
+    pub fn div(&self, a: Polynomial, b: Polynomial) -> (Polynomial, Polynomial) {
+        todo!()
+    }
 }
 
 impl Default for FField {
@@ -306,6 +310,24 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let b: Polynomial = get_poly(&testcase.arguments, "b", semantic)?;
 
             let sol = change_semantic(field.mul(a, b), Semantic::Xex, semantic);
+            serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
+                eprintln!("! could not convert block to json: {e}");
+                e
+            })?
+        }
+        Action::GfDiv => {
+            let semantic: Semantic = Semantic::Gcm;
+            let a: Polynomial = get_poly(&testcase.arguments, "a", semantic)?;
+            let b: Polynomial = get_poly(&testcase.arguments, "b", semantic)?;
+
+            let sol = change_semantic(
+                field.mul(
+                    change_semantic(a, semantic, Semantic::Xex),
+                    change_semantic(b, semantic, Semantic::Xex),
+                ),
+                Semantic::Xex,
+                semantic,
+            );
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
@@ -387,7 +409,7 @@ mod test {
     }
 
     #[test]
-    fn test_add() {
+    fn test_ffield_add() {
         const SOLUTION: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let sol = field().add(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -397,14 +419,14 @@ mod test {
     }
 
     #[test]
-    fn test_poly_from_coefficients() {
+    fn test_ffield_poly_from_coefficients() {
         const SOLUTION: Polynomial = 0x01120000000000000000000000000080;
         let sol = field().coefficients_to_poly(vec![0, 9, 12, 127]);
         assert_eq_polys(sol, SOLUTION);
     }
 
     #[test]
-    fn test_coefficients_from_poly() {
+    fn test_ffield_coefficients_from_poly() {
         // we don't care about order, so just put things in a set
         assert_eq!(
             field()
@@ -416,7 +438,7 @@ mod test {
     }
 
     #[test]
-    fn test_dipsplay_poly() {
+    fn test_ffield_dipsplay_poly() {
         let a: Polynomial = 0x14000000_00000000_00000000_00000000; // α^4 + α^2
         let b: Polynomial = 0x16000000_00000000_00000000_00000000; // α^4 + α^2 + α
         let c: Polynomial = 0x02000000_00000000_00000000_00000000; // α
@@ -429,7 +451,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_0() {
+    fn test_ffield_mul_0() {
         const SOLUTION: Polynomial = 0x2c000000000000000000000000000000; // α^5 + α^3 + α^2
         let sol = field().mul(
             0x16000000_00000000_00000000_00000000, // α^4 + α^2 + α
@@ -439,7 +461,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_1() {
+    fn test_ffield_mul_1() {
         const SOLUTION: Polynomial = 0x04000000000000000000000000000000; // α^2
         let sol = field().mul(
             0x02000000_00000000_00000000_00000000, // α
@@ -449,7 +471,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_2() {
+    fn test_ffield_mul_2() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
         let sol = field().mul(
             0x01120000_00000000_00000000_00000080, // α^127 + α^12 + α^9 + 1
@@ -459,7 +481,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_3() {
+    fn test_ffield_mul_3() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000; // α^13 + α^10 + α^7 + α^2 + 1
         let sol = field().mul(
             0x02000000_00000000_00000000_00000000, // α
@@ -469,7 +491,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_4() {
+    fn test_ffield_mul_4() {
         const SOLUTION: Polynomial = 0x40A81400000000000000000000000000;
         let sol = field().mul(
             0x03010000000000000000000000000080,
@@ -479,7 +501,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_5() {
+    fn test_ffield_mul_5() {
         const SOLUTION: Polynomial = 0x50801400000000000000000000000000;
         let sol = field().mul(
             0x03010000000000000000000000000080,
@@ -489,7 +511,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_6() {
+    fn test_ffield_mul_6() {
         const SOLUTION: Polynomial = 0x85240000000000000000000000000000;
         let sol = field().mul(
             0x01120000000000000000000000000080,
@@ -499,7 +521,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_7() {
+    fn test_ffield_mul_7() {
         const SOLUTION: Polynomial = 0x04000000_00000000_00000000_00000000;
         let sol = field().mul(
             0x02000000_00000000_00000000_00000000, // α
@@ -509,7 +531,7 @@ mod test {
     }
 
     #[test]
-    fn test_poly_from_gcm() {
+    fn test_ffield_poly_from_gcm() {
         let xex = BASE64_STANDARD.decode("ARIAAAAAAAAAAAAAAAAAgA==").unwrap();
         let gcm = BASE64_STANDARD.decode("gEgAAAAAAAAAAAAAAAAAAQ==").unwrap();
 
@@ -523,7 +545,7 @@ mod test {
     }
 
     #[test]
-    fn test_change_sem_lossles() {
+    fn test_ffield_change_sem_lossles() {
         let p: Polynomial = 0xb1480000000000000000000000000000;
         let mut t = p;
         for _ in 0..5000 {
@@ -531,5 +553,22 @@ mod test {
             t = change_semantic(t, Semantic::Gcm, Semantic::Xex);
             assert_int(p, t);
         }
+    }
+
+    #[test]
+    fn test_ffield_div_0() {
+        const SOLUTION: Polynomial = 0x02000000_00000000_00000000_00000000; // α
+        let sol = field().div(
+            0x04000000000000000000000000000000,    // α^2
+            0x02000000_00000000_00000000_00000000, // α
+        );
+        assert_eq_polys(sol.0, SOLUTION);
+    }
+
+    #[test]
+    fn test_ffield_div_1() {
+        const SOLUTION: Polynomial = 0x02000000_00000000_00000000_00000000; // α
+        let sol = field().div(SOLUTION, SOLUTION);
+        assert_eq_polys(sol.0, SOLUTION);
     }
 }
