@@ -339,14 +339,9 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             let a: Polynomial = get_poly(&testcase.arguments, "a", semantic)?;
             let b: Polynomial = get_poly(&testcase.arguments, "b", semantic)?;
 
-            let sol = change_semantic(
-                field.mul(
-                    change_semantic(a, semantic, Semantic::Xex),
-                    change_semantic(b, semantic, Semantic::Xex),
-                ),
-                Semantic::Xex,
-                semantic,
-            );
+            let sol = field.div(a, b);
+            let sol = change_semantic(sol, Semantic::Xex, semantic);
+            veprintln("sol", format_args!("{sol:032x?}"));
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
