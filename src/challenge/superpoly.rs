@@ -47,14 +47,8 @@ impl SuperPoly {
     }
     /// remove leading zeros
     pub fn normalize(&mut self) {
-        while let Some(coeff) = self.coefficients.first() {
-            if self.coefficients.len() < 2 {
-                break;
-            }
-            if *coeff != 0 {
-                break;
-            }
-            self.coefficients.remove(0);
+        while self.coefficients.last() == Some(&0) {
+            self.coefficients.pop();
         }
     }
 }
