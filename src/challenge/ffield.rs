@@ -248,6 +248,13 @@ impl FField {
         format!("{p:032X} => {}", self.display_poly(p))
     }
 
+    /// divide [Polynomial] `a` by [Polynomial] `b`
+    ///
+    /// Internally, this is just multiplication with the inverse element of `b`
+    ///
+    /// # Panics
+    ///
+    /// Panics if `b` is 0
     pub fn div(&self, a: Polynomial, b: Polynomial) -> Polynomial {
         if b == 0 {
             panic!("cannot divide by zero: {b}");
@@ -256,6 +263,7 @@ impl FField {
     }
 
     fn inv(&self, mut p: Polynomial) -> Polynomial {
+    /// get the inverse of a [Polynomial] `p`
         const BASE: u128 = 0xfffffffffffffffffffffffffffffffe;
         let mut counter: u128 = BASE;
         let mut acc: u128 = 1u128.to_be();
