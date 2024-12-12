@@ -51,6 +51,10 @@ impl SuperPoly {
             self.coefficients.pop();
         }
     }
+
+    pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
+        todo!()
+    }
 }
 
 impl Serialize for SuperPoly {
