@@ -248,8 +248,27 @@ impl FField {
         format!("{p:032X} => {}", self.display_poly(p))
     }
 
-    pub fn div(&self, a: Polynomial, b: Polynomial) -> (Polynomial, Polynomial) {
-        todo!()
+    pub fn div(&self, a: Polynomial, b: Polynomial) -> Polynomial {
+        if b == 0 {
+            panic!("cannot divide by zero: {b}");
+        }
+        self.mul(a, self.inv(b))
+    }
+
+    fn inv(&self, mut p: Polynomial) -> Polynomial {
+        const BASE: u128 = 0xfffffffffffffffffffffffffffffffe;
+        let mut counter: u128 = BASE;
+        let mut acc: u128 = 1u128.to_be();
+
+        while counter > 0 {
+            if counter & 1 == 1 {
+                acc = self.mul(p, acc);
+            }
+            counter >>= 1;
+            p = self.mul(p, p)
+        }
+
+        acc
     }
 }
 
@@ -562,13 +581,14 @@ mod test {
             0x04000000000000000000000000000000,    // α^2
             0x02000000_00000000_00000000_00000000, // α
         );
-        assert_eq_polys(sol.0, SOLUTION);
+        assert_eq_polys(sol, SOLUTION);
     }
 
     #[test]
     fn test_ffield_div_1() {
-        const SOLUTION: Polynomial = 0x02000000_00000000_00000000_00000000; // α
-        let sol = field().div(SOLUTION, SOLUTION);
-        assert_eq_polys(sol.0, SOLUTION);
+        const SOLUTION: Polynomial = 0x01000000_00000000_00000000_00000000; // 1
+        const A: Polynomial = 0x02000000_00000000_00000000_00000000; // α
+        let sol = field().div(A, A);
+        assert_eq_polys(sol, SOLUTION);
     }
 }
