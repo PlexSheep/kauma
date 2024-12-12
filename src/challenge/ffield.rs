@@ -403,6 +403,8 @@ pub fn change_semantic(p: Polynomial, source: Semantic, target: Semantic) -> Pol
 mod test {
     use std::collections::HashSet;
 
+    use serde_json::json;
+
     use crate::common::assert_int;
 
     use super::*;
@@ -590,5 +592,23 @@ mod test {
         const A: Polynomial = 0x02000000_00000000_00000000_00000000; // α
         let sol = field().div(A, A);
         assert_eq_polys(sol, SOLUTION);
+    }
+
+    #[test]
+    fn test_ffield_div_2() {
+        let args = json!(
+            {
+                "a": "JAAAAAAAAAAAAAAAAAAAAA==",
+                "b": "wAAAAAAAAAAAAAAAAAAAAA==",
+                "s": "OAAAAAAAAAAAAAAAAAAAAA=="
+            }
+        );
+
+        let a = get_poly(&args, "a", Semantic::Gcm).unwrap();
+        let b = get_poly(&args, "b", Semantic::Gcm).unwrap();
+        let s = get_poly(&args, "s", Semantic::Gcm).unwrap();
+
+        let sol = field().div(a, b);
+        assert_eq_polys(sol, s);
     }
 }
