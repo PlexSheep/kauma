@@ -602,4 +602,56 @@ mod test {
         assert_eq!(SuperPoly::zero().pow(1), SuperPoly::zero());
         assert_eq!(SuperPoly::zero().pow(20), SuperPoly::zero());
     }
+
+    #[test]
+    fn test_spoly_divmod_identity() {
+        let fake_args = json!(
+        {
+            "A": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+            ],
+            "S?": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+            ],
+        });
+        let a = get_spoly(&fake_args, "A").expect("could not parse args");
+        let s = get_spoly(&fake_args, "S?").expect("could not parse args");
+        let (q, r) = a.divmod(&a);
+        assert_poly(&q, &s);
+        assert_poly(&r, &SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_spoly_divmod_something() {
+        let fake_args = json!(
+        {
+        "A": [
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA=="
+        ],
+        "B": [
+                "0AAAAAAAAAAAAAAAAAAAAA==",
+                "IQAAAAAAAAAAAAAAAAAAAA=="
+        ],
+        "Q": [
+                "nAIAgCAIAgCAIAgCAIAgCg==",
+                "m85znOc5znOc5znOc5znOQ=="
+        ],
+        "R": [
+                "lQNA0DQNA0DQNA0DQNA0Dg=="
+        ]
+        });
+        let a = get_spoly(&fake_args, "A").expect("could not parse args");
+        let b = get_spoly(&fake_args, "B").expect("could not parse args");
+        let q = get_spoly(&fake_args, "Q").expect("could not parse args");
+        let r = get_spoly(&fake_args, "R").expect("could not parse args");
+        let (myq, myr) = a.divmod(&b);
+        assert_poly(&myq, &q);
+        assert_poly(&myr, &r);
+    }
 }
