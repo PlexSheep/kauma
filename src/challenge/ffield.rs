@@ -262,8 +262,8 @@ impl FField {
         self.mul(a, self.inv(b))
     }
 
-    fn inv(&self, mut p: Polynomial) -> Polynomial {
     /// get the inverse of a [Polynomial] `p`
+    pub fn inv(&self, mut p: Polynomial) -> Polynomial {
         const BASE: u128 = 0xfffffffffffffffffffffffffffffffe;
         let mut counter: u128 = BASE;
         let mut acc: u128 = 1u128.to_be();
