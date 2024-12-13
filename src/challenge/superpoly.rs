@@ -657,24 +657,17 @@ mod test {
 
     #[test]
     fn test_spoly_divmod_identity() {
-        let fake_args = json!(
-        {
+        let fake_args = json!({
             "A": [
-                "JAAAAAAAAAAAAAAAAAAAAA==",
-                "wAAAAAAAAAAAAAAAAAAAAA==",
-                "ACAAAAAAAAAAAAAAAAAAAA=="
-            ],
-            "S?": [
                 "JAAAAAAAAAAAAAAAAAAAAA==",
                 "wAAAAAAAAAAAAAAAAAAAAA==",
                 "ACAAAAAAAAAAAAAAAAAAAA=="
             ],
         });
         let a = get_spoly(&fake_args, "A").expect("could not parse args");
-        let s = get_spoly(&fake_args, "S?").expect("could not parse args");
         let (q, r) = a.divmod(&a);
-        assert_poly(&q, &s);
-        assert_poly(&r, &SuperPoly::zero());
+        assert_poly(&q, &SuperPoly::one()); // When dividing by itself, quotient should be 1
+        assert_poly(&r, &SuperPoly::zero()); // and remainder should be 0
     }
 
     #[test]
