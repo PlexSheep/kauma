@@ -704,4 +704,81 @@ mod test {
         assert_poly(&myq, &q);
         assert_poly(&myr, &r);
     }
+
+    #[test]
+    fn test_spoly_add_normalize_required() {
+        // Test case where both polynomials have trailing zeros
+        let a = SuperPoly::from([1, 0, 0]); // x^2 + 0x + 0
+        let b = SuperPoly::from([2, 0, 0]); // 2x^2 + 0x + 0
+        let c = &a + &b;
+        assert_eq!(c.coefficients.len(), 1); // Should normalize to [3]
+        assert_eq!(c.coefficients[0], 3);
+    }
+
+    #[test]
+    fn test_spoly_add_different_lengths() {
+        // Test polynomials of different lengths where normalization is needed
+        let a = SuperPoly::from([1, 2, 0, 0]); // x^3 + 2x^2
+        let b = SuperPoly::from([3, 4]); // 3x + 4
+        let c = &a + &b;
+        assert_eq!(c.coefficients.len(), 3); // Should normalize properly
+    }
+
+    #[test]
+    fn test_spoly_add_result_shorter() {
+        // Test where addition results in cancellation making result shorter
+        let a = SuperPoly::from([1, 1]); // x + 1
+        let b = SuperPoly::from([0, 1]); // 1
+        let c = &a + &b;
+        assert_eq!(c.coefficients.len(), 1); // Should be just [1]
+        assert_eq!(c.coefficients[0], 1);
+    }
+
+    #[test]
+    fn test_spoly_add_zero_length() {
+        // Test addition with zero-length polynomial
+        let a = SuperPoly::empty();
+        let b = SuperPoly::from([1, 2, 3]);
+        let c = &a + &b;
+        assert_eq!(c.coefficients, b.coefficients);
+    }
+
+    #[test]
+    fn test_spoly_add_all_terms_cancel() {
+        // Test where all terms cancel out
+        let a = SuperPoly::from([1, 2, 3]);
+        let b = SuperPoly::from([1, 2, 3]);
+        let c = &a + &b;
+        assert!(c.is_zero());
+        assert_eq!(c.coefficients.len(), 0); // Should normalize to empty
+    }
+
+    #[test]
+    fn test_spoly_add_leading_zeros() {
+        // Test with leading zeros that should be removed
+        let a = SuperPoly::from([1, 2, 0, 0, 0]);
+        let b = SuperPoly::from([3, 4, 0, 0]);
+        let c = &a + &b;
+        assert!(c.coefficients.len() <= 2); // Should not keep trailing zeros
+    }
+
+    #[test]
+    fn test_spoly_add_sparse_polynomials() {
+        // Test with sparse polynomials (lots of zero coefficients)
+        let a = SuperPoly::from([1, 0, 0, 2, 0, 0, 3]);
+        let b = SuperPoly::from([0, 1, 0, 0, 2, 0, 0]);
+        let c = &a + &b;
+        // Result should be properly normalized
+        assert!(!c.coefficients.iter().rev().any(|&x| x == 0));
+    }
+
+    #[test]
+    fn test_spoly_add_alternating_zeros() {
+        // Test with alternating zero and non-zero coefficients
+        let a = SuperPoly::from([1, 0, 2, 0, 3, 0]);
+        let b = SuperPoly::from([0, 1, 0, 2, 0, 3]);
+        let c = &a + &b;
+        // All coefficients should be non-zero in result
+        assert!(c.coefficients.iter().all(|&x| x != 0));
+    }
 }
