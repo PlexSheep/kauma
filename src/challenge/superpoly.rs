@@ -52,8 +52,44 @@ impl SuperPoly {
         }
     }
 
+    #[inline]
+    pub fn deg(&self) -> usize {
+        self.coefficients.len() - 1
+    }
+
     pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
-        todo!()
+        if self.is_zero() {
+            panic!("division by zero");
+        }
+        if self.deg() < rhs.deg() {
+            return (SuperPoly::zero(), self.to_owned());
+        }
+
+        let mut remainder = self.clone();
+        let mut divisor = rhs.clone();
+        let mut q = vec![0; remainder.deg() - divisor.deg() + 1];
+
+        let mut guard: u16 = 0;
+        while divisor.deg() < remainder.deg() {
+            if guard == u16::MAX {
+                panic!("divmod took too many loops")
+            }
+            let deg_delta = remainder.deg() - divisor.deg();
+            let coeff_delta =
+                remainder.coefficients.last().unwrap() / divisor.coefficients.last().unwrap();
+            q[deg_delta] = coeff_delta;
+            let mut pos;
+            for (i, coeff) in divisor.coefficients.iter().enumerate() {
+                pos = deg_delta + i;
+                let a = remainder.coefficients[pos];
+                remainder.coefficients[pos] = a + (coeff * coeff_delta);
+                remainder.normalize();
+            }
+
+            guard += 1;
+        }
+
+        (Self::from(q.as_slice()), remainder)
     }
 }
 
