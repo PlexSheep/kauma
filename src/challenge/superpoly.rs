@@ -33,7 +33,8 @@ impl SuperPoly {
     /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
     #[inline]
     pub fn one() -> Self {
-        SuperPoly::from([1])
+        // In XEX semantic, we need to byte-swap 1 to get it in the right position
+        SuperPoly::from([1u128.to_be()])
     }
     /// Check if this [`SuperPoly`] is actually [zero](Self::zero).
     ///
@@ -54,7 +55,7 @@ impl SuperPoly {
 
     #[inline]
     pub fn deg(&self) -> usize {
-        self.coefficients.len() - 1
+        self.coefficients.len()
     }
 
     pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
