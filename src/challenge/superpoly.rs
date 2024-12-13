@@ -177,14 +177,19 @@ impl BitXor for &SuperPoly {
     fn bitxor(self, rhs: Self) -> Self::Output {
         let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
         let mut new_coefficients: Vec<Polynomial> = Vec::with_capacity(max_idx);
+
+        // Add coefficients, handling different lengths
         for i in 0..max_idx {
-            new_coefficients.push(
-                self.coefficients.get(i).unwrap_or(&0) ^ rhs.coefficients.get(i).unwrap_or(&0),
-            );
+            let coeff =
+                self.coefficients.get(i).unwrap_or(&0) ^ rhs.coefficients.get(i).unwrap_or(&0);
+            if coeff != 0 || i < new_coefficients.len() {
+                new_coefficients.push(coeff);
+            }
         }
-        let mut p = SuperPoly::from(new_coefficients.as_slice());
-        p.normalize();
-        p
+
+        let mut result = SuperPoly::from(new_coefficients.as_slice());
+        result.normalize();
+        result
     }
 }
 
