@@ -28,7 +28,12 @@ impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
     pub fn zero() -> Self {
-        SuperPoly::from([0])
+        Self::empty()
+    }
+    /// Returns an "empty" [`SuperPoly`] with all coefficients set to 0.
+    #[inline]
+    fn empty() -> Self {
+        SuperPoly::from(Vec::<u128>::new().as_slice())
     }
     /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
     #[inline]
