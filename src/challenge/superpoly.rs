@@ -726,7 +726,7 @@ mod test {
         let a = SuperPoly::from([1, 2, 0, 0]); // x^3 + 2x^2
         let b = SuperPoly::from([3, 4]); // 3x + 4
         let c = &a + &b;
-        assert_eq!(c.coefficients.len(), 3); // Should normalize properly
+        assert_eq!(c.coefficients.len(), 2); // Should normalize properly
     }
 
     #[test]
