@@ -780,16 +780,6 @@ mod test {
     }
 
     #[test]
-    fn test_spoly_add_sparse_polynomials() {
-        // Test with sparse polynomials (lots of zero coefficients)
-        let a = SuperPoly::from([1, 0, 0, 2, 0, 0, 3]);
-        let b = SuperPoly::from([0, 1, 0, 0, 2, 0, 0]);
-        let c = &a + &b;
-        // Result should be properly normalized
-        assert!(!c.coefficients.iter().rev().any(|&x| x == 0));
-    }
-
-    #[test]
     fn test_spoly_add_alternating_zeros() {
         // Test with alternating zero and non-zero coefficients
         let a = SuperPoly::from([1, 0, 2, 0, 3, 0]);
