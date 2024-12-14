@@ -413,6 +413,18 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let s = a * b;
             serde_json::to_value(&s)?
         }
+        Action::GfpolyDivMod => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
+
+            let (q, r) = a.divmod(&b);
+            serde_json::json!(
+                {
+                    "Q": q,
+                    "R": r
+                }
+            )
+        }
         Action::GfpolyPow => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
             let k: u32 = get_any(&testcase.arguments, "k")?;

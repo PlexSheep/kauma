@@ -257,6 +257,27 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), product of `A` and `B`
     #[serde(rename = "gfpoly_pow")]
     GfpolyPow,
+    /// Divide a [`SuperPoly`](superpoly::SuperPoly) by another, with remainder
+    ///
+    /// # Arguments
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    /// - `B`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///    making a [SuperPoly](superpoly::SuperPoly) (never zero I think)
+    ///
+    /// # Returns
+    ///
+    /// With A = Q * B + R :
+    ///
+    /// - `Q`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    /// - `R`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    #[serde(rename = "gfpoly_divmod")]
+    GfpolyDivMod,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -298,6 +319,7 @@ impl Action {
             Self::GfpolyAdd => "S",
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
+            Self::GfpolyDivMod => return None,
         })
     }
 }
@@ -362,9 +384,10 @@ pub fn run_challenges(
     let cpus = num_cpus::get();
     eprintln!("* cpus: {cpus}");
     if cpus > 1 && settings.threads.map(|t| t != 1).unwrap_or(true) && testcases.len() > 1 {
+        eprintln!("* Running in multi threaded mode");
         run_challenges_mt(&testcases, settings)
     } else {
-        eprintln!("* This system has only one CPU, running in singlethreaded mode");
+        eprintln!("* Running in single threaded mode");
         run_challenges_st(&testcases, settings)
     }
 }
@@ -389,7 +412,7 @@ fn challenge_runner(
         }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
         Action::PaddingOracle => pad::run_testcase(testcase, settings),
-        Action::GfpolyAdd | Action::GfpolyMul | Action::GfpolyPow => {
+        Action::GfpolyAdd | Action::GfpolyMul | Action::GfpolyPow | Action::GfpolyDivMod => {
             superpoly::run_testcase(testcase, settings)
         }
     };
