@@ -466,6 +466,29 @@ mod test {
         assert_eq!(a, b, "\na\t: {a:#x?}\nb\t: {b:#x?}");
     }
 
+    fn create_poly_from_base64(values: &[&str]) -> SuperPoly {
+        let json_array: Vec<String> = values.iter().map(|&s| s.to_string()).collect();
+        let json_value = json!({ "A": json_array });
+        get_spoly(&json_value, "A").expect("Failed to parse polynomial")
+    }
+
+    fn assert_divmod(
+        dividend: &SuperPoly,
+        divisor: &SuperPoly,
+        expected_q: &SuperPoly,
+        expected_r: &SuperPoly,
+    ) {
+        let (q, r) = dividend.divmod(divisor);
+        assert_eq!(
+            q, *expected_q,
+            "\nExpected quotient:\n{expected_q:#x?}\nGot:\n{q:#x?}"
+        );
+        assert_eq!(
+            r, *expected_r,
+            "\nExpected remainder:\n{expected_r:#x?}\nGot:\n{r:#x?}"
+        );
+    }
+
     #[test]
     fn test_spoly_construct_superpoly() {
         const C: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -679,51 +702,6 @@ mod test {
     }
 
     #[test]
-    fn test_spoly_divmod_identity() {
-        let fake_args = json!({
-            "A": [
-                "JAAAAAAAAAAAAAAAAAAAAA==",
-                "wAAAAAAAAAAAAAAAAAAAAA==",
-                "ACAAAAAAAAAAAAAAAAAAAA=="
-            ],
-        });
-        let a = get_spoly(&fake_args, "A").expect("could not parse args");
-        let (q, r) = a.divmod(&a);
-        assert_poly(&q, &SuperPoly::one()); // When dividing by itself, quotient should be 1
-        assert_poly(&r, &SuperPoly::zero()); // and remainder should be 0
-    }
-
-    #[test]
-    fn test_spoly_divmod_something() {
-        let fake_args = json!(
-        {
-        "A": [
-                "JAAAAAAAAAAAAAAAAAAAAA==",
-                "wAAAAAAAAAAAAAAAAAAAAA==",
-                "ACAAAAAAAAAAAAAAAAAAAA=="
-        ],
-        "B": [
-                "0AAAAAAAAAAAAAAAAAAAAA==",
-                "IQAAAAAAAAAAAAAAAAAAAA=="
-        ],
-        "Q": [
-                "nAIAgCAIAgCAIAgCAIAgCg==",
-                "m85znOc5znOc5znOc5znOQ=="
-        ],
-        "R": [
-                "lQNA0DQNA0DQNA0DQNA0Dg=="
-        ]
-        });
-        let a = get_spoly(&fake_args, "A").expect("could not parse args");
-        let b = get_spoly(&fake_args, "B").expect("could not parse args");
-        let q = get_spoly(&fake_args, "Q").expect("could not parse args");
-        let r = get_spoly(&fake_args, "R").expect("could not parse args");
-        let (myq, myr) = a.divmod(&b);
-        assert_poly(&myq, &q);
-        assert_poly(&myr, &r);
-    }
-
-    #[test]
     fn test_spoly_add_normalize_required() {
         // Test case where both polynomials have trailing zeros
         let a = SuperPoly::from([1, 0, 0]); // x^2 + 0x + 0
@@ -788,5 +766,49 @@ mod test {
         let c = &a + &b;
         // All coefficients should be non-zero in result
         assert!(c.coefficients.iter().all(|&x| x != 0));
+    }
+
+    #[test]
+    fn test_spoly_divmod_identity() {
+        let something = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        assert_divmod(
+            &something,
+            &something,
+            &SuperPoly::one(),
+            &SuperPoly::zero(),
+        );
+    }
+
+    #[test]
+    fn test_spoly_divmod_something() {
+        let a = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let b = create_poly_from_base64(&["0AAAAAAAAAAAAAAAAAAAAA==", "IQAAAAAAAAAAAAAAAAAAAA=="]);
+        let r = create_poly_from_base64(&["lQNA0DQNA0DQNA0DQNA0Dg=="]);
+        let q = create_poly_from_base64(&["nAIAgCAIAgCAIAgCAIAgCg==", "m85znOc5znOc5znOc5znOQ=="]);
+        assert_divmod(&a, &b, &q, &r);
+    }
+
+    #[test]
+    fn test_spoly_divmod_same_degree() {
+        // When polynomials have the same degree
+        let dividend = create_poly_from_base64(&[
+            "AAAAAAAAAAAAAAAAAAAAAQ==", // 1
+            "AAAAAAAAAAAAAAAAAAAAAQ==", // 1
+        ]);
+        let divisor = create_poly_from_base64(&[
+            "AAAAAAAAAAAAAAAAAAAAAQ==", // 1
+            "AAAAAAAAAAAAAAAAAAAAAQ==", // 1
+        ]);
+        let expected_q = SuperPoly::one();
+        let expected_r = SuperPoly::zero();
+        assert_divmod(&dividend, &divisor, &expected_q, &expected_r);
     }
 }
