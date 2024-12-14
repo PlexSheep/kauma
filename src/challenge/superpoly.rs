@@ -69,40 +69,44 @@ impl SuperPoly {
             panic!("division by zero");
         }
 
+        // Create mutable clone of dividend for remainder
+        let mut remainder = self.clone();
+        remainder.normalize(); // Normalize input
+
         // If degree of dividend < degree of divisor, quotient is 0 and remainder is dividend
-        if self.deg() < rhs.deg() {
-            return (SuperPoly::zero(), self.clone());
+        if remainder.deg() < rhs.deg() {
+            return (SuperPoly::zero(), remainder);
         }
 
-        // Initialize remainder as dividend and will be modified during division
-        let mut remainder = self.clone();
+        // Get normalized divisor
+        let mut divisor = rhs.clone();
+        divisor.normalize();
 
         // Get the leading coefficient of divisor
-        let divisor_lc = *rhs.coefficients.last().unwrap();
+        let divisor_lc = *divisor.coefficients.last().unwrap();
 
-        // Initialize quotient vector with enough capacity
-        let mut quotient_coeffs = vec![0; remainder.deg() - rhs.deg() + 1];
+        // Initialize quotient vector with exact capacity
+        let mut quotient_coeffs = vec![0; remainder.deg() - divisor.deg() + 1];
 
-        // While remainder has degree >= divisor degree
-        while remainder.deg() >= rhs.deg() {
+        // While remainder has sufficient degree
+        while !remainder.is_zero() && remainder.deg() >= divisor.deg() {
             // Calculate degree difference
-            let deg_diff = remainder.deg() - rhs.deg();
+            let deg_diff = remainder.deg() - divisor.deg();
 
             // Calculate the leading coefficient for this term of quotient
-            // by dividing leading coefficients in F_2^128
-            let term_coeff = F_2_128.div(*remainder.coefficients.last().unwrap(), divisor_lc);
+            let remainder_lc = *remainder.coefficients.last().unwrap();
+            let term_coeff = F_2_128.div(remainder_lc, divisor_lc);
 
             // Save coefficient in quotient
             quotient_coeffs[deg_diff] = term_coeff;
 
-            // Subtract (rhs * term) from remainder
-            // We do this term by term to avoid creating a temporary polynomial
-            for (i, &coeff) in rhs.coefficients.iter().enumerate() {
+            // Subtract (divisor * term) from remainder
+            for (i, &coeff) in divisor.coefficients.iter().enumerate() {
                 let pos = deg_diff + i;
                 remainder.coefficients[pos] ^= F_2_128.mul(coeff, term_coeff);
             }
 
-            // Remove trailing zeros from remainder
+            // Normalize remainder after each subtraction
             remainder.normalize();
         }
 
