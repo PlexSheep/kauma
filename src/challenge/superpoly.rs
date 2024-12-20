@@ -60,7 +60,7 @@ impl SuperPoly {
 
     #[inline]
     pub fn deg(&self) -> usize {
-        self.coefficients.len()
+        self.coefficients.len() - 1
     }
 
     pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
