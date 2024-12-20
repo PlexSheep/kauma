@@ -61,7 +61,12 @@ impl SuperPoly {
 
     #[inline]
     pub fn deg(&self) -> usize {
-        self.coefficients.len() - 1
+        if self.coefficients.len() > 1 {
+            self.coefficients.len() - 1
+        } else {
+            eprintln!("! coefficients len was 0, returning 0 to avoid underflow");
+            0
+        }
     }
 
     fn insert(&mut self, idx: usize, element: u128) {
@@ -196,11 +201,7 @@ impl BitXor for &SuperPoly {
 
 impl BitXorAssign for SuperPoly {
     fn bitxor_assign(&mut self, rhs: Self) {
-        let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
-        for i in 0..max_idx {
-            self.coefficients[i] ^= rhs.coefficients.get(i).unwrap_or(&0);
-        }
-        self.normalize();
+        *self = self.clone() ^ rhs;
     }
 }
 
