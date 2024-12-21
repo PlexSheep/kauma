@@ -51,10 +51,17 @@ impl SuperPoly {
         // A SuperPoly is zero <=> all it's coefficients are zero
         self.coefficients.iter().all(|p| *p == 0)
     }
-    /// remove leading zeros
+    /// remove trailing zeros
     pub fn normalize(&mut self) {
+        // Remove trailing zeros
         while self.coefficients.last() == Some(&0) {
             self.coefficients.pop();
+        }
+
+        // If we ended up with no coefficients (was all zeros),
+        // ensure we maintain the canonical zero representation [0]
+        if self.coefficients.is_empty() {
+            self.coefficients.push(0);
         }
     }
 
@@ -466,6 +473,7 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 
 #[cfg(test)]
 mod test {
+
     use serde_json::json;
 
     use super::*;
@@ -836,7 +844,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "idk, this is kaputt"]
     fn test_spoly_divmod_small_dividend() {
         // When polynomials have the same degree
         let dividend = create_poly_from_base64(&[
@@ -862,5 +869,59 @@ mod test {
         let divisor =
             create_poly_from_base64(&["0AAAAAAAAAAAAAAAAAAAAA==", "IQAAAAAAAAAAAAAAAAAAAA=="]);
         assert_divmod(&dividend, &divisor, &SuperPoly::zero(), &SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_spoly_add_semantic_edge_cases() {
+        // Test boundary bits in different semantics
+        let poly1 = SuperPoly::from([1u128 << 127]); // Highest bit
+        let poly2 = SuperPoly::from([1u128]); // Lowest bit
+        let sum = &poly1 + &poly2;
+        assert!(!sum.is_zero()); // Should preserve both bits
+
+        // Test with alternating bit patterns
+        let alt1 = SuperPoly::from([0xAAAAAAAAAAAAAAAAu128]);
+        let alt2 = SuperPoly::from([0x5555555555555555u128]);
+        let sum_alt = &alt1 + &alt2;
+        assert_eq!(sum_alt, SuperPoly::from([0xFFFFFFFFFFFFFFFFu128]));
+    }
+
+    #[test]
+    fn test_spoly_add_zero_representations() {
+        // Test different zero representations
+        let zero1 = SuperPoly::zero();
+        let zero2 = SuperPoly::from(vec![0u128].as_slice());
+        let zero3 = SuperPoly::from(vec![0u128, 0u128, 0u128].as_slice());
+
+        assert_eq!(zero1, zero2);
+        assert_eq!(zero2, zero3);
+
+        // Test addition with different zero representations
+        let poly = SuperPoly::from([1u128]);
+        assert_eq!(&poly + &zero1, &poly + &zero2);
+        assert_eq!(&poly + &zero2, &poly + &zero3);
+    }
+
+    #[test]
+    fn test_spoly_add_associativity() {
+        let a = SuperPoly::from([0xF0F0F0F0u128]);
+        let b = SuperPoly::from([0x0F0F0F0Fu128]);
+        let c = SuperPoly::from([0x00FF00FFu128]);
+
+        let sum1 = &(&a + &b) + &c;
+        let sum2 = &a + &(&b + &c);
+        assert_eq!(sum1, sum2);
+    }
+
+    #[test]
+    fn test_spoly_add_high_degree_terms() {
+        // Test with polynomials having very high degree terms
+        let high1 = SuperPoly::from([1u128 << 127, 1u128]);
+        let high2 = SuperPoly::from([1u128 << 126, 1u128 << 1]);
+        let sum = &high1 + &high2;
+
+        // The sum should preserve the high degree terms
+        assert!(!sum.is_zero());
+        assert_eq!(sum.deg(), high1.deg());
     }
 }
