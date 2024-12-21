@@ -164,12 +164,6 @@ impl SuperPoly {
         let mut base = self.clone();
         let mut exp = k;
 
-        // First reduction of base modulo m to avoid overflow
-        base = base.divmod(m).1;
-        if base.is_zero() {
-            return Self::zero();
-        }
-
         // Square and multiply algorithm with modular reduction at each step
         while exp > 0 {
             if exp & 1 == 1 {
