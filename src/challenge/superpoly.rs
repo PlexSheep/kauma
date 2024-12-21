@@ -78,46 +78,59 @@ impl SuperPoly {
 
         // Create mutable clone of dividend for remainder
         let mut remainder = self.clone();
-        remainder.normalize(); // Normalize input
-
-        // If degree of dividend < degree of divisor, quotient is 0 and remainder is dividend
-        if remainder.deg() < rhs.deg() {
-            return (SuperPoly::zero(), remainder);
-        }
+        remainder.normalize();
 
         // Get normalized divisor
         let mut divisor = rhs.clone();
         divisor.normalize();
 
-        // Get the leading coefficient of divisor
-        let divisor_lc = *divisor.coefficients.last().unwrap();
+        // If degree of dividend < degree of divisor, quotient is 0 and remainder is dividend
+        if remainder.deg() < divisor.deg() {
+            return (SuperPoly::zero(), remainder);
+        }
 
-        // Initialize quotient vector with exact capacity
+        // Initialize quotient coefficients vector
         let mut quotient_coeffs = vec![0; remainder.deg() - divisor.deg() + 1];
 
-        // While remainder has sufficient degree
+        // Get the leading coefficient of divisor (needs to be non-zero after normalize)
+        let divisor_lc = divisor.coefficients.last().unwrap();
+
+        // Continue as long as the remainder has sufficient degree
         while !remainder.is_zero() && remainder.deg() >= divisor.deg() {
-            // Calculate degree difference
+            // Calculate the degree difference
             let deg_diff = remainder.deg() - divisor.deg();
 
-            // Calculate the leading coefficient for this term of quotient
-            let remainder_lc = *remainder.coefficients.last().unwrap();
-            let term_coeff = F_2_128.div(remainder_lc, divisor_lc);
+            // Get leading coefficient of current remainder
+            let remainder_lc = remainder.coefficients.last().unwrap();
 
-            // Save coefficient in quotient
+            // Calculate the term coefficient
+            let mut term_coeff = F_2_128.div(*remainder_lc, *divisor_lc);
+
+            // Store coefficient in quotient
             quotient_coeffs[deg_diff] = term_coeff;
 
             // Subtract (divisor * term) from remainder
-            for (i, &coeff) in divisor.coefficients.iter().enumerate() {
-                let pos = deg_diff + i;
-                remainder.coefficients[pos] ^= F_2_128.mul(coeff, term_coeff);
+            let mut temp = divisor.clone();
+            for i in 0..temp.coefficients.len() {
+                temp.coefficients[i] = F_2_128.mul(temp.coefficients[i], term_coeff);
             }
 
-            // Normalize remainder after each subtraction
+            // Shift temp polynomial by deg_diff
+            let mut shifted = vec![0; deg_diff];
+            shifted.extend(temp.coefficients);
+            temp.coefficients = shifted;
+
+            // Subtract (XOR) the shifted term from remainder
+            for i in 0..remainder.coefficients.len().max(temp.coefficients.len()) {
+                let rem_coeff = remainder.coefficients.get(i).copied().unwrap_or(0);
+                let temp_coeff = temp.coefficients.get(i).copied().unwrap_or(0);
+                remainder.coefficients[i] = F_2_128.add(rem_coeff, temp_coeff);
+            }
+
             remainder.normalize();
         }
 
-        // Create quotient polynomial and normalize it
+        // Create and return quotient polynomial and remainder
         let mut quotient = SuperPoly::from(quotient_coeffs.as_slice());
         quotient.normalize();
 
@@ -202,7 +215,6 @@ impl BitXor for &SuperPoly {
             new_coefficients[i] = left_coeff ^ right_coeff;
         }
 
-        // Create result and normalize
         let mut result = SuperPoly {
             coefficients: new_coefficients,
         };
