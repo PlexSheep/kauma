@@ -877,7 +877,7 @@ mod test {
     }
 
     #[test]
-    #[ignore = "I have 100%, this must be wrong if it faily"]
+    #[ignore = "I have 100%, this must be wrong if it fails"]
     fn test_spoly_add_all_terms_cancel() {
         // Test where all terms cancel out
         let a = SuperPoly::from([1, 2, 3]);
