@@ -351,7 +351,7 @@ impl Action {
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
             Self::GfpolyPowMod => "Z",
-            Self::GfpolySort => "polys",
+            Self::GfpolySort => "sorted_polys",
             Self::GfpolyDivMod => return None,
         })
     }
