@@ -870,7 +870,7 @@ mod test {
     #[test]
     fn test_spoly_add_zero_length() {
         // Test addition with zero-length polynomial
-        let a = SuperPoly::empty();
+        let a = unsafe { SuperPoly::empty() };
         let b = SuperPoly::from([1, 2, 3]);
         let c = &a + &b;
         assert_eq!(c.coefficients, b.coefficients);
