@@ -363,29 +363,27 @@ impl PartialOrd for SuperPoly {
 
 impl Ord for SuperPoly {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // First compare by degree
-        let deg_cmp = self.deg().cmp(&other.deg());
-        if deg_cmp != std::cmp::Ordering::Equal {
-            return deg_cmp;
-        }
+        // First compare by degree - LOWER degree comes first
+        match self.deg().cmp(&other.deg()) {
+            std::cmp::Ordering::Less => std::cmp::Ordering::Less,
+            std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+            std::cmp::Ordering::Equal => {
+                // If degrees are equal, compare coefficients from highest to lowest degree
+                for i in (0..=self.deg()).rev() {
+                    let self_coeff = self.coefficients.get(i).unwrap_or(&0);
+                    let other_coeff = other.coefficients.get(i).unwrap_or(&0);
 
-        // If degrees are equal, compare coefficients from highest to lowest degree
-        for i in (0..=self.deg()).rev() {
-            let self_coeff = self.coefficients.get(i).unwrap_or(&0);
-            let other_coeff = other.coefficients.get(i).unwrap_or(&0);
+                    let coeff_cmp = F_2_128
+                        .display_poly(*self_coeff)
+                        .cmp(&F_2_128.display_poly(*other_coeff));
 
-            // For coefficients in F2^128, compare from α^127 to α^0
-            // Convert to big-endian bytes for consistent comparison
-            let self_bytes = self_coeff.to_be_bytes();
-            let other_bytes = other_coeff.to_be_bytes();
-
-            let coeff_cmp = self_bytes.cmp(&other_bytes);
-            if coeff_cmp != std::cmp::Ordering::Equal {
-                return coeff_cmp;
+                    if coeff_cmp != std::cmp::Ordering::Equal {
+                        return coeff_cmp;
+                    }
+                }
+                std::cmp::Ordering::Equal
             }
         }
-
-        std::cmp::Ordering::Equal
     }
 }
 
