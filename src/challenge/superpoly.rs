@@ -211,11 +211,7 @@ impl BitXor for &SuperPoly {
 
 impl BitXorAssign for SuperPoly {
     fn bitxor_assign(&mut self, rhs: Self) {
-        let max_idx: usize = self.coefficients.len().max(rhs.coefficients.len());
-        for i in 0..max_idx {
-            self.coefficients[i] ^= rhs.coefficients.get(i).unwrap_or(&0);
-        }
-        self.normalize();
+        *self = self.clone() ^ rhs;
     }
 }
 
