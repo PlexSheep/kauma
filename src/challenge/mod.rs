@@ -296,6 +296,19 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), result of A^k mod M
     #[serde(rename = "gfpoly_powmod")]
     GfpolyPowMod,
+    /// Sort a list of polynomials according to total ordering rules
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `polys`: list of polynomials, each represented as `[[String]]` list of Base64 string encoding [Polynomials](ffield::Polynomial)
+    ///
+    /// # Returns
+    ///
+    /// - `sorted_polys`: list of polynomials sorted according to total ordering rules
+    #[serde(rename = "gfpoly_sort")]
+    GfpolySort,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -338,6 +351,7 @@ impl Action {
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
             Self::GfpolyPowMod => "Z",
+            Self::GfpolySort => "polys",
             Self::GfpolyDivMod => return None,
         })
     }
@@ -435,6 +449,7 @@ fn challenge_runner(
         | Action::GfpolyMul
         | Action::GfpolyPow
         | Action::GfpolyDivMod
+        | Action::GfpolySort
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
