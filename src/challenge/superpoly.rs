@@ -5,20 +5,20 @@
 
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use serde::{Serialize, Serializer};
 
-use crate::common::bytes_to_u128_unknown_size;
 use crate::common::interface::{get_any, maybe_hex};
+use crate::common::{bytes_to_u128_unknown_size, tag_json_value};
 use crate::settings::Settings;
 
 use super::ffield::{change_semantic, F_2_128};
 use super::{ffield, Action, Testcase};
 use ffield::Polynomial;
 
-#[derive(Debug, Clone, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Eq)]
 pub struct SuperPoly {
     coefficients: Vec<Polynomial>,
 }
@@ -352,6 +352,40 @@ impl Pow<u32> for &SuperPoly {
     }
 }
 
+impl PartialOrd for SuperPoly {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for SuperPoly {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // First compare by degree
+        let deg_cmp = self.deg().cmp(&other.deg());
+        if deg_cmp != std::cmp::Ordering::Equal {
+            return deg_cmp;
+        }
+
+        // If degrees are equal, compare coefficients from highest to lowest degree
+        for i in (0..=self.deg()).rev() {
+            let self_coeff = self.coefficients.get(i).unwrap_or(&0);
+            let other_coeff = other.coefficients.get(i).unwrap_or(&0);
+
+            // For coefficients in F2^128, compare from α^127 to α^0
+            // Convert to big-endian bytes for consistent comparison
+            let self_bytes = self_coeff.to_be_bytes();
+            let other_bytes = other_coeff.to_be_bytes();
+
+            let coeff_cmp = self_bytes.cmp(&other_bytes);
+            if coeff_cmp != std::cmp::Ordering::Equal {
+                return coeff_cmp;
+            }
+        }
+
+        std::cmp::Ordering::Equal
+    }
+}
+
 /** From *********************************************************************/
 
 impl From<&[Polynomial]> for SuperPoly {
@@ -509,6 +543,24 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
 
             let z = a.powmod(k, &m);
             serde_json::to_value(&z)?
+        }
+        Action::GfpolySort => {
+            let mut polys: Vec<SuperPoly> = Vec::new();
+
+            // Parse input polynomials
+            if let Some(poly_list) = testcase.arguments["polys"].as_array() {
+                for p in poly_list {
+                    polys.push(get_spoly(&tag_json_value("p", p.clone()), "p")?);
+                }
+            } else {
+                return Err(anyhow!("polys argument is not an array"));
+            }
+
+            // Sort polynomials according to total ordering
+            polys.sort();
+
+            // Convert result back to JSON format
+            serde_json::to_value(&polys)?
         }
         _ => unreachable!(),
     })
