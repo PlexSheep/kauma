@@ -28,11 +28,10 @@ impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
     pub fn zero() -> Self {
-        SuperPoly::from(vec![0].as_slice())
+        Self::empty()
     }
     /// Returns an "empty" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
-    #[allow(dead_code)]
     fn empty() -> Self {
         SuperPoly::from(Vec::<u128>::new().as_slice())
     }
@@ -64,57 +63,58 @@ impl SuperPoly {
         self.coefficients.len() - 1
     }
 
-    fn insert(&mut self, idx: usize, element: u128) {
-        self.coefficients.insert(idx, element);
-    }
-
     pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
-        let mut a = if self.is_zero() {
-            Self::zero()
-        } else {
-            self.clone()
-        };
-        let mut b = rhs.clone();
-        let mut degree_a = a.deg();
-        let degree_b = b.deg();
-
-        // Magic Q we call him
-        let mut q = Self::from(
-            vec![
-                0u128,
-                if degree_a > degree_b {
-                    (degree_a - degree_b + 1) as u128
-                } else {
-                    1
-                },
-            ]
-            .as_slice(),
-        );
-
-        while degree_a >= degree_b {
-            let degree_div = degree_a - degree_b;
-            let factor = F_2_128.div(a.coefficients[degree_a], b.coefficients[degree_b]);
-            let factor_poly: SuperPoly = SuperPoly::from([factor]);
-            q.coefficients[degree_div] = factor;
-
-            // Multiply every coefficient of 'b' with thr 'factor'
-            b *= factor_poly;
-
-            // Padd 'b' at the beginning with 16 byte vectors with 0 until it has the lenght of 'a'
-            for _ in 0..(degree_div) {
-                b.insert(0, 0);
-            }
-
-            a += b.clone(); // "Reduce" 'a' polynomial with shifted b multiplied with the factor
-            degree_a = a.deg(); // New calcualtion of degree due to deleted zero-blocks in add
-
-            if degree_div == 0 {
-                break;
-            }
+        // Check for division by zero
+        if rhs.is_zero() {
+            panic!("division by zero");
         }
-        q.normalize();
-        a.normalize();
-        (q, a)
+
+        // Create mutable clone of dividend for remainder
+        let mut remainder = self.clone();
+        remainder.normalize(); // Normalize input
+
+        // If degree of dividend < degree of divisor, quotient is 0 and remainder is dividend
+        if remainder.deg() < rhs.deg() {
+            return (SuperPoly::zero(), remainder);
+        }
+
+        // Get normalized divisor
+        let mut divisor = rhs.clone();
+        divisor.normalize();
+
+        // Get the leading coefficient of divisor
+        let divisor_lc = *divisor.coefficients.last().unwrap();
+
+        // Initialize quotient vector with exact capacity
+        let mut quotient_coeffs = vec![0; remainder.deg() - divisor.deg() + 1];
+
+        // While remainder has sufficient degree
+        while !remainder.is_zero() && remainder.deg() >= divisor.deg() {
+            // Calculate degree difference
+            let deg_diff = remainder.deg() - divisor.deg();
+
+            // Calculate the leading coefficient for this term of quotient
+            let remainder_lc = *remainder.coefficients.last().unwrap();
+            let term_coeff = F_2_128.div(remainder_lc, divisor_lc);
+
+            // Save coefficient in quotient
+            quotient_coeffs[deg_diff] = term_coeff;
+
+            // Subtract (divisor * term) from remainder
+            for (i, &coeff) in divisor.coefficients.iter().enumerate() {
+                let pos = deg_diff + i;
+                remainder.coefficients[pos] ^= F_2_128.mul(coeff, term_coeff);
+            }
+
+            // Normalize remainder after each subtraction
+            remainder.normalize();
+        }
+
+        // Create quotient polynomial and normalize it
+        let mut quotient = SuperPoly::from(quotient_coeffs.as_slice());
+        quotient.normalize();
+
+        (quotient, remainder)
     }
 }
 
