@@ -70,6 +70,7 @@ impl SuperPoly {
         self.coefficients.len() - 1
     }
 
+    /// Divide a [SuperPoly] by another, with remainder
     pub fn divmod(&self, rhs: &Self) -> (Self, Self) {
         // Check for division by zero
         if rhs.is_zero() {
@@ -135,6 +136,40 @@ impl SuperPoly {
         quotient.normalize();
 
         (quotient, remainder)
+    }
+
+    /// Compute modular exponentiation: self^k mod m
+    /// Uses the square-and-multiply algorithm to handle large exponents efficiently
+    pub fn powmod(&self, k: u128, m: &Self) -> Self {
+        if m.is_zero() {
+            panic!("modulus cannot be zero");
+        }
+        if k == 0 {
+            return Self::one();
+        }
+        if *self == Self::zero() {
+            return Self::zero();
+        }
+        if *self == Self::one() {
+            return Self::one();
+        }
+
+        let mut result = Self::one();
+        let mut base = self.clone();
+        let mut exp = k;
+
+        // Square and multiply algorithm with modular reduction at each step
+        while exp > 0 {
+            if exp & 1 == 1 {
+                result = (&result * &base).divmod(m).1; // Multiply and reduce mod m
+            }
+            if exp > 1 {
+                base = (&base * &base).divmod(m).1; // Square and reduce mod m
+            }
+            exp >>= 1;
+        }
+
+        result
     }
 }
 
@@ -466,6 +501,14 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
 
             let s = a.pow(k);
             serde_json::to_value(&s)?
+        }
+        Action::GfpolyPowMod => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let m: SuperPoly = get_spoly(&testcase.arguments, "M")?;
+            let k: u128 = get_any(&testcase.arguments, "k")?;
+
+            let z = a.powmod(k, &m);
+            serde_json::to_value(&z)?
         }
         _ => unreachable!(),
     })
