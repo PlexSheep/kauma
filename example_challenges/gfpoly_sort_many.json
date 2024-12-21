@@ -384,22 +384,19 @@
     "gfpoly_sort-022": {
       "action": "gfpoly_sort",
       "arguments": {
-        "action": "gfpoly_sort",
-        "arguments": {
-          "polys": [
-            [
-              "NeverGonnaGiveYouUpAAA=="
-            ],
-            [
-              "AAAAAAAAAAAAAAAAAAAAAA==",
-              "NeverGonnaLetYouDownAA=="
-            ],
-            [
-              "NeverGonnaGiveYouUpAAA==",
-              "NeverGonnaLetYouDownAA=="
-            ]
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
           ]
-        }
+        ]
       }
     },
     "gfpoly_sort-023": {
