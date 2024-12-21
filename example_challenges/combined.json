@@ -192,6 +192,30 @@
         ],
         "k": 1000
       }
+    },
+    "gfpoly_sort": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA==",
+            "NeverGonnaRunAroundAAA==",
+            "AndDesertYouAAAAAAAAAA=="
+          ],
+          [
+            "WereNoStrangersToLoveA==",
+            "YouKnowTheRulesAAAAAAA==",
+            "AndSoDoIAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaMakeYouCryAA==",
+            "NeverGonnaSayGoodbyeAA==",
+            "NeverGonnaTellALieAAAA==",
+            "AndHurtYouAAAAAAAAAAAA=="
+          ]
+        ]
+      }
     }
   }
 }
