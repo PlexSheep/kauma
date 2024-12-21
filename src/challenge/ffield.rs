@@ -320,7 +320,6 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
                 Semantic::Xex,
                 semantic,
             );
-            eprintln!("* block {:032X}", sol);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
@@ -349,7 +348,6 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
 
             let sol = field.div(a, b);
             let sol = change_semantic(sol, Semantic::Xex, semantic);
-            veprintln("sol", format_args!("{sol:032x?}"));
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
                 e
