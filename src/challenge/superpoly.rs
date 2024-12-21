@@ -67,6 +67,9 @@ impl SuperPoly {
 
     #[inline]
     pub fn deg(&self) -> usize {
+        if self.coefficients.is_empty() {
+            panic!("this polynomial is empty of coefficients, which is not a valid state.");
+        }
         self.coefficients.len() - 1
     }
 
