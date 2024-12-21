@@ -30,9 +30,15 @@ impl SuperPoly {
     pub fn zero() -> Self {
         SuperPoly::from([0])
     }
-    /// Returns an "empty" [`SuperPoly`] with all coefficients set to 0.
+    /// Returns an "empty" [`SuperPoly`] with no coefficients set. This is an invalid state.
+    ///
+    /// # Safety
+    ///
+    /// This function returns an invalid state of a [SuperPoly]. It may be useful to check for this
+    /// invalid state, or to build a proper [SuperPoly] (although the From trait should normally be
+    /// used in that case).
     #[inline]
-    fn empty() -> Self {
+    pub unsafe fn empty() -> Self {
         SuperPoly::from(Vec::<u128>::new().as_slice())
     }
     /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
