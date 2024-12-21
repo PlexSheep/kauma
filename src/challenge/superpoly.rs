@@ -104,7 +104,7 @@ impl SuperPoly {
             let remainder_lc = remainder.coefficients.last().unwrap();
 
             // Calculate the term coefficient
-            let mut term_coeff = F_2_128.div(*remainder_lc, *divisor_lc);
+            let term_coeff = F_2_128.div(*remainder_lc, *divisor_lc);
 
             // Store coefficient in quotient
             quotient_coeffs[deg_diff] = term_coeff;
