@@ -1,0 +1,493 @@
+{
+  "testcases": {
+    "gfpoly_sort": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA==",
+            "NeverGonnaRunAroundAAA==",
+            "AndDesertYouAAAAAAAAAA=="
+          ],
+          [
+            "WereNoStrangersToLoveA==",
+            "YouKnowTheRulesAAAAAAA==",
+            "AndSoDoIAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaMakeYouCryAA==",
+            "NeverGonnaSayGoodbyeAA==",
+            "NeverGonnaTellALieAAAA==",
+            "AndHurtYouAAAAAAAAAAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-001": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-002": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-003": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-004": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-005": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "gAAAAAAAAAAAAAAAAAAAAA==",
+            "gAAAAAAAAAAAAAAAAAAAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-006": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-007": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-008": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "AAAABAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-009": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-010": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-011": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-012": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-013": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "gAAAAAAAAAAAAAAAAAAAAA==",
+            "gAAAAAAAAAAAAAAAAAAAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-014": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-015": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-016": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "AAAABAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-017": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-018": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-019": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-020": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-021": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "gAAAAAAAAAAAAAAAAAAAAA==",
+            "gAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-022": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "action": "gfpoly_sort",
+        "arguments": {
+          "polys": [
+            [
+              "NeverGonnaGiveYouUpAAA=="
+            ],
+            [
+              "AAAAAAAAAAAAAAAAAAAAAA==",
+              "NeverGonnaLetYouDownAA=="
+            ],
+            [
+              "NeverGonnaGiveYouUpAAA==",
+              "NeverGonnaLetYouDownAA=="
+            ]
+          ]
+        }
+      }
+    },
+    "gfpoly_sort-023": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-024": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ],
+          [
+            "AAAABAAAAAAAAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-025": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-026": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    },
+    "gfpoly_sort-027": {
+      "action": "gfpoly_sort",
+      "arguments": {
+        "polys": [
+          [
+            "AAAAAAAAAAAAAAAAAAAAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA=="
+          ],
+          [
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA=="
+          ]
+        ]
+      }
+    }
+  }
+}
