@@ -177,6 +177,21 @@
           "IQAAAAAAAAAAAAAAAAAAAA=="
         ]
       }
+    },
+    "gfpoly_powmod": {
+      "action": "gfpoly_powmod",
+      "arguments": {
+        "A": [
+          "JAAAAAAAAAAAAAAAAAAAAA==",
+          "wAAAAAAAAAAAAAAAAAAAAA==",
+          "ACAAAAAAAAAAAAAAAAAAAA=="
+        ],
+        "M": [
+          "KryptoanalyseAAAAAAAAA==",
+          "DHBWMannheimAAAAAAAAAA=="
+        ],
+        "k": 1000
+      }
     }
   }
 }
