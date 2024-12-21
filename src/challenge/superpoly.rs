@@ -385,7 +385,7 @@ impl Ord for SuperPoly {
             std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
             std::cmp::Ordering::Equal => {
                 // If degrees are equal, compare coefficients from highest to lowest degree
-                for i in (0..=self.deg()).rev() {
+                for i in 0..=self.deg() {
                     let self_coeff = self.coefficients.get(i).unwrap_or(&0);
                     let other_coeff = other.coefficients.get(i).unwrap_or(&0);
 
