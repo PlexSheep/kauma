@@ -28,7 +28,7 @@ impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
     pub fn zero() -> Self {
-        Self::empty()
+        SuperPoly::from([0])
     }
     /// Returns an "empty" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
