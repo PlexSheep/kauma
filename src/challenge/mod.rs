@@ -278,6 +278,24 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly)
     #[serde(rename = "gfpoly_divmod")]
     GfpolyDivMod,
+    /// Compute the modular exponentiation Z = A^k mod M of a polynomial
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the base
+    /// - `M`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the modulus
+    /// - `k`: [u64] - the exponent
+    ///
+    /// # Returns
+    ///
+    /// - `Z`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), result of A^k mod M
+    #[serde(rename = "gfpoly_powmod")]
+    GfpolyPowMod,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -319,6 +337,7 @@ impl Action {
             Self::GfpolyAdd => "S",
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
+            Self::GfpolyPowMod => "Z",
             Self::GfpolyDivMod => return None,
         })
     }
@@ -412,9 +431,11 @@ fn challenge_runner(
         }
         Action::SD_Timeout => debug::run_testcase(testcase, settings),
         Action::PaddingOracle => pad::run_testcase(testcase, settings),
-        Action::GfpolyAdd | Action::GfpolyMul | Action::GfpolyPow | Action::GfpolyDivMod => {
-            superpoly::run_testcase(testcase, settings)
-        }
+        Action::GfpolyAdd
+        | Action::GfpolyMul
+        | Action::GfpolyPow
+        | Action::GfpolyDivMod
+        | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
