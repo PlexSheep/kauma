@@ -153,13 +153,10 @@ impl SuperPoly {
         if m.is_zero() {
             panic!("modulus cannot be zero");
         }
-        if k == 0 {
-            return Self::one();
-        }
-        if *self == Self::zero() {
+        if *self == Self::zero() || self == m {
             return Self::zero();
         }
-        if *self == Self::one() {
+        if k == 0 || *self == Self::one() || *m == Self::one() {
             return Self::one();
         }
 
@@ -167,17 +164,30 @@ impl SuperPoly {
         let mut base = self.clone();
         let mut exp = k;
 
+        // First reduction of base modulo m to avoid overflow
+        base = base.divmod(m).1;
+        if base.is_zero() {
+            return Self::zero();
+        }
+
         // Square and multiply algorithm with modular reduction at each step
         while exp > 0 {
             if exp & 1 == 1 {
-                result = (&result * &base).divmod(m).1; // Multiply and reduce mod m
+                result = (&result * &base).divmod(m).1;
+                if result.is_zero() {
+                    return Self::zero();
+                }
             }
             if exp > 1 {
-                base = (&base * &base).divmod(m).1; // Square and reduce mod m
+                base = (&base * &base).divmod(m).1;
+                if base.is_zero() {
+                    return if exp & 1 == 1 { result } else { Self::zero() };
+                }
             }
             exp >>= 1;
         }
 
+        result.normalize();
         result
     }
 }
