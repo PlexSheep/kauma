@@ -1113,6 +1113,36 @@ mod test {
     }
 
     #[test]
+    fn test_spoly_powmod_zerobase() {
+        let base = SuperPoly::zero();
+        let modu = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        for i in 0..100_000 {
+            assert!(base.powmod(i, &modu).is_zero())
+        }
+    }
+
+    #[test]
+    fn test_spoly_powmod_onebase() {
+        let base = SuperPoly::one();
+        let modu = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        for i in 0..100_000 {
+            assert!(base.powmod(i, &modu) == SuperPoly::one())
+        }
+    }
+
+    #[test]
     fn test_spoly_powmod_same_mod() {
         let base = create_poly_from_base64(&[
             "JAAAAAAAAAAAAAAAAAAAAA==",
