@@ -4,7 +4,6 @@
 //! This type has uses in cryptography and other advanced mathematical applications.
 
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign, Rem, RemAssign};
-use std::result;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
@@ -19,7 +18,7 @@ use super::ffield::{change_semantic, F_2_128};
 use super::{ffield, Action, Testcase};
 use ffield::Polynomial;
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Clone, Eq)]
 pub struct SuperPoly {
     coefficients: Vec<Polynomial>,
 }
@@ -546,6 +545,19 @@ impl From<&[&[u8; 16]]> for SuperPoly {
                 })
                 .collect(),
         }
+    }
+}
+
+/** Other Traits **************************************************************/
+
+impl std::fmt::Debug for SuperPoly {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SuperPoly")
+            .field(
+                "b64_repr =>",
+                &serde_json::to_value(self).expect("could not serialize SuperPoly"),
+            )
+            .finish_non_exhaustive()
     }
 }
 
