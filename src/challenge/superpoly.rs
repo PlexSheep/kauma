@@ -19,6 +19,8 @@ use super::ffield::{change_semantic, F_2_128};
 use super::{ffield, Action, Testcase};
 use ffield::Polynomial;
 
+const MAGIC_SQRT_NUMBER: u128 = 2u128.pow(127);
+
 #[derive(Clone, Eq)]
 pub struct SuperPoly {
     coefficients: Vec<Polynomial>,
@@ -218,6 +220,21 @@ impl SuperPoly {
         let mut result = SuperPoly::from(new_coeffs.as_slice());
         result.normalize();
         result
+    }
+
+    /// Calculate the square root of a polynomial Q where Q only has coefficients for even exponents of X.
+    /// Returns S where S^2 = Q.
+    pub fn sqrt(&self) -> Self {
+        let mut result: Vec<[u8; 16]> = Vec::new();
+        let mut buf = [0; 16];
+
+        for (coeff_idx, coeff) in self.coefficients.iter().enumerate() {
+            if coeff_idx % 2 == 0 {
+                result.push(coeff.pow(MAGIC_SQRT_NUMBER));
+            }
+        }
+
+        SuperPoly::from(result.as_slice())
     }
 }
 
@@ -655,6 +672,11 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
             let monic = a.make_monic();
             serde_json::to_value(&monic)?
+        }
+        Action::GfpolySqrt => {
+            let q: SuperPoly = get_spoly(&testcase.arguments, "Q")?;
+            let s = q.sqrt();
+            serde_json::to_value(&s)?
         }
         _ => unreachable!(),
     })

@@ -324,6 +324,21 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), the monic form of A
     #[serde(rename = "gfpoly_make_monic")]
     GfpolyMakeMonic,
+    /// Calculate the square root of a polynomial Q where Q only has coefficients for even exponents of X
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `Q`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly) that only has coefficients for even powers
+    ///
+    /// # Returns
+    ///
+    /// - `S`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), where S^2 = Q
+    #[serde(rename = "gfpoly_sqrt")]
+    GfpolySqrt,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -367,6 +382,7 @@ impl Action {
             Self::GfpolyPow => "Z",
             Self::GfpolyPowMod => "Z",
             Self::GfpolySort => "sorted_polys",
+            Self::GfpolySqrt => "S",
             Self::GfpolyDivMod => return None,
             Self::GfpolyMakeMonic => "A*",
         })
@@ -466,6 +482,7 @@ fn challenge_runner(
         | Action::GfpolyPow
         | Action::GfpolyDivMod
         | Action::GfpolySort
+        | Action::GfpolySqrt
         | Action::GfpolyMakeMonic
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
