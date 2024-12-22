@@ -1,11 +1,13 @@
 //! multiply / add polynomials in a gallois field
 
+use std::cmp::Ordering;
 use std::default::Default;
 use std::fmt::Display;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use bint_easy::u256::U256;
+use num::traits::ToBytes;
 use serde::{Deserialize, Serialize};
 
 use crate::common::interface::get_bytes_maybe_hex;
@@ -295,6 +297,16 @@ impl Display for FField {
             self.display_poly(self.defining_relation.0)
         )
     }
+}
+
+pub fn cmp_poly(a: &Polynomial, b: &Polynomial) -> Ordering {
+    for (byte_a, byte_b) in a.to_ne_bytes().iter().zip(b.to_ne_bytes().iter()).rev() {
+        match byte_a.cmp(byte_b) {
+            Ordering::Equal => continue,
+            unequal => return unequal,
+        }
+    }
+    Ordering::Equal
 }
 
 pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_json::Value> {
