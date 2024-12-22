@@ -3,7 +3,8 @@
 //! The `superpoly` module provides an implementation of "super polynomials" - polynomials with coefficients that are also polynomials in a finite field.
 //! This type has uses in cryptography and other advanced mathematical applications.
 
-use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign, Rem, RemAssign};
+use std::result;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
@@ -167,13 +168,13 @@ impl SuperPoly {
         // Square and multiply algorithm with modular reduction at each step
         while exp > 0 {
             if exp & 1 == 1 {
-                result = (&result * &base).divmod(m).1;
+                result = &(&result * &base) % m;
                 if result.is_zero() {
                     return Self::zero();
                 }
             }
             if exp > 1 {
-                base = (&base * &base).divmod(m).1;
+                base = &(&base * &base) % m;
                 if base.is_zero() {
                     return if exp & 1 == 1 { result } else { Self::zero() };
                 }
@@ -275,6 +276,39 @@ impl BitXor for &SuperPoly {
 impl BitXorAssign for SuperPoly {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = self.clone() ^ rhs;
+    }
+}
+
+impl RemAssign<&SuperPoly> for SuperPoly {
+    fn rem_assign(&mut self, rhs: &Self) {
+        *self = self.clone() % rhs;
+    }
+}
+
+impl RemAssign for SuperPoly {
+    fn rem_assign(&mut self, rhs: Self) {
+        *self = self.clone() % rhs;
+    }
+}
+
+impl Rem<&SuperPoly> for SuperPoly {
+    type Output = SuperPoly;
+    fn rem(self, rhs: &Self) -> Self::Output {
+        &self % rhs
+    }
+}
+
+impl Rem for SuperPoly {
+    type Output = SuperPoly;
+    fn rem(self, rhs: Self) -> Self::Output {
+        &self % &rhs
+    }
+}
+
+impl Rem for &SuperPoly {
+    type Output = SuperPoly;
+    fn rem(self, rhs: Self) -> Self::Output {
+        self.divmod(rhs).1
     }
 }
 
