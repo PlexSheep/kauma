@@ -1306,4 +1306,78 @@ mod test {
             "here in better format: Polys: {polys:#?}\nSorted: {sorted:#?}"
         )
     }
+
+    #[test]
+    fn test_spoly_monic_example() {
+        // From the example in aufgabe4.pdf
+        let input = create_poly_from_base64(&[
+            "NeverGonnaGiveYouUpAAA==",
+            "NeverGonnaLetYouDownAA==",
+            "NeverGonnaRunAroundAAA==",
+            "AndDesertYouAAAAAAAAAA==",
+        ]);
+
+        let expected = create_poly_from_base64(&[
+            "edY47onJ4MtCENDTHG/sZw==",
+            "oaXjCKnceBIxSavZ9eFT8w==",
+            "1Ial5rAJGOucIdUe3zh5bw==",
+            "gAAAAAAAAAAAAAAAAAAAAA==", // Leading coefficient is 1
+        ]);
+
+        let result = input.make_monic();
+        assert_poly(&result, &expected);
+    }
+
+    #[test]
+    fn test_spoly_monic_zero() {
+        // Zero polynomial should remain zero
+        let input = SuperPoly::zero();
+        let result = input.make_monic();
+        assert_poly(&result, &SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_spoly_monic_one() {
+        // Zero polynomial should remain zero
+        let input = SuperPoly::one();
+        let result = input.make_monic();
+        assert_poly(&result, &SuperPoly::one());
+    }
+
+    #[test]
+    fn test_spoly_monic_already_monic() {
+        // Already monic polynomial should remain unchanged
+        let input = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "gAAAAAAAAAAAAAAAAAAAAA==", // Leading coefficient is 1
+        ]);
+
+        let result = input.make_monic();
+        assert_poly(&result, &input);
+    }
+
+    #[test]
+    fn test_spoly_monic_single_term() {
+        // Single term polynomial should become just 1
+        let input = create_poly_from_base64(&[
+            "wAAAAAAAAAAAAAAAAAAAAA==", // Just one coefficient
+        ]);
+
+        let expected = SuperPoly::one();
+
+        let result = input.make_monic();
+        assert_poly(&result, &expected);
+    }
+
+    #[test]
+    fn test_spoly_monic_constant_polynomial() {
+        // Constant polynomial (degree 0) should become 1
+        let input = create_poly_from_base64(&["JAAAAAAAAAAAAAAAAAAAAA=="]);
+
+        let expected = SuperPoly::one();
+
+        let result = input.make_monic();
+        assert_poly(&result, &expected);
+    }
 }
