@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use num::traits::ToBytes;
 use openssl::symm::{Cipher, Crypter, Mode as OpenSslMode};
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +7,8 @@ use crate::common::interface::{get_bytes_base64, put_bytes};
 use crate::common::{bytes_to_u128_unknown_size, len_to_const_arr, veprintln};
 use crate::settings::Settings;
 
-use super::ffield::{self, F_2_128, F_2_128_ALPHA};
+use super::ffield::element::FieldElement;
+use super::ffield::{self, F_2_128};
 use super::{Action, Testcase};
 
 pub const SEA_128_MAGIC_NUMBER: u128 = 0xc0ffeec0ffeec0ffeec0ffeec0ffee11;
@@ -317,7 +319,10 @@ pub fn sea_128_decrypt_xex(
         plain_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128_unknown_size(&xorval)?, F_2_128_ALPHA)
+            .mul(
+                bytes_to_u128_unknown_size(&xorval)?.into(),
+                FieldElement::ALPHA,
+            )
             .to_be_bytes();
     }
     if verbose {
@@ -375,7 +380,10 @@ pub fn sea_128_encrypt_xex(
         cipher_text.push(buf);
 
         xorval = F_2_128
-            .mul(bytes_to_u128_unknown_size(&xorval)?, F_2_128_ALPHA)
+            .mul(
+                bytes_to_u128_unknown_size(&xorval)?.into(),
+                FieldElement::ALPHA,
+            )
             .to_be_bytes();
     }
     if verbose {
@@ -390,7 +398,7 @@ fn ghash(
     ciphertext: &[u8],
     verbose: bool,
 ) -> ([u8; 16], u128) {
-    let mut buf: u128 = 0;
+    let mut buf: FieldElement = FieldElement::ZERO;
     let mut ad = Vec::from(associated_data);
     let mut ct = Vec::from(ciphertext);
     if verbose {
@@ -406,8 +414,8 @@ fn ghash(
     }
     assert!(ct.len() % 16 == 0);
     assert!(ad.len() % 16 == 0);
-    let ak: u128 = u128::from_be_bytes(*auth_key);
-    let ak_sem = ffield::change_semantic(ak, ffield::Semantic::Gcm, ffield::Semantic::Xex);
+    let ak: FieldElement = u128::from_be_bytes(*auth_key).into();
+    let ak_sem: FieldElement = ak.change_semantic(ffield::Semantic::Gcm, ffield::Semantic::Xex);
     let l: u128 = ((associated_data.len() as u128 * 8) << 64) | (ciphertext.len() as u128 * 8);
 
     if verbose {
@@ -437,11 +445,8 @@ fn ghash(
         buf ^= item;
         // multiply in field, but we need to change semantic from gcm for xex for internal reasons,
         // and back
-        buf = ffield::change_semantic(
-            F_2_128.mul(
-                ffield::change_semantic(buf, ffield::Semantic::Gcm, ffield::Semantic::Xex),
-                ak_sem,
-            ),
+        buf = FieldElement::change_semantic(
+            buf.change_semantic(ffield::Semantic::Gcm, ffield::Semantic::Xex) * ak_sem,
             ffield::Semantic::Xex,
             ffield::Semantic::Gcm,
         );

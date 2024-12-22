@@ -9,21 +9,22 @@ use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign, Rem, RemAss
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
+use num::traits::ToBytes;
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
 use crate::common::{bytes_to_u128_unknown_size, tag_json_value};
 use crate::settings::Settings;
 
-use super::ffield::{change_semantic, F_2_128};
+use super::ffield::element::FieldElement;
+use super::ffield::F_2_128;
 use super::{ffield, Action, Testcase};
-use ffield::Polynomial;
 
 const MAGIC_SQRT_NUMBER: u128 = 2u128.pow(127);
 
 #[derive(Clone, Eq)]
 pub struct SuperPoly {
-    coefficients: Vec<Polynomial>,
+    coefficients: Vec<FieldElement>,
 }
 
 /// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
@@ -31,7 +32,7 @@ impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
     #[inline]
     pub fn zero() -> Self {
-        SuperPoly::from([0])
+        SuperPoly::from([FieldElement::ZERO])
     }
     /// Returns an "empty" [`SuperPoly`] with no coefficients set. This is an invalid state.
     ///
@@ -42,7 +43,7 @@ impl SuperPoly {
     /// used in that case).
     #[inline]
     pub unsafe fn empty() -> Self {
-        SuperPoly::from(Vec::<u128>::new().as_slice())
+        SuperPoly::from(Vec::<FieldElement>::new().as_slice())
     }
     /// Returns a "one" [`SuperPoly`] with all coefficients set to 0, but the LSC, which is 1.
     #[inline]
@@ -63,14 +64,14 @@ impl SuperPoly {
     /// remove trailing zeros
     pub fn normalize(&mut self) {
         // Remove trailing zeros
-        while self.coefficients.last() == Some(&0) {
+        while self.coefficients.last() == Some(&FieldElement::ZERO) {
             self.coefficients.pop();
         }
 
         // If we ended up with no coefficients (was all zeros),
         // ensure we maintain the canonical zero representation [0]
         if self.coefficients.is_empty() {
-            self.coefficients.push(0);
+            self.coefficients.push(0.into());
         }
     }
 
@@ -103,7 +104,8 @@ impl SuperPoly {
         }
 
         // Initialize quotient coefficients vector
-        let mut quotient_coeffs = vec![0; remainder.deg() - divisor.deg() + 1];
+        let mut quotient_coeffs: Vec<FieldElement> =
+            vec![FieldElement::ZERO; remainder.deg() - divisor.deg() + 1];
 
         // Get the leading coefficient of divisor (needs to be non-zero after normalize)
         let divisor_lc = divisor.coefficients.last().unwrap();
@@ -129,14 +131,22 @@ impl SuperPoly {
             }
 
             // Shift temp polynomial by deg_diff
-            let mut shifted = vec![0; deg_diff];
+            let mut shifted: Vec<FieldElement> = vec![FieldElement::ZERO; deg_diff];
             shifted.extend(temp.coefficients);
             temp.coefficients = shifted;
 
             // Subtract (XOR) the shifted term from remainder
             for i in 0..remainder.coefficients.len().max(temp.coefficients.len()) {
-                let rem_coeff = remainder.coefficients.get(i).copied().unwrap_or(0);
-                let temp_coeff = temp.coefficients.get(i).copied().unwrap_or(0);
+                let rem_coeff = remainder
+                    .coefficients
+                    .get(i)
+                    .copied()
+                    .unwrap_or(FieldElement::ZERO);
+                let temp_coeff = temp
+                    .coefficients
+                    .get(i)
+                    .copied()
+                    .unwrap_or(FieldElement::ZERO);
                 remainder.coefficients[i] = F_2_128.add(rem_coeff, temp_coeff);
             }
 
@@ -230,7 +240,8 @@ impl SuperPoly {
 
         for (coeff_idx, coeff) in self.coefficients.iter().enumerate() {
             if coeff_idx % 2 == 0 {
-                result.push(coeff.pow(MAGIC_SQRT_NUMBER));
+                todo!()
+                // result.push(coeff.pow(MAGIC_SQRT_NUMBER));
             }
         }
 
@@ -246,7 +257,7 @@ impl Serialize for SuperPoly {
         let coefficients: Vec<String> = self
             .coefficients
             .iter()
-            .map(|coeff| change_semantic(*coeff, ffield::Semantic::Xex, ffield::Semantic::Gcm))
+            .map(|coeff| coeff.change_semantic(ffield::Semantic::Xex, ffield::Semantic::Gcm))
             .map(|coeff| BASE64_STANDARD.encode(coeff.to_be_bytes()))
             .collect();
 
@@ -307,13 +318,13 @@ impl BitXor for &SuperPoly {
 
         // Now work with normalized polynomials
         let max_len = left.coefficients.len().max(right.coefficients.len());
-        let mut new_coefficients = vec![0u128; max_len];
+        let mut new_coefficients = vec![FieldElement::ZERO; max_len];
 
         #[allow(clippy::needless_range_loop)] // better for readability
         for i in 0..max_len {
-            let left_coeff = left.coefficients.get(i).unwrap_or(&0);
-            let right_coeff = right.coefficients.get(i).unwrap_or(&0);
-            new_coefficients[i] = left_coeff ^ right_coeff;
+            let left_coeff = left.coefficients.get(i).unwrap_or(&FieldElement::ZERO);
+            let right_coeff = right.coefficients.get(i).unwrap_or(&FieldElement::ZERO);
+            new_coefficients[i] = *left_coeff ^ *right_coeff;
         }
 
         let mut result = SuperPoly {
@@ -379,12 +390,12 @@ impl Mul for &SuperPoly {
         if self.is_zero() || rhs.is_zero() {
             return SuperPoly::zero();
         }
-        let mut result: Vec<Polynomial> =
-            vec![0; self.coefficients.len() + rhs.coefficients.len() - 1];
+        let mut result: Vec<FieldElement> =
+            vec![FieldElement::ZERO; self.coefficients.len() + rhs.coefficients.len() - 1];
 
         for i in 0..self.coefficients.len() {
             for j in 0..rhs.coefficients.len() {
-                result[i + j] ^= F_2_128.mul(self.coefficients[i], rhs.coefficients[j]);
+                result[i + j] ^= self.coefficients[i] * rhs.coefficients[j];
             }
         }
 
@@ -467,7 +478,7 @@ impl Ord for SuperPoly {
                     .zip(other.coefficients.iter())
                     .rev()
                 {
-                    match ffield::cmp_poly(coeff_self, coeff_other) {
+                    match coeff_self.cmp(coeff_other) {
                         Ordering::Equal => continue,
                         other => return other,
                     }
@@ -481,42 +492,97 @@ impl Ord for SuperPoly {
 
 /** From *********************************************************************/
 
-impl From<&[Polynomial]> for SuperPoly {
-    fn from(value: &[Polynomial]) -> Self {
+impl From<&[FieldElement]> for SuperPoly {
+    fn from(value: &[FieldElement]) -> Self {
         SuperPoly {
             coefficients: value.to_vec(),
         }
     }
 }
 
-impl From<&[&Polynomial]> for SuperPoly {
-    fn from(value: &[&Polynomial]) -> Self {
+impl From<&[&FieldElement]> for SuperPoly {
+    fn from(value: &[&FieldElement]) -> Self {
         SuperPoly {
             coefficients: value.iter().map(|v| **v).collect(),
         }
     }
 }
 
-impl<const N: usize> From<&[Polynomial; N]> for SuperPoly {
-    fn from(value: &[Polynomial; N]) -> Self {
+impl<const N: usize> From<&[FieldElement; N]> for SuperPoly {
+    fn from(value: &[FieldElement; N]) -> Self {
         SuperPoly {
             coefficients: value.to_vec(),
         }
     }
 }
 
-impl<const N: usize> From<&[&Polynomial; N]> for SuperPoly {
-    fn from(value: &[&Polynomial; N]) -> Self {
+impl<const N: usize> From<&[&FieldElement; N]> for SuperPoly {
+    fn from(value: &[&FieldElement; N]) -> Self {
         SuperPoly {
             coefficients: value.map(|v| *v).to_vec(),
         }
     }
 }
 
-impl<const N: usize> From<[Polynomial; N]> for SuperPoly {
-    fn from(value: [Polynomial; N]) -> Self {
+impl<const N: usize> From<[FieldElement; N]> for SuperPoly {
+    fn from(value: [FieldElement; N]) -> Self {
         SuperPoly {
             coefficients: value.to_vec(),
+        }
+    }
+}
+
+impl From<&[u128]> for SuperPoly {
+    fn from(value: &[u128]) -> Self {
+        SuperPoly {
+            coefficients: value
+                .iter()
+                .map(|v| FieldElement::const_from_raw(*v))
+                .collect(),
+        }
+    }
+}
+
+impl From<&[&u128]> for SuperPoly {
+    fn from(value: &[&u128]) -> Self {
+        SuperPoly {
+            coefficients: value
+                .iter()
+                .map(|v| FieldElement::const_from_raw(**v))
+                .collect(),
+        }
+    }
+}
+
+impl<const N: usize> From<&[u128; N]> for SuperPoly {
+    fn from(value: &[u128; N]) -> Self {
+        SuperPoly {
+            coefficients: value
+                .iter()
+                .map(|v| FieldElement::const_from_raw(*v))
+                .collect(),
+        }
+    }
+}
+
+impl<const N: usize> From<&[&u128; N]> for SuperPoly {
+    fn from(value: &[&u128; N]) -> Self {
+        SuperPoly {
+            coefficients: value
+                .iter()
+                .map(|v| FieldElement::const_from_raw(**v))
+                .collect(),
+        }
+    }
+}
+
+impl<const N: usize> From<[u128; N]> for SuperPoly {
+    fn from(value: [u128; N]) -> Self {
+        SuperPoly {
+            coefficients: value
+                .iter()
+                .map(|v| FieldElement::const_from_raw(*v))
+                .collect(),
         }
     }
 }
@@ -527,8 +593,10 @@ impl<const N: usize> From<&[&[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128_unknown_size(*v)
-                        .expect("bytes are correct length but u128 can still not be made")
+                    FieldElement::const_from_raw(
+                        bytes_to_u128_unknown_size(*v)
+                            .expect("bytes are correct length but u128 can still not be made"),
+                    )
                 })
                 .collect(),
         }
@@ -541,8 +609,10 @@ impl<const N: usize> From<&[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128_unknown_size(v)
-                        .expect("bytes are correct length but u128 can still not be made")
+                    FieldElement::const_from_raw(
+                        bytes_to_u128_unknown_size(v)
+                            .expect("bytes are correct length but u128 can still not be made"),
+                    )
                 })
                 .collect(),
         }
@@ -555,8 +625,10 @@ impl<const N: usize> From<[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128_unknown_size(v)
-                        .expect("bytes are correct length but u128 can still not be made")
+                    FieldElement::const_from_raw(
+                        bytes_to_u128_unknown_size(v)
+                            .expect("bytes are correct length but u128 can still not be made"),
+                    )
                 })
                 .collect(),
         }
@@ -569,8 +641,10 @@ impl From<&[[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128_unknown_size(v)
-                        .expect("bytes are correct length but u128 can still not be made")
+                    FieldElement::const_from_raw(
+                        bytes_to_u128_unknown_size(v)
+                            .expect("bytes are correct length but u128 can still not be made"),
+                    )
                 })
                 .collect(),
         }
@@ -583,8 +657,10 @@ impl From<&[&[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    bytes_to_u128_unknown_size(*v)
-                        .expect("bytes are correct length but u128 can still not be made")
+                    FieldElement::const_from_raw(
+                        bytes_to_u128_unknown_size(*v)
+                            .expect("bytes are correct length but u128 can still not be made"),
+                    )
                 })
                 .collect(),
         }
@@ -691,11 +767,10 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 
     let mut coefficients: Vec<_> = Vec::with_capacity(raw_parts.len());
     for raw_part in raw_parts {
-        coefficients.push(change_semantic(
-            bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?,
-            ffield::Semantic::Gcm,
-            ffield::Semantic::Xex,
-        ));
+        coefficients.push(
+            FieldElement::const_from_raw(bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?)
+                .change_semantic(ffield::Semantic::Gcm, ffield::Semantic::Xex),
+        );
     }
 
     Ok(SuperPoly::from(coefficients.as_slice()))
