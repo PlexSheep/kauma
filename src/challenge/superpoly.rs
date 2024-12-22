@@ -257,6 +257,7 @@ impl BitXor for &SuperPoly {
         let max_len = left.coefficients.len().max(right.coefficients.len());
         let mut new_coefficients = vec![0u128; max_len];
 
+        #[allow(clippy::needless_range_loop)] // better for readability
         for i in 0..max_len {
             let left_coeff = left.coefficients.get(i).unwrap_or(&0);
             let right_coeff = right.coefficients.get(i).unwrap_or(&0);
