@@ -1221,4 +1221,60 @@ mod test {
         dbg!(&t);
         assert!(!t.expect("timed out or failed for other reason").is_zero()); // i think it shouldn't be zero? At least. This is for performance
     }
+
+    #[test]
+    fn test_spoly_ord() {
+        let mut polys: [SuperPoly; 7] = [
+            SuperPoly::one(),
+            create_poly_from_base64(&[
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaGiveYouUpAAA==",
+                "NeverGonnaLetYouDownAA==",
+                "NeverGonnaRunAroundAAA==",
+                "AndDesertYouAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "WereNoStrangersToLoveA==",
+                "YouKnowTheRulesAAAAAAA==",
+                "AndSoDoIAAAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaSayGoodbyeAA==",
+                "NeverGonnaTellALieAAAA==",
+                "AndHurtYouAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaSayGoodbyeAA==",
+                "NeverGonnaTellALieAAAA==",
+                "AndHurtYouAAAAAAAAAAAA==",
+            ]),
+            SuperPoly::zero(),
+        ];
+        let sorted: [SuperPoly; 7] = [
+            polys[6].clone(),
+            polys[0].clone(),
+            polys[1].clone(),
+            polys[3].clone(),
+            polys[2].clone(),
+            polys[4].clone(),
+            polys[5].clone(),
+        ];
+        polys.sort();
+
+        assert_eq!(
+            polys, sorted,
+            "here in better format: Polys: {polys:#?}\nSorted: {sorted:#?}"
+        )
+    }
 }
