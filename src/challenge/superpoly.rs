@@ -1252,6 +1252,15 @@ mod test {
     }
 
     #[test]
+    fn test_spoly_powmod_same_but_k0() {
+        let a = create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]);
+        let k = 0;
+        let res = a.powmod(k, &a);
+        // k=0 is stronger than the same module
+        assert_poly(&res, &SuperPoly::one());
+    }
+
+    #[test]
     fn test_spoly_ord() {
         let mut polys: [SuperPoly; 7] = [
             SuperPoly::one(),
