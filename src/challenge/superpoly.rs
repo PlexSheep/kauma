@@ -1051,4 +1051,21 @@ mod test {
         assert!(!sum.is_zero());
         assert_eq!(sum.deg(), high1.deg());
     }
+
+    #[test]
+    fn test_spoly_powmod_basic() {
+        let base = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let modu =
+            create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
+        let k = 1000;
+        let res = base.powmod(k, &modu);
+        assert_poly(
+            &res,
+            &create_poly_from_base64(&["oNXl5P8xq2WpUTP92u25zg=="]),
+        );
+    }
 }
