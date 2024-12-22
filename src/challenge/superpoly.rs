@@ -599,7 +599,11 @@ fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
 #[cfg(test)]
 mod test {
 
+    use std::time::Duration;
+
     use serde_json::json;
+
+    use crate::common::run_with_timeout;
 
     use super::*;
 
@@ -1067,5 +1071,72 @@ mod test {
             &res,
             &create_poly_from_base64(&["oNXl5P8xq2WpUTP92u25zg=="]),
         );
+    }
+
+    #[test]
+    fn test_spoly_powmod_k1() {
+        let base = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let modu = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let k = 1;
+        let res = base.powmod(k, &modu);
+        assert_poly(&res, &base);
+    }
+
+    #[test]
+    fn test_spoly_powmod_k0() {
+        let base = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let modu = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let k = 0;
+        let res = base.powmod(k, &modu);
+        assert_poly(&res, &SuperPoly::one());
+    }
+
+    #[test]
+    fn test_spoly_powmod_same_mod() {
+        let base = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let k = 1000;
+        let res = base.powmod(k, &base);
+        assert_poly(&res, &SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_spoly_powmod_largek() {
+        let t = run_with_timeout(Duration::from_millis(20), || {
+            let base = create_poly_from_base64(&[
+                "JAAAAAAAAAAAAAAAAAAAAA==",
+                "wAAAAAAAAAAAAAAAAAAAAA==",
+                "ACAAAAAAAAAAAAAAAAAAAA==",
+            ]);
+            let modu =
+                create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
+            let k = 10u128.pow(37); // huge fucking number
+            base.powmod(k, &modu)
+        });
+        dbg!(&t);
+        assert!(!t.expect("timed out or failed for other reason").is_zero()); // i think it shouldn't be zero? At least. This is for performance
     }
 }
