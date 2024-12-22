@@ -3,6 +3,7 @@
 //! The `superpoly` module provides an implementation of "super polynomials" - polynomials with coefficients that are also polynomials in a finite field.
 //! This type has uses in cryptography and other advanced mathematical applications.
 
+use std::cmp::Ordering;
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign, Rem, RemAssign};
 
 use anyhow::{anyhow, Result};
@@ -412,26 +413,22 @@ impl PartialOrd for SuperPoly {
 
 impl Ord for SuperPoly {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // First compare by degree - LOWER degree comes first
-        match self.deg().cmp(&other.deg()) {
-            std::cmp::Ordering::Less => std::cmp::Ordering::Less,
-            std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
-            std::cmp::Ordering::Equal => {
-                // If degrees are equal, compare coefficients from highest to lowest degree
-                for i in 0..=self.deg() {
-                    let self_coeff = self.coefficients.get(i).unwrap_or(&0);
-                    let other_coeff = other.coefficients.get(i).unwrap_or(&0);
-
-                    let coeff_cmp = F_2_128
-                        .display_poly(*self_coeff)
-                        .cmp(&F_2_128.display_poly(*other_coeff));
-
-                    if coeff_cmp != std::cmp::Ordering::Equal {
-                        return coeff_cmp;
+        match other.deg().cmp(&self.deg()) {
+            Ordering::Equal => {
+                for (coeff_self, coeff_other) in self
+                    .coefficients
+                    .iter()
+                    .zip(other.coefficients.iter())
+                    .rev()
+                {
+                    match ffield::cmp_poly(coeff_self, coeff_other) {
+                        Ordering::Equal => continue,
+                        other => return other,
                     }
                 }
-                std::cmp::Ordering::Equal
+                Ordering::Equal
             }
+            unequal => unequal.reverse(),
         }
     }
 }
