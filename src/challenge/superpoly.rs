@@ -160,6 +160,9 @@ impl SuperPoly {
         if k == 0 || *self == Self::one() || *m == Self::one() {
             return Self::one();
         }
+        if k == 1 {
+            return self % m;
+        }
 
         let mut result = Self::one();
         let mut base = self.clone();
@@ -182,6 +185,8 @@ impl SuperPoly {
             exp >>= 1;
         }
 
+        // modulo just in case
+        result %= m;
         result.normalize();
         result
     }
