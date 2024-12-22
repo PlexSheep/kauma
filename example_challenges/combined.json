@@ -227,6 +227,20 @@
           "AndDesertYouAAAAAAAAAA=="
         ]
       }
+    },
+    "gfpoly_sqrt": {
+      "action": "gfpoly_sqrt",
+      "arguments": {
+        "Q": [
+          "5TxUxLHO1lHE/rSFquKIAg==",
+          "AAAAAAAAAAAAAAAAAAAAAA==",
+          "0DEUJYdHlmd4X7nzzIdcCA==",
+          "AAAAAAAAAAAAAAAAAAAAAA==",
+          "PKUa1+JHTxHE8y3LbuKIIA==",
+          "AAAAAAAAAAAAAAAAAAAAAA==",
+          "Ds96KiAKKoigKoiKiiKAiA=="
+        ]
+      }
     }
   }
 }
