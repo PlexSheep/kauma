@@ -309,6 +309,21 @@ pub enum Action {
     /// - `sorted_polys`: list of polynomials sorted according to total ordering rules
     #[serde(rename = "gfpoly_sort")]
     GfpolySort,
+    /// Convert a polynomial to monic form by dividing all coefficients by the leading coefficient
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `A*`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the monic form of A
+    #[serde(rename = "gfpoly_make_monic")]
+    GfpolyMakeMonic,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -353,6 +368,7 @@ impl Action {
             Self::GfpolyPowMod => "Z",
             Self::GfpolySort => "sorted_polys",
             Self::GfpolyDivMod => return None,
+            Self::GfpolyMakeMonic => "A*",
         })
     }
 }
@@ -450,6 +466,7 @@ fn challenge_runner(
         | Action::GfpolyPow
         | Action::GfpolyDivMod
         | Action::GfpolySort
+        | Action::GfpolyMakeMonic
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {

@@ -190,6 +190,33 @@ impl SuperPoly {
         result.normalize();
         result
     }
+
+    /// Convert polynomial to monic form by dividing all coefficients by the leading coefficient
+    pub fn make_monic(&self) -> Self {
+        if self.is_zero() {
+            return self.clone();
+        }
+
+        // Get the leading coefficient (highest degree term)
+        let leading_coeff = *self
+            .coefficients
+            .last()
+            .expect("coefficients vector should not be empty");
+
+        if leading_coeff == 1 {
+            return self.clone(); // Already monic
+        }
+
+        // Create new coefficients vector divided by leading coefficient
+        let mut new_coeffs = Vec::with_capacity(self.coefficients.len());
+        for coeff in &self.coefficients {
+            new_coeffs.push(F_2_128.div(*coeff, leading_coeff));
+        }
+
+        let mut result = SuperPoly::from(new_coeffs.as_slice());
+        result.normalize();
+        result
+    }
 }
 
 impl Serialize for SuperPoly {
@@ -621,6 +648,11 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
 
             // Convert result back to JSON format
             serde_json::to_value(&polys)?
+        }
+        Action::GfpolyMakeMonic => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let monic = a.make_monic();
+            serde_json::to_value(&monic)?
         }
         _ => unreachable!(),
     })
