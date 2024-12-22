@@ -1,6 +1,6 @@
 {
   "testcases": {
-    "gfpoly_sort": {
+    "gfpoly_monic": {
       "action": "gfpoly_make_monic",
       "arguments": {
         "A": [
