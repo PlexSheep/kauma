@@ -151,16 +151,18 @@ impl SuperPoly {
     /// Compute modular exponentiation: self^k mod m
     /// Uses the square-and-multiply algorithm to handle large exponents efficiently
     pub fn powmod(&self, k: u128, m: &Self) -> Self {
+        // the order of these checks is important
         if m.is_zero() {
             panic!("modulus cannot be zero");
-        }
-        if *self == Self::zero() || self == m {
+        } else if *self == Self::zero() {
             return Self::zero();
-        }
-        if k == 0 || *self == Self::one() || *m == Self::one() {
+        } else if k == 0 {
             return Self::one();
-        }
-        if k == 1 {
+        } else if self == m {
+            return Self::zero();
+        } else if *self == Self::one() || *m == Self::one() {
+            return Self::one();
+        } else if k == 1 {
             return self % m;
         }
 
