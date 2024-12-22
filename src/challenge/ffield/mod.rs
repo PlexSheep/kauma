@@ -16,6 +16,8 @@ use crate::settings::{Settings, DEFAULT_SETTINGS};
 
 use super::{Action, Testcase};
 
+pub mod element;
+
 /// A type alias for the polinomials.
 ///
 /// Polynomials (if the factors are all either 0 or 1) can be represented as numbers where each bit
@@ -297,6 +299,10 @@ impl Display for FField {
             self.display_poly(self.defining_relation.0)
         )
     }
+}
+
+pub fn pow_poly(base: &Polynomial, exp: u128) -> Polynomial {
+    todo!()
 }
 
 pub fn cmp_poly(a: &Polynomial, b: &Polynomial) -> Ordering {
