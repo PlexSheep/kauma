@@ -10,7 +10,7 @@ use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Rem, R
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
-use num::traits::{ConstZero, ToBytes};
+use num::traits::ToBytes;
 use num::{BigUint, FromPrimitive as _, One as _, Zero as _};
 use serde::{Serialize, Serializer};
 
@@ -162,9 +162,20 @@ impl SuperPoly {
         (quotient, remainder)
     }
 
-    /// Compute modular exponentiation: self^k mod m
+    /// Compute modular exponentiation: self^k mod m for u64 exponents
     /// Uses the square-and-multiply algorithm to handle large exponents efficiently
     pub fn powmod(&self, mut k: u64, m: &Self) -> Self {
+        // Handle edge cases
+        if k == 0 {
+            return SuperPoly::one();
+        }
+        if k == 1 || *self == SuperPoly::one() {
+            return self.clone() % m;
+        }
+        if self.is_zero() || *m == SuperPoly::one() {
+            return SuperPoly::zero();
+        }
+
         let mut result = SuperPoly::one();
         let mut base = self.clone();
 
@@ -184,30 +195,50 @@ impl SuperPoly {
         result
     }
 
-    /// Compute modular exponentiation: self^k mod m
-    /// Uses the square-and-multiply algorithm to handle large exponents efficiently
-    ///
-    /// For numbers that are less than 2^64 use [Self::powmod]
+    /// Compute modular exponentiation: self^k mod m for arbitrary-size exponents
+    /// Breaks down large exponents into u64-sized operations using powmod internally
     pub fn bpowmod<T>(&self, k: T, m: &Self) -> Self
     where
         BigUint: From<T>,
     {
         let mut k: BigUint = BigUint::from(k);
 
-        let two = BigUint::from_u8(2).unwrap();
-        let mut result = SuperPoly::one();
-        let mut base = self.clone();
+        let u64_max = BigUint::from_u64(u64::MAX).unwrap();
+        // If k fits in u64, use powmod directly
+        if k < u64_max {
+            return self.powmod(k.to_u64_digits()[0], m);
+        }
 
-        while k > BigUint::ZERO {
-            // If k is odd, multiply result by base
-            if &k % &two == BigUint::one() {
-                result *= &base;
-                result %= m;
+        // Handle edge cases
+        if k == BigUint::zero() {
+            return SuperPoly::one();
+        }
+        if k == BigUint::one() || *self == SuperPoly::one() {
+            return self.clone() % m;
+        }
+        if self.is_zero() || *m == SuperPoly::one() {
+            return SuperPoly::zero();
+        }
+
+        let mut result = SuperPoly::one();
+        let base = self.clone();
+
+        // Process bits in chunks of u64::MAX
+        while k > BigUint::zero() {
+            let chunk = if k > u64_max {
+                u64::MAX
+            } else {
+                k.to_u64_digits()[0] // downcast
+            };
+
+            // Use powmod for this chunk
+            result = result.powmod(chunk, m);
+
+            // If there's more left, keep going
+            if k > u64_max {
+                k -= &u64_max;
+                result = (&result * &base.powmod(u64::MAX, m)) % m;
             }
-            // Square the base and use modular reduction
-            base = (&base * &base) % m;
-            // Halve k
-            k >>= 1;
         }
 
         result.normalize();
