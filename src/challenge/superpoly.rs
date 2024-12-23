@@ -27,6 +27,13 @@ pub struct SuperPoly {
     coefficients: Vec<FieldElement>,
 }
 
+/// For the [GfpolyFactorSff](Action::GfpolyFactorSff) action
+#[derive(Serialize)]
+pub struct FactorExp {
+    pub factor: SuperPoly,
+    pub exponent: u32,
+}
+
 /// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
 impl SuperPoly {
     /// Returns a "zero" [`SuperPoly`] with all coefficients set to 0.
@@ -317,7 +324,7 @@ impl SuperPoly {
 
     /// Compute the square-free factorization of the polynomial
     /// Returns a vector of (factor, exponent) pairs
-    pub fn factor_sff(mut self) -> Vec<(Self, u32)> {
+    pub fn factor_sff(mut self) -> Vec<FactorExp> {
         // Make input polynomial monic first
         self = self.make_monic();
 
@@ -329,7 +336,7 @@ impl SuperPoly {
         let mut f = &self / &c;
 
         // Step 4: Initialize result vector
-        let mut factors = Vec::new();
+        let mut factors: Vec<FactorExp> = Vec::new();
 
         // Step 5: Initialize multiplicity counter
         let mut e = 1;
@@ -341,7 +348,10 @@ impl SuperPoly {
 
             // Step 8-10: If we found a factor, add it
             if f != y {
-                factors.push(((&f / &y).make_monic(), e));
+                factors.push(FactorExp {
+                    factor: (&f / &y).make_monic(),
+                    exponent: e,
+                });
             }
 
             // Step 11-12: Update for next iteration
@@ -358,13 +368,16 @@ impl SuperPoly {
             let sqrt_factors = c.sqrt().factor_sff();
 
             // Double the exponents and add to results
-            for (factor, exp) in sqrt_factors {
-                factors.push((factor, 2 * exp));
+            for facexp in sqrt_factors {
+                factors.push(FactorExp {
+                    factor: facexp.factor,
+                    exponent: 2 * facexp.exponent,
+                });
             }
         }
 
         // Sort the factors according to the total ordering rules
-        factors.sort_by(|a, b| a.0.cmp(&b.0));
+        factors.sort_by(|a, b| a.factor.cmp(&b.factor));
 
         factors
     }
@@ -900,18 +913,9 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         }
         Action::GfpolyFactorSff => {
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
-            let factors: Vec<(_, _)> = f.factor_sff();
+            let factors: Vec<FactorExp> = f.factor_sff();
 
-            factors
-                .into_iter()
-                .map(|(factor, exp)| {
-                    serde_json::json!({
-                        "factor": serde_json::to_value(&factor).unwrap(),
-                        "exponent": exp
-                    })
-                })
-                .collect::<Vec<serde_json::Value>>()
-                .into()
+            serde_json::to_value(&factors)?
         }
         _ => unreachable!(),
     })
