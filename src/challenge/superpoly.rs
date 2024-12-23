@@ -1495,6 +1495,23 @@ mod test {
     }
 
     #[test]
+    fn test_spoly_ord_samesize() {
+        let polys = &mut [
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+            create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
+        ];
+        let sorted = &[
+            create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+        ];
+
+        polys.sort();
+        assert_eq!(polys, sorted);
+    }
+
+    #[test]
     fn test_spoly_monic_example() {
         // From the example in aufgabe4.pdf
         let input = create_poly_from_base64(&[
