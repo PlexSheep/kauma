@@ -97,7 +97,7 @@ impl SuperPoly {
             x_poly.coefficients = vec![FieldElement::ZERO, FieldElement::ONE.to_be()];
 
             // Calculate X^(q^d) mod f*
-            let h = x_poly.powmod(q.pow(d as u32), &f_star) + x_poly;
+            let h = x_poly.bpowmod(q.pow(d as u32), &f_star) + x_poly;
             let g = h.gcd(&f_star);
 
             // If we found a factor
@@ -148,7 +148,7 @@ impl SuperPoly {
 
             let exponent = (q.pow(d as u32) - BigUint::one()) / BigUint::from_u8(3).unwrap();
 
-            let g = h.powmod(exponent, &f) + SuperPoly::one();
+            let g = h.bpowmod(exponent, &f) + SuperPoly::one();
 
             for i in 0..z.len() {
                 if z[i].deg() > d {
