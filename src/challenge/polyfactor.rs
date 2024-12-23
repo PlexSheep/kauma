@@ -183,7 +183,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
             let d: usize = get_any(&testcase.arguments, "d")?;
 
-            let mut factors = f.factor_edf(d);
+            let factors = f.factor_edf(d);
             serde_json::to_value(&factors)?
         }
         _ => unreachable!(),
