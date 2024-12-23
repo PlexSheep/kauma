@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/PlexSheep/kauma/compare/v0.3.0...v0.4.0) (2024-12-23)
+
+
+### Features
+
+* **gcm_crack:** magic poly repr ([dde8b1c](https://github.com/PlexSheep/kauma/commit/dde8b1c35eaec67ab094bb7e1756d7bf0eafefee))
+* **gcm_crack:** works but wrong ([aad1e21](https://github.com/PlexSheep/kauma/commit/aad1e2135c86f381f98f0102075cd04b135be2da))
+
+
+### Bug Fixes
+
+* **gcm_crack:** fix magic_p ([5f4387d](https://github.com/PlexSheep/kauma/commit/5f4387d0f077999aa98eac69ab1c65a88fe934b3))
+* **gcm_crack:** IT WORKS ([0d983be](https://github.com/PlexSheep/kauma/commit/0d983bead3ff5f76dc91a802a236a3880bf59f85))
+* **superpoly:** edf is now sorted ([8d1170c](https://github.com/PlexSheep/kauma/commit/8d1170cc004dffc817e3a7db784a458cddb96156))
+
 ## [0.3.0](https://github.com/PlexSheep/kauma/compare/v0.2.0...v0.3.0) (2024-12-23)
 
 
