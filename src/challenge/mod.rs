@@ -2,6 +2,7 @@ pub mod cipher;
 pub mod debug;
 pub mod example;
 pub mod ffield;
+pub mod gcm_crack;
 pub mod pad;
 pub mod polyfactor;
 pub mod superpoly;
@@ -419,6 +420,29 @@ pub enum Action {
     #[serde(rename = "gfpoly_factor_edf")]
     GfpolyFactorEdf,
 
+    /// Break GCM when nonces are reused
+    ///
+    /// # Arguments
+    ///
+    /// - `nonce`: [String] - Base64 string encoding a `[u8;12]`
+    /// - `m1`: Message with fields:
+    ///   - `ciphertext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///   - `associated_data`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///   - `tag`: [String] - Base64 string encoding a [`[u8;16]`]
+    /// - `m2`: Message with same fields as m1
+    /// - `m3`: Message with same fields as m1
+    /// - `forgery`: Message to forge with fields:
+    ///   - `ciphertext`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///   - `associated_data`: [String] - Base64 string encoding a [`Vec<u8>`]
+    ///
+    /// # Returns
+    ///
+    /// - `tag`: [String] - Base64 string encoding a [`[u8;16]`] - The forged auth tag
+    /// - `H`: [String] - Base64 string encoding a [`[u8;16]`] - The recovered auth key
+    /// - `mask`: [String] - Base64 string encoding a [`[u8;16]`] - The recovered mask (E_K(Y_0))
+    #[serde(rename = "gcm_crack")]
+    GcmCrack,
+
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
     SD_Timeout,
@@ -469,6 +493,7 @@ impl Action {
             Self::GfpolyFactorSff => "factors",
             Self::GfpolyFactorDdf => "factors",
             Self::GfpolyFactorEdf => "factors",
+            Self::GcmCrack => return None,
         })
     }
 }
@@ -574,6 +599,7 @@ fn challenge_runner(
         Action::GfpolyFactorSff | Action::GfpolyFactorDdf | Action::GfpolyFactorEdf => {
             polyfactor::run_testcase(testcase, settings)
         }
+        Action::GcmCrack => gcm_crack::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));

@@ -392,7 +392,7 @@ pub fn sea_128_encrypt_xex(
     Ok(cipher_text.concat())
 }
 
-fn ghash(
+pub fn ghash(
     auth_key: &[u8; 16],
     associated_data: &[u8],
     ciphertext: &[u8],
