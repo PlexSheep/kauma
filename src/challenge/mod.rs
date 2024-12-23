@@ -418,7 +418,7 @@ impl Action {
             Self::GfpolyDivMod => return None,
             Self::GfpolyMakeMonic => "A*",
             Self::GfpolyDiff => "F'",
-            Self::GfpolyGcd => "G'",
+            Self::GfpolyGcd => "G",
         })
     }
 }
