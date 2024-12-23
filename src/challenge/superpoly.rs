@@ -183,6 +183,8 @@ impl SuperPoly {
             return Self::one();
         } else if k == 1 {
             return self % m;
+        } else if *m == Self::one() {
+            return Self::zero();
         }
 
         let mut result = Self::one();
