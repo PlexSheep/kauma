@@ -11,7 +11,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use num::traits::ToBytes;
-use num::{BigUint, One as _, Zero as _};
+use num::{BigUint, FromPrimitive, One};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
@@ -164,53 +164,52 @@ impl SuperPoly {
 
     /// Compute modular exponentiation: self^k mod m
     /// Uses the square-and-multiply algorithm to handle large exponents efficiently
-    pub fn powmod<T>(&self, k: T, m: &Self) -> Self
+    pub fn powmod(&self, mut k: u64, m: &Self) -> Self {
+        let mut result = SuperPoly::one();
+        let mut base = self.clone();
+
+        while k > 0 {
+            // If k is odd, multiply result by base
+            if k % 2 == 1 {
+                result *= &base;
+                result %= m;
+            }
+            // Square the base and use modular reduction
+            base = (&base * &base) % m;
+            // Halve k
+            k >>= 1;
+        }
+
+        result.normalize();
+        result
+    }
+
+    /// Compute modular exponentiation: self^k mod m
+    /// Uses the square-and-multiply algorithm to handle large exponents efficiently
+    ///
+    /// For numbers that are less than 2^64 use [Self::powmod]
+    pub fn bpowmod<T>(&self, k: T, m: &Self) -> Self
     where
         BigUint: From<T>,
     {
-        let k: BigUint = BigUint::from(k);
-        // the order of these checks is important
-        if m.is_zero() {
-            panic!("modulus cannot be zero");
-        } else if *self == Self::zero() {
-            return Self::zero();
-        } else if k == BigUint::ZERO {
-            return Self::one();
-        } else if self == m || *m == Self::one() {
-            return Self::zero();
-        } else if *self == Self::one() || *m == Self::one() {
-            return Self::one();
-        } else if k == BigUint::one() {
-            return self % m;
-        }
+        let mut k: BigUint = BigUint::from(k);
 
-        let mut result = Self::one();
+        let two = BigUint::from_u8(2).unwrap();
+        let mut result = SuperPoly::one();
         let mut base = self.clone();
-        let mut exp = k;
 
-        // Square and multiply algorithm with modular reduction at each step
-        while exp > BigUint::zero() {
-            if &exp & BigUint::one() == BigUint::one() {
-                result = &(&result * &base) % m;
-                if result.is_zero() {
-                    return Self::zero();
-                }
+        while k > BigUint::ZERO {
+            // If k is odd, multiply result by base
+            if &k % &two == BigUint::one() {
+                result *= &base;
+                result %= m;
             }
-            if exp > BigUint::one() {
-                base = &(&base * &base) % m;
-                if base.is_zero() {
-                    return if exp & BigUint::one() == BigUint::one() {
-                        result
-                    } else {
-                        Self::zero()
-                    };
-                }
-            }
-            exp >>= 1;
+            // Square the base and use modular reduction
+            base = (&base * &base) % m;
+            // Halve k
+            k >>= 1;
         }
 
-        // modulo just in case
-        result %= m;
         result.normalize();
         result
     }
@@ -575,20 +574,23 @@ impl PartialOrd for SuperPoly {
 }
 
 impl Ord for SuperPoly {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match other.deg().cmp(&self.deg()) {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.deg().cmp(&other.deg()) {
             Ordering::Equal => {
-                for (coeff_self, coeff_other) in
-                    self.coefficients.iter().zip(other.coefficients.iter())
+                for (field_a, field_b) in self
+                    .coefficients
+                    .iter()
+                    .zip(other.coefficients.iter())
+                    .rev()
                 {
-                    match coeff_self.cmp(coeff_other) {
+                    match field_a.cmp(field_b) {
                         Ordering::Equal => continue,
-                        other => return other.reverse(),
+                        other => return other,
                     }
                 }
                 Ordering::Equal
             }
-            unequal => unequal.reverse(),
+            other => other,
         }
     }
 }
@@ -640,7 +642,7 @@ impl From<&[u128]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -651,7 +653,7 @@ impl From<&[&u128]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(**v))
+                .map(|v| FieldElement::const_from_raw_xex(**v))
                 .collect(),
         }
     }
@@ -662,7 +664,7 @@ impl<const N: usize> From<&[u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -673,7 +675,7 @@ impl<const N: usize> From<&[&u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(**v))
+                .map(|v| FieldElement::const_from_raw_xex(**v))
                 .collect(),
         }
     }
@@ -684,7 +686,7 @@ impl<const N: usize> From<[u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -696,7 +698,7 @@ impl<const N: usize> From<&[&[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(*v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -712,7 +714,7 @@ impl<const N: usize> From<&[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -728,7 +730,7 @@ impl<const N: usize> From<[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -744,7 +746,7 @@ impl From<&[[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -760,7 +762,7 @@ impl From<&[&[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(*v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -830,7 +832,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         Action::GfpolyPowMod => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
             let m: SuperPoly = get_spoly(&testcase.arguments, "M")?;
-            let k: u128 = get_any(&testcase.arguments, "k")?;
+            let k: u64 = get_any(&testcase.arguments, "k")?;
 
             let z = a.powmod(k, &m);
             serde_json::to_value(&z)?
@@ -889,7 +891,7 @@ pub fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
     let mut coefficients: Vec<_> = Vec::with_capacity(raw_parts.len());
     for raw_part in raw_parts {
         coefficients.push(
-            FieldElement::const_from_raw(bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?)
+            FieldElement::const_from_raw_xex(bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?)
                 .change_semantic(ffield::Semantic::Gcm, ffield::Semantic::Xex),
         );
     }
@@ -1275,7 +1277,7 @@ mod test {
     }
 
     #[test]
-    #[ignore = "I have 100%, this must be wrong if it faily"]
+    #[ignore = "I have 100%, this may be wrong if it fails"]
     fn test_spoly_divmod_small_dividend() {
         // When polynomials have the same degree
         let dividend = create_poly_from_base64(&[
@@ -1366,7 +1368,7 @@ mod test {
         ]);
         let modu =
             create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
-        let k: u32 = 1000;
+        let k: u64 = 1000;
         let res = base.powmod(k, &modu);
         assert_poly(
             &res,
@@ -1388,7 +1390,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k: u32 = 1;
+        let k: u64 = 1;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &base);
     }
@@ -1407,7 +1409,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k: u32 = 0;
+        let k: u64 = 0;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &SuperPoly::one());
     }
@@ -1420,24 +1422,9 @@ mod test {
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
         let modu = SuperPoly::one();
-        let k: u32 = 1;
+        let k: u64 = 1;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &SuperPoly::zero());
-    }
-
-    #[test]
-    fn test_spoly_powmod_zerobase() {
-        let base = SuperPoly::zero();
-        let modu = create_poly_from_base64(&[
-            "JAAAAAAAAAAAAAAAAAAAAA==",
-            "wAAAAAAAAAAAAAAAAAAAAA==",
-            "wAAAAAAAAAAAAAAAAAAAAA==",
-            "wAAAAAAAAAAAAAAAAAAAAA==",
-            "ACAAAAAAAAAAAAAAAAAAAA==",
-        ]);
-        for i in 0usize..100_000 {
-            assert!(base.powmod(i, &modu).is_zero())
-        }
     }
 
     #[test]
@@ -1450,7 +1437,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        for i in 0usize..100_000 {
+        for i in 0u64..100_000 {
             assert!(base.powmod(i, &modu) == SuperPoly::one())
         }
     }
@@ -1462,7 +1449,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k: u32 = 1000;
+        let k: u64 = 1000;
         let res = base.powmod(k, &base);
         assert_poly(&res, &SuperPoly::zero());
     }
@@ -1477,7 +1464,7 @@ mod test {
             ]);
             let modu =
                 create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
-            let k = 10u128.pow(37); // huge fucking number
+            let k = u64::MAX; // huge fucking number
             base.powmod(k, &modu)
         });
         dbg!(&t);
@@ -1487,14 +1474,13 @@ mod test {
     #[test]
     fn test_spoly_powmod_same_but_k0() {
         let a = create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]);
-        let k: u32 = 0;
+        let k: u64 = 0;
         let res = a.powmod(k, &a);
         // k=0 is stronger than the same module
         assert_poly(&res, &SuperPoly::one());
     }
 
     #[test]
-    #[ignore = "Ord is confusing right now"]
     fn test_spoly_ord() {
         let mut polys: [SuperPoly; 7] = [
             SuperPoly::one(),
@@ -1538,8 +1524,8 @@ mod test {
             polys[0].clone(),
             polys[1].clone(),
             polys[3].clone(),
-            polys[2].clone(),
             polys[4].clone(),
+            polys[2].clone(),
             polys[5].clone(),
         ];
         polys.sort();
@@ -1550,17 +1536,16 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Ord is confusing right now"]
     fn test_spoly_ord_samesize() {
         let polys = &mut [
             create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
             create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
         ];
         let sorted = &[
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
             create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
         ];
 
         polys.sort();

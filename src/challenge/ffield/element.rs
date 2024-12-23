@@ -16,23 +16,47 @@ const DEFINING_RELATION_F_2_128_SHORT: u128 = 0x87000000_00000000_00000000_00000
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
 pub struct FieldElement {
     inner: u128,
+    semantic: Semantic,
 }
 
 impl FieldElement {
-    pub const ZERO: FieldElement = Self::const_from_raw(0);
-    pub const ONE: FieldElement = Self::const_from_raw(0x01000000_00000000_00000000_00000000);
-    pub const ALPHA: FieldElement = Self::const_from_raw(0x02000000_00000000_00000000_00000000);
+    pub const ZERO: FieldElement = Self::const_from_raw_xex(0);
+    pub const ONE: FieldElement = Self::const_from_raw_xex(0x01000000_00000000_00000000_00000000);
+    pub const ALPHA: FieldElement = Self::const_from_raw_xex(0x02000000_00000000_00000000_00000000);
     pub const RELATION_FULL: U256 = DEFINING_RELATION_F_2_128;
-    pub const RELATION: FieldElement = Self::const_from_raw(DEFINING_RELATION_F_2_128_SHORT);
+    pub const RELATION: FieldElement = Self::const_from_raw_xex(DEFINING_RELATION_F_2_128_SHORT);
 
     #[inline]
-    pub const fn const_from_raw(inner: u128) -> Self {
-        Self { inner }
+    pub const fn const_from_raw_gcm(inner: u128) -> Self {
+        Self {
+            inner,
+            semantic: Semantic::Gcm,
+        }
+    }
+
+    #[inline]
+    pub const fn const_from_raw_xex(inner: u128) -> Self {
+        Self {
+            inner,
+            semantic: Semantic::Xex,
+        }
+    }
+
+    pub fn new(raw: u128, sem: Semantic) -> Self {
+        Self {
+            inner: raw,
+            semantic: sem,
+        }
     }
 
     #[inline]
     pub const fn raw(self) -> u128 {
         self.inner
+    }
+
+    #[inline]
+    pub const fn sem(self) -> Semantic {
+        self.semantic
     }
 
     pub fn pow(self, mut exp: u128) -> Self {
@@ -46,6 +70,9 @@ impl FieldElement {
         // just square and multiply
         let mut acc: FieldElement = FieldElement::ONE;
         let mut base = self;
+        if base.semantic != Semantic::Xex {
+            base = base.change_semantic(base.semantic, Semantic::Xex);
+        }
         while exp > 1 {
             if (exp & 1) == 1 {
                 acc = acc * base;
@@ -64,9 +91,11 @@ impl FieldElement {
                     .iter()
                     .map(|v| v.reverse_bits())
                     .collect();
-                bytes_to_u128_unknown_size(&by)
+                let mut a: Self = bytes_to_u128_unknown_size(&by)
                     .expect("same size u128 is not same size")
-                    .into()
+                    .into();
+                a.semantic = target;
+                a
             }
             (Semantic::Gcm, Semantic::Gcm) => self,
             (Semantic::Xex, Semantic::Xex) => self,
@@ -74,8 +103,12 @@ impl FieldElement {
     }
 
     pub fn to_coefficients(&self) -> Vec<usize> {
+        let mut base = *self;
+        if base.semantic != Semantic::Xex {
+            base = base.change_semantic(base.semantic, Semantic::Xex);
+        }
         let mut enabled = Vec::new();
-        for (byte_idx, byte) in self.to_be_bytes().iter().enumerate() {
+        for (byte_idx, byte) in base.to_be_bytes().iter().enumerate() {
             for (bit_idx, bit) in byte_to_bits(*byte).iter().rev().enumerate() {
                 if *bit {
                     enabled.push(bit_idx + (byte_idx * 8));
@@ -93,7 +126,7 @@ impl FieldElement {
         format!("{self:032X} => {}", self.display_algebra())
     }
 
-    pub fn from_coefficients(coefficients: Vec<usize>) -> FieldElement {
+    pub fn from_coefficients_xex(coefficients: Vec<usize>) -> FieldElement {
         let mut poly: FieldElement = FieldElement::ZERO;
         for coefficient in coefficients {
             // NOTE: Why does this work? Shouldn't the horrible repr kill everything that uses
@@ -107,8 +140,12 @@ impl FieldElement {
 
     /// Convert the machine representation of a polynomial to the human representation, using [XEX Semantic](Semantic::Xex).
     pub fn display_algebra(&self) -> String {
+        let mut base = *self;
+        if base.semantic != Semantic::Xex {
+            base = base.change_semantic(base.semantic, Semantic::Xex);
+        }
         let mut buf = String::new();
-        let enabled: Vec<_> = self.to_coefficients().into_iter().rev().collect();
+        let enabled: Vec<_> = base.to_coefficients().into_iter().rev().collect();
         if enabled.is_empty() {
             buf = "0".to_string();
             return buf;
@@ -164,10 +201,19 @@ impl PartialOrd for FieldElement {
 
 impl Ord for FieldElement {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        for (byte_a, byte_b) in self.to_be_bytes().iter().zip(other.to_be_bytes().iter()) {
+        let self_sem = self.change_semantic(self.semantic, Semantic::Xex);
+        let other_sem = other.change_semantic(other.semantic, Semantic::Xex);
+
+        for (byte_a, byte_b) in self_sem
+            .raw()
+            .to_be_bytes()
+            .iter()
+            .rev()
+            .zip(other_sem.raw().to_be_bytes().iter().rev())
+        {
             match byte_a.cmp(byte_b) {
                 Ordering::Equal => continue,
-                unequal => return unequal,
+                other => return other,
             }
         }
         Ordering::Equal
@@ -213,7 +259,7 @@ impl BitOrAssign for FieldElement {
 impl BitOr for FieldElement {
     type Output = FieldElement;
     fn bitor(self, rhs: Self) -> Self::Output {
-        Self::const_from_raw(self.inner | rhs.inner)
+        Self::const_from_raw_xex(self.inner | rhs.inner)
     }
 }
 
@@ -240,21 +286,25 @@ impl Add for FieldElement {
 impl Div for FieldElement {
     type Output = Self;
     fn div(self, rhs: Self) -> Self::Output {
-        F_2_128.div(self, rhs)
+        let self_sem = self.change_semantic(self.semantic, Semantic::Xex);
+        let other_sem = rhs.change_semantic(rhs.semantic, Semantic::Xex);
+        F_2_128.div(self_sem, other_sem)
     }
 }
 
 impl BitXor for FieldElement {
     type Output = FieldElement;
     fn bitxor(self, rhs: Self) -> Self::Output {
-        Self::const_from_raw(self.inner ^ rhs.inner)
+        Self::const_from_raw_xex(self.inner ^ rhs.inner)
     }
 }
 
 impl Mul<Self> for FieldElement {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
-        F_2_128.mul(self, rhs)
+        let self_sem = self.change_semantic(self.semantic, Semantic::Xex);
+        let other_sem = rhs.change_semantic(rhs.semantic, Semantic::Xex);
+        F_2_128.mul(self_sem, other_sem)
     }
 }
 
@@ -266,7 +316,7 @@ impl PartialEq<u128> for FieldElement {
 
 impl From<u128> for FieldElement {
     fn from(value: u128) -> Self {
-        Self::const_from_raw(value)
+        Self::const_from_raw_xex(value)
     }
 }
 
@@ -290,6 +340,6 @@ impl<'d> Deserialize<'d> for FieldElement {
     where
         D: serde::Deserializer<'d>,
     {
-        u128::deserialize(deserializer).map(FieldElement::const_from_raw)
+        u128::deserialize(deserializer).map(FieldElement::const_from_raw_xex)
     }
 }
