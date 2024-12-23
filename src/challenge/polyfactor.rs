@@ -28,7 +28,6 @@ impl SuperPoly {
     /// Compute the square-free factorization of the polynomial
     /// Returns a vector of (factor, exponent) pairs
     pub fn factor_sff(self) -> Vec<FactorExp> {
-        veprintln("sff_got", format_args!("{self:#02x?}"));
         // Step 2: Calculate GCD of f and its derivative
         let mut c = self.gcd(&self.derivative());
 
