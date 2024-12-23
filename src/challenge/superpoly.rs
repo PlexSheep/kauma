@@ -234,14 +234,12 @@ impl SuperPoly {
 
     /// Calculate the square root of a polynomial Q where Q only has coefficients for even exponents of X.
     /// Returns S where S^2 = Q.
-    pub fn sqrt(&self) -> Self {
-        let result: Vec<[u8; 16]> = Vec::new();
-        let buf = [0; 16];
+    pub fn sqrt(self) -> Self {
+        let mut result: Vec<FieldElement> = vec![];
 
-        for (coeff_idx, coeff) in self.coefficients.iter().enumerate() {
-            if coeff_idx % 2 == 0 {
-                todo!()
-                // result.push(coeff.pow(MAGIC_SQRT_NUMBER));
+        for (position, element) in self.coefficients.iter().enumerate() {
+            if position % 2 == 0 {
+                result.push(element.pow(MAGIC_SQRT_NUMBER));
             }
         }
 
