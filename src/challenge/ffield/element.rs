@@ -300,7 +300,12 @@ impl Div for FieldElement {
 impl BitXor for FieldElement {
     type Output = FieldElement;
     fn bitxor(self, rhs: Self) -> Self::Output {
-        Self::const_from_raw_xex(self.inner ^ rhs.inner)
+        if rhs.sem() == self.sem() {
+            Self::new(self.inner ^ rhs.inner, self.sem())
+        } else {
+            let tmp = rhs.change_semantic(rhs.sem(), self.sem());
+            Self::new(self.inner ^ tmp.inner, self.sem())
+        }
     }
 }
 

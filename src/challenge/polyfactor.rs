@@ -3,6 +3,7 @@ use num::{BigUint, FromPrimitive, One};
 use serde::Serialize;
 
 use crate::common::interface::get_any;
+use crate::common::veprintln;
 use crate::settings::Settings;
 
 use super::ffield::element::FieldElement;
@@ -27,9 +28,7 @@ impl SuperPoly {
     /// Compute the square-free factorization of the polynomial
     /// Returns a vector of (factor, exponent) pairs
     pub fn factor_sff(mut self) -> Vec<FactorExp> {
-        // Make input polynomial monic first
-        self = self.make_monic();
-
+        veprintln("sff_got", format_args!("{self:#02x?}"));
         // Step 2: Calculate GCD of f and its derivative
         let mut c = self.gcd(&self.derivative());
 

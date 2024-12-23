@@ -62,7 +62,7 @@ impl GcmMessage {
         // WARN: DO NOT TOUCH
         /////////////////////////////////////////////////////////////////////
         ///// UNDER NO CIRCUMSTANCES TOUCH THIS IF IT WORKS
-        ///// ADD YOUR MARK IF YOU DESPAIRED: I
+        ///// ADD YOUR MARK IF YOU DESPAIRED: II
         /////////////////////////////////////////////////////////////////////
         let length: u128 = self.length();
 
@@ -77,7 +77,6 @@ impl GcmMessage {
         }
         let ad_chunks: Vec<FieldElement> = ad
             .chunks(16)
-            .rev()
             .map(|chunk| {
                 FieldElement::from_gcm_convert_to_xex(bytes_to_u128(
                     &len_to_const_arr::<16>(chunk).expect("is not len 16"),
@@ -86,7 +85,6 @@ impl GcmMessage {
             .collect();
         let ct_chunks: Vec<FieldElement> = ct
             .chunks(16)
-            .rev()
             .map(|chunk| {
                 FieldElement::from_gcm_convert_to_xex(bytes_to_u128(
                     &len_to_const_arr::<16>(chunk).expect("is not len 16"),
@@ -106,7 +104,6 @@ impl GcmMessage {
         raw.extend(ad_chunks);
 
         let a = SuperPoly::from(raw.as_slice());
-        veprintln("magic_p", format_args!("{a:#x?}"));
         a
     }
 }
@@ -194,14 +191,14 @@ pub fn crack(
 ) -> Result<GcmSolution> {
     let p1 = m1.get_magic_p();
     let p2 = m2.get_magic_p();
-    let pdiff = p1 ^ p2;
+    let mut pdiff = p1 ^ p2;
 
     let pdiff_sff = pdiff.make_monic().factor_sff();
-    // veprintln("sff", format_args!("{pdiff_sff:#x?}"));
     let mut pdiff_ddf: Vec<_> = Vec::with_capacity(pdiff_sff.len() * 3);
     for factor in pdiff_sff.iter().map(|f| &f.factor) {
         pdiff_ddf.extend(factor.factor_ddf());
     }
+    veprintln("pdiff_ddf", format_args!("{pdiff_ddf:#02x?}"));
     let mut pdiff_edf: Vec<_> = Vec::with_capacity(1);
     for factor in pdiff_ddf
         .iter()
@@ -218,6 +215,7 @@ pub fn crack(
     if pdiff_edf.is_empty() {
         panic!("edf returned no candidates with deg 1");
     }
+    veprintln("pdiff_edf", format_args!("{pdiff_edf:#02x?}"));
 
     let mut m3_tag: [u8; 16];
     let mut h_candidate: FieldElement = FieldElement::ZERO;
@@ -227,7 +225,6 @@ pub fn crack(
     // will run at least once because we panic early if pdiff_edf is empty
     for candidate in pdiff_edf {
         h_candidate = candidate.coefficients[0];
-        h_candidate = h_candidate.change_semantic(h_candidate.sem(), super::ffield::Semantic::Gcm);
         // veprintln("h", format_args!("{h_candidate:x?}"));
         hashes[0] = hash_msg(h_candidate, m1);
 
@@ -240,9 +237,12 @@ pub fn crack(
             break;
         }
     }
+    veprintln("h", format_args!("{h_candidate:#02x?}"));
 
     hashes[2] = hash_msg(h_candidate, forgery);
     let tag = xor_bytes(&eky0, hashes[2].to_be_bytes());
+
+    h_candidate = h_candidate.change_semantic(h_candidate.sem(), super::ffield::Semantic::Gcm);
 
     Ok(GcmSolution {
         tag,
@@ -261,8 +261,8 @@ fn hash_msg(key: FieldElement, msg: &impl GcmData) -> FieldElement {
         &ghash(
             &key.change_semantic(key.sem(), crate::challenge::ffield::Semantic::Gcm)
                 .to_be_bytes(),
-            &msg.associated_data(),
-            &msg.ciphertext(),
+            msg.associated_data(),
+            msg.ciphertext(),
             false,
         )
         .0,
