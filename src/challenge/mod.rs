@@ -372,6 +372,7 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), the monic GCD of A and B
     #[serde(rename = "gfpoly_gcd")]
     GfpolyGcd,
+
     /// Squarefree factorization of a polynomial
     ///
     /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
@@ -389,6 +390,21 @@ pub enum Action {
     ///   - `exponent`: [u32] - the multiplicity of this factor
     #[serde(rename = "gfpoly_factor_sff")]
     GfpolyFactorSff,
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `F`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `factors`: List of factor & degree pairs where:
+    ///   - `factor`: `[[String]]` - Base64 encoded polynomial
+    ///   - `degree`: [usize] - Integer degree of each irreducible polynomial in this factor
+    #[serde(rename = "gfpoly_factor_ddf")]
+    GfpolyFactorDdf,
     /// Calculate equal-degree factorization using Cantor-Zassenhaus algorithm
     ///
     /// # Arguments
@@ -451,6 +467,7 @@ impl Action {
             Self::GfpolyDiff => "F'",
             Self::GfpolyGcd => "G",
             Self::GfpolyFactorSff => "factors",
+            Self::GfpolyFactorDdf => "factors",
             Self::GfpolyFactorEdf => "factors",
         })
     }
@@ -554,7 +571,7 @@ fn challenge_runner(
         | Action::GfpolyDiff
         | Action::GfpolyGcd
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
-        Action::GfpolyFactorSff | Action::GfpolyFactorEdf => {
+        Action::GfpolyFactorSff | Action::GfpolyFactorDdf | Action::GfpolyFactorEdf => {
             polyfactor::run_testcase(testcase, settings)
         }
     };

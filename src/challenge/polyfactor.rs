@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::common::interface::get_any;
 use crate::settings::Settings;
 
+use super::ffield::element::FieldElement;
 use super::superpoly::{get_spoly, SuperPoly};
 use super::{Action, Testcase};
 
@@ -13,6 +14,13 @@ use super::{Action, Testcase};
 pub struct FactorExp {
     pub factor: SuperPoly,
     pub exponent: u32,
+}
+
+/// For the [GfpolyFactorDdf](Action::GfpolyFactorDdf) action
+#[derive(Serialize)]
+pub struct FactorDeg {
+    pub factor: SuperPoly,
+    pub degree: usize,
 }
 
 impl SuperPoly {
@@ -75,6 +83,56 @@ impl SuperPoly {
         factors
     }
 
+    /// Implements the distinct-degree factorization (DDF) algorithm for polynomials
+    /// Takes a monic, square-free polynomial and factors it into polynomials that are products of irreducible polynomials of the same degree
+    pub fn factor_ddf(&self) -> Vec<FactorDeg> {
+        let mut f_star = self.make_monic();
+        let mut factors = Vec::new();
+        let mut d = 1;
+        let q = BigUint::pow(&BigUint::from_u64(2).unwrap(), 128);
+
+        while f_star.deg() >= 2 * d {
+            // Calculate h = X^(q^d) - X mod f*
+            let mut x_poly = SuperPoly::zero();
+            x_poly.coefficients = vec![FieldElement::ZERO, FieldElement::ONE.to_be()];
+
+            // Calculate X^(q^d) mod f*
+            let h = x_poly.powmod(q.pow(d as u32), &f_star) + x_poly;
+            let g = h.gcd(&f_star);
+
+            // If we found a factor
+            if !g.is_zero() && g != SuperPoly::one() {
+                // Add the factor and its degree to results
+                factors.push(FactorDeg {
+                    factor: g.clone(),
+                    degree: d,
+                });
+
+                // Update f* for next iteration
+                f_star = &f_star / &g;
+            }
+
+            d += 1;
+        }
+
+        // Handle remaining factor if any
+        if !f_star.is_zero() && f_star != SuperPoly::one() {
+            factors.push(FactorDeg {
+                degree: f_star.deg(),
+                factor: f_star,
+            });
+        } else if factors.is_empty() {
+            // Special case: input was irreducible
+            factors.push(FactorDeg {
+                factor: self.clone(),
+                degree: 1,
+            });
+        }
+
+        factors.sort_by(|a, b| a.factor.cmp(&b.factor));
+        factors
+    }
+
     /// Implements the Cantor-Zassenhaus algorithm for equal-degree factorization
     pub fn factor_edf(&self, d: usize) -> Vec<Self> {
         // variable names like in the formal definition of the algorithm
@@ -114,6 +172,12 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         Action::GfpolyFactorSff => {
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
             let factors: Vec<FactorExp> = f.factor_sff();
+
+            serde_json::to_value(&factors)?
+        }
+        Action::GfpolyFactorDdf => {
+            let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
+            let factors: Vec<FactorDeg> = f.factor_ddf();
 
             serde_json::to_value(&factors)?
         }

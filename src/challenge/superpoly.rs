@@ -26,7 +26,7 @@ const MAGIC_SQRT_NUMBER: u128 = 2u128.pow(127);
 
 #[derive(Clone, Eq)]
 pub struct SuperPoly {
-    coefficients: Vec<FieldElement>,
+    pub(crate) coefficients: Vec<FieldElement>,
 }
 
 /// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
