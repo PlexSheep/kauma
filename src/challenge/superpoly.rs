@@ -245,6 +245,35 @@ impl SuperPoly {
 
         SuperPoly::from(result.as_slice())
     }
+
+    /// Calculate the derivative of the polynomial
+    ///
+    /// For a polynomial in GF(2^128), the derivative follows these rules:
+    ///
+    /// 1. The derivative of a constant term is 0
+    /// 2. For odd powers, derivative is coefficient * reduced power
+    /// 3. For even powers, derivative is 0
+    pub fn derivative(&self) -> Self {
+        if self.is_zero() || self.coefficients.len() == 1 {
+            return SuperPoly::zero();
+        }
+
+        let mut derivative_coeffs = Vec::new();
+
+        // Start from index 1 since derivative of constant term is 0
+        for (power, coeff) in self.coefficients.iter().enumerate().skip(1) {
+            if power % 2 == 1 {
+                // Only odd powers contribute to derivative
+                derivative_coeffs.push(*coeff);
+            } else {
+                derivative_coeffs.push(FieldElement::ZERO);
+            }
+        }
+
+        let mut result = SuperPoly::from(derivative_coeffs.as_slice());
+        result.normalize();
+        result
+    }
 }
 
 impl Serialize for SuperPoly {
@@ -751,6 +780,11 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let q: SuperPoly = get_spoly(&testcase.arguments, "Q")?;
             let s = q.sqrt();
             serde_json::to_value(&s)?
+        }
+        Action::GfpolyDiff => {
+            let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
+            let derivative = f.derivative();
+            serde_json::to_value(&derivative)?
         }
         _ => unreachable!(),
     })

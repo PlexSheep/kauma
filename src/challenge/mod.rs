@@ -339,6 +339,21 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), where S^2 = Q
     #[serde(rename = "gfpoly_sqrt")]
     GfpolySqrt,
+    /// Calculate the derivative of a polynomial F
+    ///
+    /// Uses [Semantic::Gcm].
+    ///
+    /// # Arguments
+    ///
+    /// - `F`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `F'`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the derivative of F
+    #[serde(rename = "gfpoly_diff")]
+    GfpolyDiff,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -385,6 +400,7 @@ impl Action {
             Self::GfpolySqrt => "S",
             Self::GfpolyDivMod => return None,
             Self::GfpolyMakeMonic => "A*",
+            Self::GfpolyDiff => "F'",
         })
     }
 }
@@ -484,6 +500,7 @@ fn challenge_runner(
         | Action::GfpolySort
         | Action::GfpolySqrt
         | Action::GfpolyMakeMonic
+        | Action::GfpolyDiff
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
