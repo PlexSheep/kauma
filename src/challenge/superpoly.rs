@@ -1457,6 +1457,19 @@ mod test {
     }
 
     #[test]
+    fn test_spoly_powmod_m0() {
+        let base = create_poly_from_base64(&[
+            "JAAAAAAAAAAAAAAAAAAAAA==",
+            "wAAAAAAAAAAAAAAAAAAAAA==",
+            "ACAAAAAAAAAAAAAAAAAAAA==",
+        ]);
+        let modu = SuperPoly::one();
+        let k = 1;
+        let res = base.powmod(k, &modu);
+        assert_poly(&res, &SuperPoly::zero());
+    }
+
+    #[test]
     fn test_spoly_powmod_zerobase() {
         let base = SuperPoly::zero();
         let modu = create_poly_from_base64(&[
