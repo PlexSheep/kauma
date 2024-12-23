@@ -11,7 +11,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use num::traits::ToBytes;
-use num::{BigUint, One, Zero};
+use num::{BigUint, One as _, Zero as _};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
@@ -1420,7 +1420,7 @@ mod test {
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
         let modu = SuperPoly::one();
-        let k = 1;
+        let k: u32 = 1;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &SuperPoly::zero());
     }
