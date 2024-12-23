@@ -177,14 +177,12 @@ impl SuperPoly {
             return Self::zero();
         } else if k == 0 {
             return Self::one();
-        } else if self == m {
+        } else if self == m || *m == Self::one() {
             return Self::zero();
         } else if *self == Self::one() || *m == Self::one() {
             return Self::one();
         } else if k == 1 {
             return self % m;
-        } else if *m == Self::one() {
-            return Self::zero();
         }
 
         let mut result = Self::one();
