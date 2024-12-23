@@ -197,7 +197,29 @@ impl Shr<usize> for U256 {
 
 impl ShlAssign<usize> for U256 {
     fn shl_assign(&mut self, rhs: usize) {
-        *self = *self << rhs;
+        // For shifts of 1, optimize by handling carry directly
+        if rhs == 1 {
+            let carry_bit = bit_at_i(self.1, 127);
+            self.0 = (self.0 << 1) | (if carry_bit { 1 } else { 0 });
+            self.1 <<= 1;
+            return;
+        }
+
+        // For larger shifts, handle in chunks based on relative sizes
+        if rhs >= 256 {
+            // If shift is >= total bits, result is 0
+            self.0 = 0;
+            self.1 = 0;
+        } else if rhs >= 128 {
+            // If shift >= 128, upper half becomes 0 and lower gets bits from upper
+            self.1 = self.0 << (rhs - 128);
+            self.0 = 0;
+        } else {
+            // Handle shifts less than 128 bits
+            let carry_bits = self.1 >> (128 - rhs);
+            self.0 = (self.0 << rhs) | carry_bits;
+            self.1 <<= rhs;
+        }
     }
 }
 
