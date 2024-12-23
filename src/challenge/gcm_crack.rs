@@ -191,7 +191,7 @@ pub fn crack(
 ) -> Result<GcmSolution> {
     let p1 = m1.get_magic_p();
     let p2 = m2.get_magic_p();
-    let mut pdiff = p1 ^ p2;
+    let pdiff = p1 ^ p2;
 
     let pdiff_sff = pdiff.make_monic().factor_sff();
     let mut pdiff_ddf: Vec<_> = Vec::with_capacity(pdiff_sff.len() * 3);

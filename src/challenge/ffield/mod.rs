@@ -8,8 +8,8 @@ use bint_easy::u256::U256;
 use num::traits::ToBytes;
 use serde::{Deserialize, Serialize};
 
+use crate::common::bit_at_i;
 use crate::common::interface::get_bytes_maybe_hex;
-use crate::common::{bit_at_i, veprintln};
 use crate::settings::{Settings, DEFAULT_SETTINGS};
 
 use self::element::{FieldElement, DEFINING_RELATION_F_2_128};
