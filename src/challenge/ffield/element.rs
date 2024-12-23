@@ -35,8 +35,25 @@ impl FieldElement {
         self.inner
     }
 
-    pub fn pow(self, exp: u128) -> Self {
-        todo!()
+    pub fn pow(self, mut exp: u128) -> Self {
+        if exp == 1 {
+            return self;
+        }
+        if exp == 0 {
+            return FieldElement::ONE;
+        }
+
+        // just square and multiply
+        let mut acc: FieldElement = FieldElement::ONE;
+        let mut base = self;
+        while exp > 1 {
+            if (exp & 1) == 1 {
+                acc = acc * base;
+            }
+            exp /= 2;
+            base = base * base;
+        }
+        acc * base
     }
 
     pub fn change_semantic(self, source: Semantic, target: Semantic) -> FieldElement {
