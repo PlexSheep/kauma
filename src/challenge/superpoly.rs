@@ -11,7 +11,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use num::traits::ToBytes;
-use num::{BigUint, FromPrimitive, One, Zero};
+use num::{BigUint, One, Zero};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
