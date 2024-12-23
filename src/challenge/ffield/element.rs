@@ -164,12 +164,7 @@ impl PartialOrd for FieldElement {
 
 impl Ord for FieldElement {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        for (byte_a, byte_b) in self
-            .to_ne_bytes()
-            .iter()
-            .zip(other.to_ne_bytes().iter())
-            .rev()
-        {
+        for (byte_a, byte_b) in self.to_be_bytes().iter().zip(other.to_be_bytes().iter()) {
             match byte_a.cmp(byte_b) {
                 Ordering::Equal => continue,
                 unequal => return unequal,
