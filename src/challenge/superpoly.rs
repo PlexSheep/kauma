@@ -4,7 +4,7 @@
 //! This type has uses in cryptography and other advanced mathematical applications.
 
 use std::cmp::Ordering;
-use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Mul, MulAssign, Rem, RemAssign};
+use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Rem, RemAssign};
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
@@ -314,6 +314,60 @@ impl SuperPoly {
         // Return monic form of the result
         a.make_monic()
     }
+
+    /// Compute the square-free factorization of the polynomial
+    /// Returns a vector of (factor, exponent) pairs
+    pub fn factor_sff(mut self) -> Vec<(Self, u32)> {
+        // Make input polynomial monic first
+        self = self.make_monic();
+
+        // Step 2: Calculate GCD of f and its derivative
+        let derivative = self.derivative();
+        let mut c = Self::gcd(self.clone(), derivative);
+
+        // Step 3: Get the square-free part
+        let mut f = &self / &c;
+
+        // Step 4: Initialize result vector
+        let mut factors = Vec::new();
+
+        // Step 5: Initialize multiplicity counter
+        let mut e = 1;
+
+        // Step 6-14: Main factorization loop
+        while !f.is_zero() && f != Self::one() {
+            // Step 7: Calculate new GCD
+            let y = Self::gcd(f.clone(), c.clone());
+
+            // Step 8-10: If we found a factor, add it
+            if f != y {
+                factors.push(((&f / &y).make_monic(), e));
+            }
+
+            // Step 11-12: Update for next iteration
+            f = y.clone();
+            c = &c / &y;
+
+            // Step 13: Increment multiplicity
+            e += 1;
+        }
+
+        // Step 15-20: Handle the case where c != 1
+        if !c.is_zero() && c != Self::one() {
+            // Recursively factor the square part
+            let sqrt_factors = c.sqrt().factor_sff();
+
+            // Double the exponents and add to results
+            for (factor, exp) in sqrt_factors {
+                factors.push((factor, 2 * exp));
+            }
+        }
+
+        // Sort the factors according to the total ordering rules
+        factors.sort_by(|a, b| a.0.cmp(&b.0));
+
+        factors
+    }
 }
 
 impl Serialize for SuperPoly {
@@ -438,6 +492,20 @@ impl Rem for &SuperPoly {
     type Output = SuperPoly;
     fn rem(self, rhs: Self) -> Self::Output {
         self.divmod(rhs).1
+    }
+}
+
+impl Div for SuperPoly {
+    type Output = SuperPoly;
+    fn div(self, rhs: Self) -> Self::Output {
+        &self / &rhs
+    }
+}
+
+impl Div for &SuperPoly {
+    type Output = SuperPoly;
+    fn div(self, rhs: Self) -> Self::Output {
+        self.divmod(rhs).0
     }
 }
 
@@ -829,6 +897,21 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
             let gcd = SuperPoly::gcd(a, b);
             serde_json::to_value(&gcd)?
+        }
+        Action::GfpolyFactorSff => {
+            let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
+            let factors: Vec<(_, _)> = f.factor_sff();
+
+            factors
+                .into_iter()
+                .map(|(factor, exp)| {
+                    serde_json::json!({
+                        "factor": serde_json::to_value(&factor).unwrap(),
+                        "exponent": exp
+                    })
+                })
+                .collect::<Vec<serde_json::Value>>()
+                .into()
         }
         _ => unreachable!(),
     })

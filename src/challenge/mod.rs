@@ -371,6 +371,23 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), the monic GCD of A and B
     #[serde(rename = "gfpoly_gcd")]
     GfpolyGcd,
+    /// Squarefree factorization of a polynomial
+    ///
+    /// Uses [Semantic::Gcm](ffield::Semantic::Gcm).
+    ///
+    /// # Arguments
+    ///
+    /// - `F`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the polynomial to factor
+    ///
+    /// # Returns
+    ///
+    /// - `factors`: list of objects containing:
+    ///   - `factor`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///     making a [SuperPoly](superpoly::SuperPoly), a squarefree factor
+    ///   - `exponent`: [u32] - the multiplicity of this factor
+    #[serde(rename = "gfpoly_factor_sff")]
+    GfpolyFactorSff,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -413,6 +430,7 @@ impl Action {
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
             Self::GfpolyPowMod => "Z",
+            Self::GfpolyFactorSff => "factors",
             Self::GfpolySort => "sorted_polys",
             Self::GfpolySqrt => "S",
             Self::GfpolyDivMod => return None,
@@ -520,6 +538,7 @@ fn challenge_runner(
         | Action::GfpolyMakeMonic
         | Action::GfpolyDiff
         | Action::GfpolyGcd
+        | Action::GfpolyFactorSff
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
