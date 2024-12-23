@@ -135,12 +135,9 @@ impl SuperPoly {
 
     /// Implements the Cantor-Zassenhaus algorithm for equal-degree factorization
     pub fn factor_edf(&self, d: usize) -> Vec<Self> {
-        // variable names like in the formal definition of the algorithm
-        // math people make weird one-letter names
         let f = self.make_monic();
-
         let q = BigUint::pow(&BigUint::from_u8(2).unwrap(), 128);
-        let n = f.deg() / (d);
+        let n = f.deg() / d;
         let mut z: Vec<SuperPoly> = vec![f.clone()];
 
         while (z.len()) < n {
@@ -163,6 +160,7 @@ impl SuperPoly {
             }
         }
 
+        z.sort();
         z
     }
 }
@@ -185,7 +183,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
             let d: usize = get_any(&testcase.arguments, "d")?;
 
-            let factors = f.factor_edf(d);
+            let mut factors = f.factor_edf(d);
             serde_json::to_value(&factors)?
         }
         _ => unreachable!(),
