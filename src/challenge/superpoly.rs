@@ -4,6 +4,7 @@
 //! This type has uses in cryptography and other advanced mathematical applications.
 
 use std::cmp::Ordering;
+use std::hash::Hash;
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Rem, RemAssign};
 
 use anyhow::{anyhow, Result};
@@ -380,6 +381,83 @@ impl SuperPoly {
         factors.sort_by(|a, b| a.factor.cmp(&b.factor));
 
         factors
+    }
+
+    /// Implements the Cantor-Zassenhaus algorithm for equal-degree factorization
+    pub fn factor_edf(&self, d: usize) -> Vec<Self> {
+        // Make input monic first
+        let monic = self.make_monic();
+
+        // Early exit for special cases
+        if monic.is_zero() || monic == Self::one() {
+            return vec![monic];
+        }
+
+        // Calculate q = 2^128 (field characteristic)
+        let q: u128 = 1u128 << 127;
+
+        // Calculate n = deg(f)/d which is the number of factors
+        let n = monic.deg() / d;
+        if n == 1 {
+            // f is already irreducible
+            return vec![monic];
+        }
+
+        // Initialize result vector with just f
+        let mut factors = vec![monic.clone()];
+
+        // Main factorization loop
+        while factors.len() < n {
+            // Generate a random polynomial of degree < deg(f)
+            let randpol = Self::random(monic.deg() - 1);
+
+            // Calculate g = h^((q^d-1)/3) - 1 mod f
+            let exp = (q.pow(d as u32) - 1) / 3;
+            let mut g = randpol.powmod(exp, &monic);
+            g ^= Self::one(); // Subtract 1
+
+            // Try to split factors using gcd
+            let mut updated_factors = Vec::new();
+            for u in factors {
+                if u.deg() > d {
+                    let j = Self::gcd(u.clone(), g.clone());
+                    if !j.is_zero() && j != u {
+                        // Found a non-trivial factor, add both
+                        updated_factors.push(j.make_monic());
+                        updated_factors.push((&u / &j).make_monic());
+                    } else {
+                        // No split found, keep original
+                        updated_factors.push(u);
+                    }
+                } else {
+                    // Factor already at target degree
+                    updated_factors.push(u);
+                }
+            }
+
+            factors = updated_factors;
+        }
+
+        // Sort factors according to total ordering
+        factors.sort();
+        factors
+    }
+
+    /// Generate a random [SuperPoly]
+    pub fn random(max_deg: usize) -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+
+        // Generate random coefficients up to max_deg
+        let mut coeffs = Vec::with_capacity(max_deg + 1);
+        for _ in 0..=max_deg {
+            let coeff: u128 = rng.gen();
+            coeffs.push(FieldElement::from(coeff));
+        }
+
+        let mut poly = SuperPoly::from(coeffs.as_slice());
+        poly.normalize();
+        poly
     }
 }
 
@@ -825,6 +903,12 @@ impl std::fmt::Debug for SuperPoly {
     }
 }
 
+impl Hash for SuperPoly {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.coefficients.hash(state);
+    }
+}
+
 /** Interface *****************************************************************/
 
 #[allow(unreachable_code)]
@@ -915,6 +999,13 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
             let factors: Vec<FactorExp> = f.factor_sff();
 
+            serde_json::to_value(&factors)?
+        }
+        Action::GfpolyFactorEdf => {
+            let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
+            let d: usize = get_any(&testcase.arguments, "d")?;
+
+            let factors = f.factor_edf(d);
             serde_json::to_value(&factors)?
         }
         _ => unreachable!(),
