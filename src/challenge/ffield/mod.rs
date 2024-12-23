@@ -108,14 +108,10 @@ impl FField {
         let mut y = U256::from(y.raw().to_be());
         let mut z = U256::from(0);
 
-        self.dbg_mul("preparation", x, y, z);
-
         // if lsb
         if bit_at_i(y.lower(), 0) {
             z ^= x;
         }
-        self.dbg_mul("first", x, y, z);
-
         y >>= 1;
 
         while y != 0 {
@@ -135,8 +131,6 @@ impl FField {
             y >>= 1;
         }
 
-        self.dbg_mul("final", x, y, z);
-
         let a: u128 = z
             // swap the byte order of the result back, so that we are in XEX semantic again.
             .swap_bytes()
@@ -145,17 +139,6 @@ impl FField {
             .try_into()
             .expect("z is still too big, was not reduced correctly in multiplication");
         a.into()
-    }
-
-    /// helper function for debug prints in [Self::mul].
-    #[inline]
-    fn dbg_mul(&self, title: &str, x: U256, y: U256, z: U256) {
-        if self.verbose() {
-            eprintln!("? {title}");
-            veprintln("x", format_args!("{x:032x}"));
-            veprintln("y", format_args!("{y:032x}"));
-            veprintln("z", format_args!("{z:032x}"));
-        }
     }
 
     /// divide [Polynomial] `a` by [Polynomial] `b`
