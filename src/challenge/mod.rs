@@ -3,6 +3,7 @@ pub mod debug;
 pub mod example;
 pub mod ffield;
 pub mod pad;
+pub mod polyfactor;
 pub mod superpoly;
 
 use std::collections::HashMap;
@@ -388,6 +389,19 @@ pub enum Action {
     ///   - `exponent`: [u32] - the multiplicity of this factor
     #[serde(rename = "gfpoly_factor_sff")]
     GfpolyFactorSff,
+    /// Calculate equal-degree factorization using Cantor-Zassenhaus algorithm
+    ///
+    /// # Arguments
+    ///
+    /// - `F`: `[String]` - list of Base64 string encoding Polynomials,
+    ///   making a SuperPoly that is a product of irreducible polynomials of degree d
+    /// - `d`: [usize] - The degree of the irreducible polynomials
+    ///
+    /// # Returns
+    ///
+    /// - `factors`: `[[String]]` - list of polynomials that are the irreducible factors
+    #[serde(rename = "gfpoly_factor_edf")]
+    GfpolyFactorEdf,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -430,13 +444,14 @@ impl Action {
             Self::GfpolyMul => "P",
             Self::GfpolyPow => "Z",
             Self::GfpolyPowMod => "Z",
-            Self::GfpolyFactorSff => "factors",
             Self::GfpolySort => "sorted_polys",
             Self::GfpolySqrt => "S",
             Self::GfpolyDivMod => return None,
             Self::GfpolyMakeMonic => "A*",
             Self::GfpolyDiff => "F'",
             Self::GfpolyGcd => "G",
+            Self::GfpolyFactorSff => "factors",
+            Self::GfpolyFactorEdf => "factors",
         })
     }
 }
@@ -538,8 +553,10 @@ fn challenge_runner(
         | Action::GfpolyMakeMonic
         | Action::GfpolyDiff
         | Action::GfpolyGcd
-        | Action::GfpolyFactorSff
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
+        Action::GfpolyFactorSff | Action::GfpolyFactorEdf => {
+            polyfactor::run_testcase(testcase, settings)
+        }
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));

@@ -4,12 +4,14 @@
 //! This type has uses in cryptography and other advanced mathematical applications.
 
 use std::cmp::Ordering;
+use std::hash::Hash;
 use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Rem, RemAssign};
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use num::traits::ToBytes;
+use num::{BigUint, FromPrimitive, One, Zero};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
@@ -25,13 +27,6 @@ const MAGIC_SQRT_NUMBER: u128 = 2u128.pow(127);
 #[derive(Clone, Eq)]
 pub struct SuperPoly {
     coefficients: Vec<FieldElement>,
-}
-
-/// For the [GfpolyFactorSff](Action::GfpolyFactorSff) action
-#[derive(Serialize)]
-pub struct FactorExp {
-    pub factor: SuperPoly,
-    pub exponent: u32,
 }
 
 /// A struct representing a "super polynomial" - a polynomial with coefficients that are also polynomials in a finite field.
@@ -169,19 +164,23 @@ impl SuperPoly {
 
     /// Compute modular exponentiation: self^k mod m
     /// Uses the square-and-multiply algorithm to handle large exponents efficiently
-    pub fn powmod(&self, k: u128, m: &Self) -> Self {
+    pub fn powmod<T>(&self, k: T, m: &Self) -> Self
+    where
+        BigUint: From<T>,
+    {
+        let k: BigUint = BigUint::from(k);
         // the order of these checks is important
         if m.is_zero() {
             panic!("modulus cannot be zero");
         } else if *self == Self::zero() {
             return Self::zero();
-        } else if k == 0 {
+        } else if k == BigUint::ZERO {
             return Self::one();
         } else if self == m || *m == Self::one() {
             return Self::zero();
         } else if *self == Self::one() || *m == Self::one() {
             return Self::one();
-        } else if k == 1 {
+        } else if k == BigUint::one() {
             return self % m;
         }
 
@@ -190,17 +189,21 @@ impl SuperPoly {
         let mut exp = k;
 
         // Square and multiply algorithm with modular reduction at each step
-        while exp > 0 {
-            if exp & 1 == 1 {
+        while exp > BigUint::zero() {
+            if &exp & BigUint::one() == BigUint::one() {
                 result = &(&result * &base) % m;
                 if result.is_zero() {
                     return Self::zero();
                 }
             }
-            if exp > 1 {
+            if exp > BigUint::one() {
                 base = &(&base * &base) % m;
                 if base.is_zero() {
-                    return if exp & 1 == 1 { result } else { Self::zero() };
+                    return if exp & BigUint::one() == BigUint::one() {
+                        result
+                    } else {
+                        Self::zero()
+                    };
                 }
             }
             exp >>= 1;
@@ -284,102 +287,57 @@ impl SuperPoly {
 
     /// Calculate the greatest common divisor (GCD) of two polynomials.
     /// Returns the monic GCD polynomial.
-    pub fn gcd(mut a: Self, mut b: Self) -> Self {
-        // Normalize inputs
-        a.normalize();
-        b.normalize();
-
+    pub fn gcd(&self, rhs: &Self) -> Self {
         // Handle edge cases
-        if a.is_zero() {
-            return if b.is_zero() {
+        if self.is_zero() {
+            return if rhs.is_zero() {
                 SuperPoly::zero()
             } else {
-                b.make_monic()
+                rhs.make_monic()
             };
         }
-        if b.is_zero() {
-            return a.make_monic();
+        if rhs.is_zero() {
+            return self.make_monic();
         }
 
+        let mut other: Self = rhs.clone();
+        let mut acc: Self = self.clone();
         // Ensure a has the higher or equal degree
-        if a.deg() < b.deg() {
-            std::mem::swap(&mut a, &mut b);
+        if acc.deg() < other.deg() {
+            std::mem::swap(&mut acc, &mut other);
         }
 
         // Main Euclidean algorithm loop
-        while !b.is_zero() {
+        while !other.is_zero() {
             // Calculate remainder using divmod
-            let r = a.clone() % &b;
-            a = b;
-            b = r;
+            let r = acc % &other;
+            acc = other;
+            other = r;
 
             // Normalize after each step
-            a.normalize();
-            b.normalize();
+            acc.normalize();
+            other.normalize();
         }
 
         // Return monic form of the result
-        a.make_monic()
+        acc.make_monic()
     }
 
-    /// Compute the square-free factorization of the polynomial
-    /// Returns a vector of (factor, exponent) pairs
-    pub fn factor_sff(mut self) -> Vec<FactorExp> {
-        // Make input polynomial monic first
-        self = self.make_monic();
+    /// Generate a random [SuperPoly]
+    pub fn random(max_deg: usize) -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
 
-        // Step 2: Calculate GCD of f and its derivative
-        let derivative = self.derivative();
-        let mut c = Self::gcd(self.clone(), derivative);
-
-        // Step 3: Get the square-free part
-        let mut f = &self / &c;
-
-        // Step 4: Initialize result vector
-        let mut factors: Vec<FactorExp> = Vec::new();
-
-        // Step 5: Initialize multiplicity counter
-        let mut e = 1;
-
-        // Step 6-14: Main factorization loop
-        while !f.is_zero() && f != Self::one() {
-            // Step 7: Calculate new GCD
-            let y = Self::gcd(f.clone(), c.clone());
-
-            // Step 8-10: If we found a factor, add it
-            if f != y {
-                factors.push(FactorExp {
-                    factor: (&f / &y).make_monic(),
-                    exponent: e,
-                });
-            }
-
-            // Step 11-12: Update for next iteration
-            f = y.clone();
-            c = &c / &y;
-
-            // Step 13: Increment multiplicity
-            e += 1;
+        // Generate random coefficients up to max_deg
+        let mut coeffs = Vec::with_capacity(max_deg + 1);
+        for _ in 0..=max_deg {
+            let coeff: u128 = rng.gen();
+            coeffs.push(FieldElement::from(coeff));
         }
 
-        // Step 15-20: Handle the case where c != 1
-        if !c.is_zero() && c != Self::one() {
-            // Recursively factor the square part
-            let sqrt_factors = c.sqrt().factor_sff();
-
-            // Double the exponents and add to results
-            for facexp in sqrt_factors {
-                factors.push(FactorExp {
-                    factor: facexp.factor,
-                    exponent: 2 * facexp.exponent,
-                });
-            }
-        }
-
-        // Sort the factors according to the total ordering rules
-        factors.sort_by(|a, b| a.factor.cmp(&b.factor));
-
-        factors
+        let mut poly = SuperPoly::from(coeffs.as_slice());
+        poly.normalize();
+        poly
     }
 }
 
@@ -825,6 +783,12 @@ impl std::fmt::Debug for SuperPoly {
     }
 }
 
+impl Hash for SuperPoly {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.coefficients.hash(state);
+    }
+}
+
 /** Interface *****************************************************************/
 
 #[allow(unreachable_code)]
@@ -908,21 +872,15 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         Action::GfpolyGcd => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
-            let gcd = SuperPoly::gcd(a, b);
+            let gcd = SuperPoly::gcd(&a, &b);
             serde_json::to_value(&gcd)?
-        }
-        Action::GfpolyFactorSff => {
-            let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
-            let factors: Vec<FactorExp> = f.factor_sff();
-
-            serde_json::to_value(&factors)?
         }
         _ => unreachable!(),
     })
 }
 
 /// Retrieves a [`SuperPoly`] from the provided arguments.
-fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
+pub fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
     let raw_parts: Vec<String> = serde_json::from_value(args[key].clone()).map_err(|e| {
         eprintln!("Error while serializing '{key}': {e}");
         e
@@ -1408,7 +1366,7 @@ mod test {
         ]);
         let modu =
             create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
-        let k = 1000;
+        let k: u32 = 1000;
         let res = base.powmod(k, &modu);
         assert_poly(
             &res,
@@ -1430,7 +1388,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 1;
+        let k: u32 = 1;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &base);
     }
@@ -1449,7 +1407,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 0;
+        let k: u32 = 0;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &SuperPoly::one());
     }
@@ -1477,7 +1435,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        for i in 0..100_000 {
+        for i in 0usize..100_000 {
             assert!(base.powmod(i, &modu).is_zero())
         }
     }
@@ -1492,7 +1450,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        for i in 0..100_000 {
+        for i in 0usize..100_000 {
             assert!(base.powmod(i, &modu) == SuperPoly::one())
         }
     }
@@ -1504,7 +1462,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 1000;
+        let k: u32 = 1000;
         let res = base.powmod(k, &base);
         assert_poly(&res, &SuperPoly::zero());
     }
@@ -1529,7 +1487,7 @@ mod test {
     #[test]
     fn test_spoly_powmod_same_but_k0() {
         let a = create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]);
-        let k = 0;
+        let k: u32 = 0;
         let res = a.powmod(k, &a);
         // k=0 is stronger than the same module
         assert_poly(&res, &SuperPoly::one());
