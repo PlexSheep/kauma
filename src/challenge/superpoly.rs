@@ -1520,4 +1520,50 @@ mod test {
         let result = input.make_monic();
         assert_poly(&result, &expected);
     }
+
+    #[test]
+    fn test_spoly_derivative() {
+        // Test case from aufgabe04.pdf
+        let input = create_poly_from_base64(&[
+            "IJustWannaTellYouAAAAA==",
+            "HowImFeelingAAAAAAAAAA==",
+            "GottaMakeYouAAAAAAAAAA==",
+            "UnderstaaaaaaaaaaaaanQ==",
+        ]);
+
+        let expected = create_poly_from_base64(&[
+            "HowImFeelingAAAAAAAAAA==",
+            "AAAAAAAAAAAAAAAAAAAAAA==",
+            "UnderstaaaaaaaaaaaaanQ==",
+        ]);
+
+        let result = input.derivative();
+        assert_poly(&result, &expected);
+    }
+
+    #[test]
+    fn test_spoly_derivative_constant() {
+        // Derivative of a constant should be zero
+        let input = create_poly_from_base64(&["JAAAAAAAAAAAAAAAAAAAAA=="]);
+        let result = input.derivative();
+        assert_poly(&result, &SuperPoly::zero());
+    }
+
+    #[test]
+    fn test_spoly_derivative_linear() {
+        // Derivative of a linear term should be just the coefficient
+        let input =
+            create_poly_from_base64(&["JAAAAAAAAAAAAAAAAAAAAA==", "wAAAAAAAAAAAAAAAAAAAAA=="]);
+        let expected = create_poly_from_base64(&["wAAAAAAAAAAAAAAAAAAAAA=="]);
+        let result = input.derivative();
+        assert_poly(&result, &expected);
+    }
+
+    #[test]
+    fn test_spoly_derivative_zero() {
+        // Derivative of zero should be zero
+        let input = SuperPoly::zero();
+        let result = input.derivative();
+        assert_poly(&result, &SuperPoly::zero());
+    }
 }
