@@ -77,62 +77,33 @@ impl SuperPoly {
 
     /// Implements the Cantor-Zassenhaus algorithm for equal-degree factorization
     pub fn factor_edf(&self, d: usize) -> Vec<Self> {
-        // Make input monic first
-        let monic = self.make_monic();
+        let f = self.make_monic();
 
-        // Early exit for special cases
-        if monic.is_zero() || monic == Self::one() {
-            return vec![monic];
-        }
+        let q = BigUint::pow(&BigUint::from_u8(2).unwrap(), 128);
+        let n = f.deg() / (d);
+        let mut acc: Vec<SuperPoly> = vec![f.clone()];
 
-        // Calculate q = 2^128 (field characteristic)
-        let q: u128 = 1u128 << 127;
+        while (acc.len()) < n {
+            let h = SuperPoly::random(f.deg());
 
-        // Calculate n = deg(f)/d which is the number of factors
-        let n = monic.deg() / d;
-        if n == 1 {
-            // f is already irreducible
-            return vec![monic];
-        }
+            let exponent = (q.pow(d as u32) - BigUint::one()) / BigUint::from_u8(3).unwrap();
 
-        // Initialize result vector with just f
-        let mut factors = vec![monic.clone()];
+            let g = h.powmod(exponent, &f) + SuperPoly::one();
 
-        // Main factorization loop
-        while factors.len() < n {
-            // Generate a random polynomial of degree < deg(f)
-            let randpol = Self::random(monic.deg() - 1);
-
-            // Calculate g = h^((q^d-1)/3) - 1 mod f
-            let exp = (q.pow(d as u32) - 1) / 3;
-            let mut g = randpol.powmod(exp, &monic);
-            g ^= Self::one(); // Subtract 1
-
-            // Try to split factors using gcd
-            let mut updated_factors = Vec::new();
-            for u in factors {
-                if u.deg() > d {
-                    let j = Self::gcd(u.clone(), g.clone());
-                    if !j.is_zero() && j != u {
-                        // Found a non-trivial factor, add both
-                        updated_factors.push(j.make_monic());
-                        updated_factors.push((&u / &j).make_monic());
-                    } else {
-                        // No split found, keep original
-                        updated_factors.push(u);
+            for i in 0..acc.len() {
+                if acc[i].deg() > d {
+                    let j = acc[i].gcd(&g);
+                    if j != SuperPoly::one() && j != acc[i] {
+                        let intemediate = &acc[i] / &j;
+                        acc.remove(i);
+                        acc.push(intemediate);
+                        acc.push(j.clone());
                     }
-                } else {
-                    // Factor already at target degree
-                    updated_factors.push(u);
                 }
             }
-
-            factors = updated_factors;
         }
 
-        // Sort factors according to total ordering
-        factors.sort();
-        factors
+        acc
     }
 }
 
