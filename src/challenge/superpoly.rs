@@ -287,42 +287,40 @@ impl SuperPoly {
 
     /// Calculate the greatest common divisor (GCD) of two polynomials.
     /// Returns the monic GCD polynomial.
-    pub fn gcd(mut a: Self, mut b: Self) -> Self {
-        // Normalize inputs
-        a.normalize();
-        b.normalize();
-
+    pub fn gcd(&self, rhs: &Self) -> Self {
         // Handle edge cases
-        if a.is_zero() {
-            return if b.is_zero() {
+        if self.is_zero() {
+            return if rhs.is_zero() {
                 SuperPoly::zero()
             } else {
-                b.make_monic()
+                rhs.make_monic()
             };
         }
-        if b.is_zero() {
-            return a.make_monic();
+        if rhs.is_zero() {
+            return self.make_monic();
         }
 
+        let mut other: Self = rhs.clone();
+        let mut acc: Self = self.clone();
         // Ensure a has the higher or equal degree
-        if a.deg() < b.deg() {
-            std::mem::swap(&mut a, &mut b);
+        if acc.deg() < other.deg() {
+            std::mem::swap(&mut acc, &mut other);
         }
 
         // Main Euclidean algorithm loop
-        while !b.is_zero() {
+        while !other.is_zero() {
             // Calculate remainder using divmod
-            let r = a.clone() % &b;
-            a = b;
-            b = r;
+            let r = acc % &other;
+            acc = other;
+            other = r;
 
             // Normalize after each step
-            a.normalize();
-            b.normalize();
+            acc.normalize();
+            other.normalize();
         }
 
         // Return monic form of the result
-        a.make_monic()
+        acc.make_monic()
     }
 
     /// Generate a random [SuperPoly]
@@ -874,7 +872,7 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
         Action::GfpolyGcd => {
             let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
             let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
-            let gcd = SuperPoly::gcd(a, b);
+            let gcd = SuperPoly::gcd(&a, &b);
             serde_json::to_value(&gcd)?
         }
         _ => unreachable!(),

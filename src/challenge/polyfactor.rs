@@ -23,8 +23,7 @@ impl SuperPoly {
         self = self.make_monic();
 
         // Step 2: Calculate GCD of f and its derivative
-        let derivative = self.derivative();
-        let mut c = Self::gcd(self.clone(), derivative);
+        let mut c = self.gcd(&self.derivative());
 
         // Step 3: Get the square-free part
         let mut f = &self / &c;
@@ -38,7 +37,7 @@ impl SuperPoly {
         // Step 6-14: Main factorization loop
         while !f.is_zero() && f != Self::one() {
             // Step 7: Calculate new GCD
-            let y = Self::gcd(f.clone(), c.clone());
+            let y = f.gcd(&c);
 
             // Step 8-10: If we found a factor, add it
             if f != y {
