@@ -10,8 +10,8 @@ use std::ops::{Add, AddAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Rem, R
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
-use num::traits::{ConstZero, ToBytes};
-use num::{BigUint, FromPrimitive as _, One as _, Zero as _};
+use num::traits::ToBytes;
+use num::{BigUint, FromPrimitive, One};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
