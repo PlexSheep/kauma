@@ -1494,7 +1494,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Ord is confusing right now"]
     fn test_spoly_ord() {
         let mut polys: [SuperPoly; 7] = [
             SuperPoly::one(),
@@ -1538,8 +1537,8 @@ mod test {
             polys[0].clone(),
             polys[1].clone(),
             polys[3].clone(),
-            polys[2].clone(),
             polys[4].clone(),
+            polys[2].clone(),
             polys[5].clone(),
         ];
         polys.sort();
@@ -1550,17 +1549,16 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Ord is confusing right now"]
     fn test_spoly_ord_samesize() {
         let polys = &mut [
             create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
             create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
         ];
         let sorted = &[
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
+            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
             create_poly_from_base64(&["NeverGonnaLetYouDownAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
-            create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]),
         ];
 
         polys.sort();
