@@ -1,6 +1,9 @@
+use core::hash;
+use std::arch::x86_64::_SIDD_CMP_EQUAL_ANY;
+
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
-use num::traits::ToBytes as _;
+use num::traits::ToBytes;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, Serializer};
 
@@ -9,6 +12,11 @@ use crate::common::{self, bytes_to_u128, len_to_const_arr};
 use super::cipher::ghash;
 use super::ffield::element::FieldElement;
 use super::superpoly::SuperPoly;
+
+pub trait GcmData {
+    fn associated_data(&self) -> &[u8];
+    fn ciphertext(&self) -> &[u8];
+}
 
 #[derive(Debug)]
 pub struct GcmMessage {
@@ -30,15 +38,36 @@ pub struct GcmSolution {
     mask: [u8; 16],
 }
 
+impl GcmData for GcmMessage {
+    fn ciphertext(&self) -> &[u8] {
+        &self.ciphertext
+    }
+    fn associated_data(&self) -> &[u8] {
+        &self.associated_data
+    }
+}
+
+impl GcmData for GcmForgery {
+    fn ciphertext(&self) -> &[u8] {
+        &self.ciphertext
+    }
+    fn associated_data(&self) -> &[u8] {
+        &self.associated_data
+    }
+}
+
 impl GcmMessage {
     pub fn get_ghash(&self) -> Result<FieldElement> {
         let (hash, _) = ghash(&[0; 16], &self.associated_data, &self.ciphertext, false);
         Ok(FieldElement::const_from_raw_gcm(bytes_to_u128(&hash)))
     }
 
+    pub fn length(&self) -> u128 {
+        ((self.associated_data.len() as u128 * 8) << 64) | (self.ciphertext.len() as u128 * 8)
+    }
+
     pub fn get_magic_polynom_repr(&self) -> SuperPoly {
-        let length: u128 =
-            ((self.associated_data.len() as u128 * 8) << 64) | (self.ciphertext.len() as u128 * 8);
+        let length: u128 = self.length();
 
         let mut ad = self.associated_data.clone();
         let mut ct = self.ciphertext.clone();
@@ -140,9 +169,9 @@ impl Serialize for GcmSolution {
     where
         S: Serializer,
     {
-        let tag = common::interface::encode_hex(&self.tag);
-        let h = common::interface::encode_hex(&self.h);
-        let mask = common::interface::encode_hex(&self.mask);
+        let tag = BASE64_STANDARD.encode(self.tag);
+        let h = BASE64_STANDARD.encode(self.h);
+        let mask = BASE64_STANDARD.encode(self.mask);
 
         let mut s = serializer.serialize_map(Some(3))?;
         s.serialize_entry("tag", &tag)?;
@@ -158,69 +187,78 @@ pub fn crack(
     m3: &GcmMessage,
     forgery: &GcmForgery,
 ) -> Result<GcmSolution> {
-    // Calculate GHASH polynomials
-    let p1 = m1.get_ghash()?;
-    let p2 = m2.get_ghash()?;
-    let p3 = m3.get_ghash()?;
+    let p1 = m1.get_magic_polynom_repr();
+    let p2 = m2.get_magic_polynom_repr();
+    let pdiff = p1 ^ p2;
 
-    // Get auth tags
-    let t1 = FieldElement::from(bytes_to_u128(&m1.tag));
-    let t2 = FieldElement::from(bytes_to_u128(&m2.tag));
-    let t3 = FieldElement::from(bytes_to_u128(&m3.tag));
+    let pdiff_sff = pdiff.make_monic().factor_sff();
+    let mut pdiff_ddf: Vec<_> = Vec::with_capacity(pdiff_sff.len() * 3);
+    for factor in pdiff_sff.iter().map(|f| &f.factor) {
+        pdiff_ddf.extend(factor.factor_ddf());
+    }
+    let mut pdiff_edf: Vec<_> = Vec::with_capacity(1);
+    for factor in pdiff_ddf
+        .iter()
+        .filter(|v| v.degree == 1)
+        .map(|v| &v.factor)
+    {
+        pdiff_edf.extend(factor.factor_edf(1));
+    }
+    pdiff_edf = pdiff_edf
+        .iter()
+        .filter(|v| v.deg() == 1)
+        .map(|v| v.to_owned())
+        .collect();
+    if pdiff_edf.is_empty() {
+        panic!("edf returned no candidates with deg 1");
+    }
 
-    // Create polynomial for first equation
-    let mut coeffs = Vec::new();
-    coeffs.push(t1 ^ t2); // constant term
-    coeffs.push(p1 ^ p2); // coefficient of X
-    let poly1 = SuperPoly::from(coeffs.as_slice());
+    let mut m3_tag: [u8; 16];
+    let mut h_candidate: FieldElement = FieldElement::ZERO;
+    let mut hashes: [FieldElement; 3] = [FieldElement::ZERO; 3];
+    let mut eky0: [u8; 16] = [0; 16];
 
-    // Create polynomial for second equation
-    coeffs.clear();
-    coeffs.push(t2 ^ t3);
-    coeffs.push(p2 ^ p3);
-    let poly2 = SuperPoly::from(coeffs.as_slice());
+    // will run at least once because we panic early if pdiff_edf is empty
+    for candidate in pdiff_edf {
+        h_candidate = candidate.coefficients[0];
+        hashes[0] = hash_msg(h_candidate, m1);
 
-    // Form a combined polynomial that H must satisfy
-    // Multiply equations to get:
-    // ((p1 ⊕ p2)·H ⊕ (t1 ⊕ t2))·((p2 ⊕ p3)·H ⊕ (t2 ⊕ t3)) = 0
-    let combined_poly = &poly1 * &poly2;
+        eky0 = xor_bytes(&m1.tag, hashes[0].to_be_bytes());
+        hashes[1] = hash_msg(h_candidate, m3);
 
-    // Factor the polynomial to find H
-    let factors = combined_poly.factor_sff();
+        m3_tag = xor_bytes(&eky0, hashes[1].to_be_bytes());
 
-    // Find linear factors which give us candidates for H
-    for factor in factors {
-        let factor_poly = factor.factor;
-        if factor_poly.deg() == 1 {
-            // Extract H value from linear factor
-            let h = factor_poly.coefficients[0] / factor_poly.coefficients[1];
-
-            // Calculate EK(Y0) using first message
-            let ek_y0 = t1 ^ (p1 * h);
-
-            // Verify it works for all messages
-            if (t2 ^ (p2 * h) == ek_y0) && (t3 ^ (p3 * h) == ek_y0) {
-                // Found valid H - now calculate forgery tag
-                let (forge_hash, _) = ghash(
-                    &h.to_be_bytes(),
-                    &forgery.associated_data,
-                    &forgery.ciphertext,
-                    false,
-                );
-                let forge_poly = FieldElement::from(bytes_to_u128(&forge_hash));
-                let forge_tag = ek_y0 ^ (forge_poly * h);
-
-                return Ok(GcmSolution {
-                    tag: forge_tag.to_be_bytes(),
-                    h: h.to_be_bytes(),
-                    mask: ek_y0.to_be_bytes(),
-                });
-            }
+        if m3_tag == m3.tag {
+            break;
         }
     }
 
-    // If we reach here, we failed to find a valid H
-    Err(anyhow!("Could not find valid H value"))
+    hashes[2] = hash_msg(h_candidate, forgery);
+    let tag = xor_bytes(&eky0, hashes[2].to_be_bytes());
+
+    Ok(GcmSolution {
+        tag,
+        h: h_candidate.to_be_bytes(),
+        mask: eky0,
+    })
+}
+
+fn xor_bytes(a: &[u8; 16], b: [u8; 16]) -> [u8; 16] {
+    len_to_const_arr(&a.iter().zip(b).map(|(a, b)| a ^ b).collect::<Vec<_>>())
+        .expect("was somehow wrong length")
+}
+
+fn hash_msg(key: FieldElement, msg: &impl GcmData) -> FieldElement {
+    FieldElement::const_from_raw_gcm(bytes_to_u128(
+        &ghash(
+            &key.change_semantic(key.sem(), crate::challenge::ffield::Semantic::Gcm)
+                .to_be_bytes(),
+            &msg.associated_data(),
+            &msg.ciphertext(),
+            false,
+        )
+        .0,
+    ))
 }
 
 pub fn run_testcase(
