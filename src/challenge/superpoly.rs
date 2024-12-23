@@ -575,20 +575,23 @@ impl PartialOrd for SuperPoly {
 }
 
 impl Ord for SuperPoly {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match other.deg().cmp(&self.deg()) {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.deg().cmp(&other.deg()) {
             Ordering::Equal => {
-                for (coeff_self, coeff_other) in
-                    self.coefficients.iter().zip(other.coefficients.iter())
+                for (field_a, field_b) in self
+                    .coefficients
+                    .iter()
+                    .zip(other.coefficients.iter())
+                    .rev()
                 {
-                    match coeff_self.cmp(coeff_other) {
+                    match field_a.cmp(field_b) {
                         Ordering::Equal => continue,
-                        other => return other.reverse(),
+                        other => return other,
                     }
                 }
                 Ordering::Equal
             }
-            unequal => unequal.reverse(),
+            other => other,
         }
     }
 }

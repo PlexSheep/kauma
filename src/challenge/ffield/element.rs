@@ -205,13 +205,15 @@ impl Ord for FieldElement {
         let other_sem = other.change_semantic(other.semantic, Semantic::Xex);
 
         for (byte_a, byte_b) in self_sem
+            .raw()
             .to_be_bytes()
             .iter()
-            .zip(other_sem.to_be_bytes().iter())
+            .rev()
+            .zip(other_sem.raw().to_be_bytes().iter().rev())
         {
             match byte_a.cmp(byte_b) {
                 Ordering::Equal => continue,
-                unequal => return unequal,
+                other => return other,
             }
         }
         Ordering::Equal
