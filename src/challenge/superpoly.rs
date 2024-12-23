@@ -1487,7 +1487,6 @@ mod test {
             polys[5].clone(),
         ];
         polys.sort();
-
         assert_eq!(
             polys, sorted,
             "here in better format: Polys: {polys:#?}\nSorted: {sorted:#?}"
@@ -1508,7 +1507,58 @@ mod test {
         ];
 
         polys.sort();
-        assert_eq!(polys, sorted);
+        assert_eq!(
+            polys, sorted,
+            "here in better format: Polys: {polys:#?}\nSorted: {sorted:#?}"
+        )
+    }
+
+    #[test]
+    fn test_spoly_ord_example() {
+        let polys = &mut [
+            create_poly_from_base64(&[
+                "NeverGonnaGiveYouUpAAA==",
+                "NeverGonnaLetYouDownAA==",
+                "NeverGonnaRunAroundAAA==",
+                "AndDesertYouAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "WereNoStrangersToLoveA==",
+                "YouKnowTheRulesAAAAAAA==",
+                "AndSoDoIAAAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaSayGoodbyeAA==",
+                "NeverGonnaTellALieAAAA==",
+                "AndHurtYouAAAAAAAAAAAA==",
+            ]),
+        ];
+        let sorted = &mut [
+            create_poly_from_base64(&[
+                "WereNoStrangersToLoveA==",
+                "YouKnowTheRulesAAAAAAA==",
+                "AndSoDoIAAAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaMakeYouCryAA==",
+                "NeverGonnaSayGoodbyeAA==",
+                "NeverGonnaTellALieAAAA==",
+                "AndHurtYouAAAAAAAAAAAA==",
+            ]),
+            create_poly_from_base64(&[
+                "NeverGonnaGiveYouUpAAA==",
+                "NeverGonnaLetYouDownAA==",
+                "NeverGonnaRunAroundAAA==",
+                "AndDesertYouAAAAAAAAAA==",
+            ]),
+        ];
+
+        polys.sort();
+        assert_eq!(
+            polys, sorted,
+            "here in better format: Polys: {polys:#?}\nSorted: {sorted:#?}"
+        )
     }
 
     #[test]
