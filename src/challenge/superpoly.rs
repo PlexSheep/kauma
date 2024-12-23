@@ -274,6 +274,46 @@ impl SuperPoly {
         result.normalize();
         result
     }
+
+    /// Calculate the greatest common divisor (GCD) of two polynomials.
+    /// Returns the monic GCD polynomial.
+    pub fn gcd(mut a: Self, mut b: Self) -> Self {
+        // Normalize inputs
+        a.normalize();
+        b.normalize();
+
+        // Handle edge cases
+        if a.is_zero() {
+            return if b.is_zero() {
+                SuperPoly::zero()
+            } else {
+                b.make_monic()
+            };
+        }
+        if b.is_zero() {
+            return a.make_monic();
+        }
+
+        // Ensure a has the higher or equal degree
+        if a.deg() < b.deg() {
+            std::mem::swap(&mut a, &mut b);
+        }
+
+        // Main Euclidean algorithm loop
+        while !b.is_zero() {
+            // Calculate remainder using divmod
+            let r = a.clone() % &b;
+            a = b;
+            b = r;
+
+            // Normalize after each step
+            a.normalize();
+            b.normalize();
+        }
+
+        // Return monic form of the result
+        a.make_monic()
+    }
 }
 
 impl Serialize for SuperPoly {
@@ -785,6 +825,13 @@ pub fn run_testcase(testcase: &Testcase, _settings: Settings) -> Result<serde_js
             let f: SuperPoly = get_spoly(&testcase.arguments, "F")?;
             let derivative = f.derivative();
             serde_json::to_value(&derivative)?
+        }
+
+        Action::GfpolyGcd => {
+            let a: SuperPoly = get_spoly(&testcase.arguments, "A")?;
+            let b: SuperPoly = get_spoly(&testcase.arguments, "B")?;
+            let gcd = SuperPoly::gcd(a, b);
+            serde_json::to_value(&gcd)?
         }
         _ => unreachable!(),
     })

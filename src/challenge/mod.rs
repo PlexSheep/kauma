@@ -354,6 +354,23 @@ pub enum Action {
     ///   making a [SuperPoly](superpoly::SuperPoly), the derivative of F
     #[serde(rename = "gfpoly_diff")]
     GfpolyDiff,
+    /// Calculate the greatest common divisor (GCD) of two polynomials A and B
+    ///
+    /// Uses [Semantic::Gcm].
+    ///
+    /// # Arguments
+    ///
+    /// - `A`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    /// - `B`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly)
+    ///
+    /// # Returns
+    ///
+    /// - `G`: `[[String]]` - list of Base64 string encoding [Polynomials](ffield::Polynomial),
+    ///   making a [SuperPoly](superpoly::SuperPoly), the monic GCD of A and B
+    #[serde(rename = "gfpoly_gcd")]
+    GfpolyGcd,
 
     // debug items ////////////////////////////////////////////////////////////////////////////////
     /// wait indefinitely, job should eventually be killed
@@ -401,6 +418,7 @@ impl Action {
             Self::GfpolyDivMod => return None,
             Self::GfpolyMakeMonic => "A*",
             Self::GfpolyDiff => "F'",
+            Self::GfpolyGcd => "G'",
         })
     }
 }
@@ -501,6 +519,7 @@ fn challenge_runner(
         | Action::GfpolySqrt
         | Action::GfpolyMakeMonic
         | Action::GfpolyDiff
+        | Action::GfpolyGcd
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
     };
     if let Err(e) = sol {
