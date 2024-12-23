@@ -640,7 +640,7 @@ impl From<&[u128]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -651,7 +651,7 @@ impl From<&[&u128]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(**v))
+                .map(|v| FieldElement::const_from_raw_xex(**v))
                 .collect(),
         }
     }
@@ -662,7 +662,7 @@ impl<const N: usize> From<&[u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -673,7 +673,7 @@ impl<const N: usize> From<&[&u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(**v))
+                .map(|v| FieldElement::const_from_raw_xex(**v))
                 .collect(),
         }
     }
@@ -684,7 +684,7 @@ impl<const N: usize> From<[u128; N]> for SuperPoly {
         SuperPoly {
             coefficients: value
                 .iter()
-                .map(|v| FieldElement::const_from_raw(*v))
+                .map(|v| FieldElement::const_from_raw_xex(*v))
                 .collect(),
         }
     }
@@ -696,7 +696,7 @@ impl<const N: usize> From<&[&[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(*v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -712,7 +712,7 @@ impl<const N: usize> From<&[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -728,7 +728,7 @@ impl<const N: usize> From<[[u8; 16]; N]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -744,7 +744,7 @@ impl From<&[[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -760,7 +760,7 @@ impl From<&[&[u8; 16]]> for SuperPoly {
             coefficients: value
                 .iter()
                 .map(|v| {
-                    FieldElement::const_from_raw(
+                    FieldElement::const_from_raw_xex(
                         bytes_to_u128_unknown_size(*v)
                             .expect("bytes are correct length but u128 can still not be made"),
                     )
@@ -889,7 +889,7 @@ pub fn get_spoly(args: &serde_json::Value, key: &str) -> Result<SuperPoly> {
     let mut coefficients: Vec<_> = Vec::with_capacity(raw_parts.len());
     for raw_part in raw_parts {
         coefficients.push(
-            FieldElement::const_from_raw(bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?)
+            FieldElement::const_from_raw_xex(bytes_to_u128_unknown_size(&maybe_hex(&raw_part)?)?)
                 .change_semantic(ffield::Semantic::Gcm, ffield::Semantic::Xex),
         );
     }

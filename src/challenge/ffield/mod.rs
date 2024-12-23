@@ -22,7 +22,9 @@ pub mod element;
 /// AES.
 pub const F_2_128: FField = FField::new(2, DEFAULT_SETTINGS);
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, Default)]
+#[derive(
+    Debug, Deserialize, Serialize, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Semantic {
     /// whatever is used in AES-XEX
@@ -212,7 +214,7 @@ pub fn run_testcase(testcase: &Testcase, settings: Settings) -> Result<serde_jso
             } else {
                 return Err(anyhow!("coefficients is not a list"));
             }
-            let sol = FieldElement::from_coefficients(coefficients)
+            let sol = FieldElement::from_coefficients_xex(coefficients)
                 .change_semantic(Semantic::Xex, semantic);
             serde_json::to_value(BASE64_STANDARD.encode(sol.to_be_bytes())).map_err(|e| {
                 eprintln!("! could not convert block to json: {e}");
@@ -316,10 +318,10 @@ mod test {
     #[test]
     fn test_ffield_add() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x14000000_00000000_00000000_00000000); // α^4 + α^2
+            FieldElement::const_from_raw_xex(0x14000000_00000000_00000000_00000000); // α^4 + α^2
         let sol = field().add(
-            FieldElement::const_from_raw(0x16000000_00000000_00000000_00000000), // α^4 + α^2 + α
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x16000000_00000000_00000000_00000000), // α^4 + α^2 + α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -327,8 +329,8 @@ mod test {
     #[test]
     fn test_ffield_poly_from_coefficients() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x01120000000000000000000000000080);
-        let sol = FieldElement::from_coefficients(vec![0, 9, 12, 127]);
+            FieldElement::const_from_raw_xex(0x01120000000000000000000000000080);
+        let sol = FieldElement::from_coefficients_xex(vec![0, 9, 12, 127]);
         assert_eq_polys(sol, SOLUTION);
     }
 
@@ -336,7 +338,7 @@ mod test {
     fn test_ffield_coefficients_from_poly() {
         // we don't care about order, so just put things in a set
         assert_eq!(
-            FieldElement::const_from_raw(0x01120000000000000000000000000080)
+            FieldElement::const_from_raw_xex(0x01120000000000000000000000000080)
                 .to_coefficients()
                 .into_iter()
                 .collect::<HashSet<_>>(),
@@ -347,10 +349,10 @@ mod test {
     #[test]
     fn test_ffield_mul_0() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x2c000000000000000000000000000000); // α^5 + α^3 + α^2
+            FieldElement::const_from_raw_xex(0x2c000000000000000000000000000000); // α^5 + α^3 + α^2
         let sol = field().mul(
-            FieldElement::const_from_raw(0x16000000_00000000_00000000_00000000), // α^4 + α^2 + α
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x16000000_00000000_00000000_00000000), // α^4 + α^2 + α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -358,10 +360,10 @@ mod test {
     #[test]
     fn test_ffield_mul_1() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x04000000000000000000000000000000); // α^2
+            FieldElement::const_from_raw_xex(0x04000000000000000000000000000000); // α^2
         let sol = field().mul(
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -369,10 +371,10 @@ mod test {
     #[test]
     fn test_ffield_mul_2() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x85240000000000000000000000000000); // α^13 + α^10 + α^7 + α^2 + 1
+            FieldElement::const_from_raw_xex(0x85240000000000000000000000000000); // α^13 + α^10 + α^7 + α^2 + 1
         let sol = field().mul(
-            FieldElement::const_from_raw(0x01120000_00000000_00000000_00000080), // α^127 + α^12 + α^9 + 1
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x01120000_00000000_00000000_00000080), // α^127 + α^12 + α^9 + 1
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -380,10 +382,10 @@ mod test {
     #[test]
     fn test_ffield_mul_3() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x85240000000000000000000000000000); // α^13 + α^10 + α^7 + α^2 + 1
+            FieldElement::const_from_raw_xex(0x85240000000000000000000000000000); // α^13 + α^10 + α^7 + α^2 + 1
         let sol = field().mul(
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
-            FieldElement::const_from_raw(0x01120000_00000000_00000000_00000080), // α^127 + α^12 + α^9 + 1
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x01120000_00000000_00000000_00000080), // α^127 + α^12 + α^9 + 1
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -391,10 +393,10 @@ mod test {
     #[test]
     fn test_ffield_mul_4() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x40A81400000000000000000000000000);
+            FieldElement::const_from_raw_xex(0x40A81400000000000000000000000000);
         let sol = field().mul(
-            FieldElement::const_from_raw(0x03010000000000000000000000000080),
-            FieldElement::const_from_raw(0x80100000000000000000000000000000),
+            FieldElement::const_from_raw_xex(0x03010000000000000000000000000080),
+            FieldElement::const_from_raw_xex(0x80100000000000000000000000000000),
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -402,10 +404,10 @@ mod test {
     #[test]
     fn test_ffield_mul_5() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x50801400000000000000000000000000);
+            FieldElement::const_from_raw_xex(0x50801400000000000000000000000000);
         let sol = field().mul(
-            FieldElement::const_from_raw(0x03010000000000000000000000000080),
-            FieldElement::const_from_raw(0xA0100000000000000000000000000000),
+            FieldElement::const_from_raw_xex(0x03010000000000000000000000000080),
+            FieldElement::const_from_raw_xex(0xA0100000000000000000000000000000),
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -413,10 +415,10 @@ mod test {
     #[test]
     fn test_ffield_mul_6() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x85240000000000000000000000000000);
+            FieldElement::const_from_raw_xex(0x85240000000000000000000000000000);
         let sol = field().mul(
-            FieldElement::const_from_raw(0x01120000000000000000000000000080),
-            FieldElement::const_from_raw(0x02000000000000000000000000000000),
+            FieldElement::const_from_raw_xex(0x01120000000000000000000000000080),
+            FieldElement::const_from_raw_xex(0x02000000000000000000000000000000),
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -424,10 +426,10 @@ mod test {
     #[test]
     fn test_ffield_mul_7() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x04000000_00000000_00000000_00000000);
+            FieldElement::const_from_raw_xex(0x04000000_00000000_00000000_00000000);
         let sol = field().mul(
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -448,7 +450,7 @@ mod test {
 
     #[test]
     fn test_ffield_change_sem_lossles() {
-        let p: FieldElement = FieldElement::const_from_raw(0xb1480000000000000000000000000000);
+        let p: FieldElement = FieldElement::const_from_raw_xex(0xb1480000000000000000000000000000);
         let mut t = p;
         for _ in 0..5000 {
             t = t.change_semantic(Semantic::Xex, Semantic::Gcm);
@@ -460,10 +462,10 @@ mod test {
     #[test]
     fn test_ffield_div_0() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000); // α
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000); // α
         let sol = field().div(
-            FieldElement::const_from_raw(0x04000000000000000000000000000000), // α^2
-            FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000), // α
+            FieldElement::const_from_raw_xex(0x04000000000000000000000000000000), // α^2
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000), // α
         );
         assert_eq_polys(sol, SOLUTION);
     }
@@ -471,8 +473,9 @@ mod test {
     #[test]
     fn test_ffield_div_1() {
         const SOLUTION: FieldElement =
-            FieldElement::const_from_raw(0x01000000_00000000_00000000_00000000); // 1
-        const A: FieldElement = FieldElement::const_from_raw(0x02000000_00000000_00000000_00000000); // α
+            FieldElement::const_from_raw_xex(0x01000000_00000000_00000000_00000000); // 1
+        const A: FieldElement =
+            FieldElement::const_from_raw_xex(0x02000000_00000000_00000000_00000000); // α
         let sol = field().div(A, A);
         assert_eq_polys(sol, SOLUTION);
     }
