@@ -1,0 +1,15 @@
+{
+  "testcases": {
+    "gfpoly_diff": {
+      "action": "gfpoly_diff",
+      "arguments": {
+        "F": [
+          "IJustWannaTellYouAAAAA==",
+          "HowImFeelingAAAAAAAAAA==",
+          "GottaMakeYouAAAAAAAAAA==",
+          "UnderstaaaaaaaaaaaaanQ=="
+        ]
+      }
+    }
+  }
+}

@@ -241,6 +241,17 @@
           "Ds96KiAKKoigKoiKiiKAiA=="
         ]
       }
+    },
+    "gfpoly_diff": {
+      "action": "gfpoly_diff",
+      "arguments": {
+        "F": [
+          "IJustWannaTellYouAAAAA==",
+          "HowImFeelingAAAAAAAAAA==",
+          "GottaMakeYouAAAAAAAAAA==",
+          "UnderstaaaaaaaaaaaaanQ=="
+        ]
+      }
     }
   }
 }
