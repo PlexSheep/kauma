@@ -3,6 +3,7 @@ pub mod debug;
 pub mod example;
 pub mod ffield;
 pub mod pad;
+pub mod polyfactor;
 pub mod superpoly;
 
 use std::collections::HashMap;
@@ -552,9 +553,10 @@ fn challenge_runner(
         | Action::GfpolyMakeMonic
         | Action::GfpolyDiff
         | Action::GfpolyGcd
-        | Action::GfpolyFactorSff
-        | Action::GfpolyFactorEdf
         | Action::GfpolyPowMod => superpoly::run_testcase(testcase, settings),
+        Action::GfpolyFactorSff | Action::GfpolyFactorEdf => {
+            polyfactor::run_testcase(testcase, settings)
+        }
     };
     if let Err(e) = sol {
         return Err(anyhow!("error while processing a testcase {key}: {e}"));
