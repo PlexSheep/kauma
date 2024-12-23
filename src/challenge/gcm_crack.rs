@@ -12,8 +12,8 @@ use super::superpoly::SuperPoly;
 
 #[derive(Debug)]
 pub struct GcmMessage {
-    pub ciphertext: Vec<u8>,
     pub associated_data: Vec<u8>,
+    pub ciphertext: Vec<u8>,
     pub tag: [u8; 16],
 }
 
@@ -33,7 +33,47 @@ pub struct GcmSolution {
 impl GcmMessage {
     pub fn get_ghash(&self) -> Result<FieldElement> {
         let (hash, _) = ghash(&[0; 16], &self.associated_data, &self.ciphertext, false);
-        Ok(FieldElement::from(bytes_to_u128(&hash)))
+        Ok(FieldElement::const_from_raw_gcm(bytes_to_u128(&hash)))
+    }
+
+    pub fn get_magic_polynom_repr(&self) -> SuperPoly {
+        let length: u128 =
+            ((self.associated_data.len() as u128 * 8) << 64) | (self.ciphertext.len() as u128 * 8);
+
+        let mut ad = self.associated_data.clone();
+        let mut ct = self.ciphertext.clone();
+        if ad.len() % 16 != 0 || ad.is_empty() {
+            ad.append(vec![0u8; 16 - (ad.len() % 16)].as_mut());
+        }
+        if ct.len() % 16 != 0 || ct.is_empty() {
+            ct.append(vec![0u8; 16 - (ct.len() % 16)].as_mut());
+        }
+        let ad_chunks: Vec<FieldElement> = ad
+            .chunks(16)
+            .map(|chunk| {
+                FieldElement::from(bytes_to_u128(
+                    &len_to_const_arr::<16>(chunk).expect("is not len 16"),
+                ))
+            })
+            .collect();
+        let ct_chunks: Vec<FieldElement> = ct
+            .chunks(16)
+            .map(|chunk| {
+                FieldElement::from(bytes_to_u128(
+                    &len_to_const_arr::<16>(chunk).expect("is not len 16"),
+                ))
+            })
+            .collect();
+
+        let mut raw: Vec<FieldElement> = Vec::with_capacity(
+            (self.associated_data.len() / 16) + (self.ciphertext.len() / 16) + 1 + 1,
+        );
+        raw.push(FieldElement::const_from_raw_gcm(bytes_to_u128(&self.tag)));
+        raw.push(FieldElement::const_from_raw_gcm(length));
+        raw.extend(ct_chunks);
+        raw.extend(ad_chunks);
+
+        SuperPoly::from(raw.as_slice())
     }
 }
 
@@ -113,7 +153,6 @@ impl Serialize for GcmSolution {
 }
 
 pub fn crack(
-    _nonce: &[u8; 12],
     m1: &GcmMessage,
     m2: &GcmMessage,
     m3: &GcmMessage,
@@ -193,14 +232,14 @@ pub fn run_testcase(
             let m1: GcmMessage = serde_json::from_value(testcase.arguments["m1"].clone())?;
             let m2: GcmMessage = serde_json::from_value(testcase.arguments["m2"].clone())?;
             let m3: GcmMessage = serde_json::from_value(testcase.arguments["m3"].clone())?;
-            let nonce: [u8; 12] = len_to_const_arr(&common::interface::get_bytes_base64(
+            let _nonce: [u8; 12] = len_to_const_arr(&common::interface::get_bytes_base64(
                 &testcase.arguments,
                 "nonce",
             )?)?;
             let forgery: GcmForgery =
                 serde_json::from_value(testcase.arguments["forgery"].clone())?;
 
-            let a = crack(&nonce, &m1, &m2, &m3, &forgery)?;
+            let a = crack(&m1, &m2, &m3, &forgery)?;
             Ok(serde_json::to_value(&a)?)
         }
         _ => unreachable!(),
