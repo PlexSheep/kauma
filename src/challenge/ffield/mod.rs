@@ -88,20 +88,6 @@ impl FField {
     ///
     /// Note: This function uses the [XEX Semantic](Semantic::Xex) for [polynomials](Polynomial).
     pub fn mul(&self, x: FieldElement, y: FieldElement) -> FieldElement {
-        if self.verbose() {
-            eprintln!("? inputs");
-            veprintln("x", format_args!("{}", x.dbg()));
-            veprintln("y", format_args!("{}", y.dbg()));
-            veprintln(
-                "relation~",
-                format_args!("{}", FieldElement::RELATION.dbg()),
-            );
-            veprintln(
-                "relation",
-                format_args!("{:032x}", DEFINING_RELATION_F_2_128),
-            );
-        }
-
         // Reverse the byte order, so that we can work with regular bitshifts.
         // Otherwise, the bit order and the byte order are different, resulting in garbage.
         let mut x = U256::from(x.raw().to_be());
