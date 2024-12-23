@@ -125,12 +125,6 @@ impl FieldElement {
         enabled
     }
 
-    /// helps print a [FieldElement] for debug purposes
-    #[inline]
-    pub(crate) fn dbg(&self) -> String {
-        format!("{self:032X} => {}", self.display_algebra())
-    }
-
     pub fn from_coefficients_xex(coefficients: Vec<usize>) -> FieldElement {
         let mut poly: FieldElement = FieldElement::ZERO;
         for coefficient in coefficients {

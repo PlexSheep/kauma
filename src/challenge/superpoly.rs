@@ -228,11 +228,11 @@ impl SuperPoly {
 
     /// Convert polynomial to monic form by dividing all coefficients by the leading coefficient
     pub fn make_monic(&self) -> Self {
-        let divident = self.coefficients.last().unwrap().clone();
+        let divident = self.coefficients.last().unwrap();
 
         let mut acc = self.clone();
         for fieldelement in &mut acc.coefficients.iter_mut() {
-            *fieldelement = fieldelement.clone() / divident.clone();
+            *fieldelement = *fieldelement / *divident;
         }
 
         while !acc.coefficients.is_empty()

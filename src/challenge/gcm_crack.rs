@@ -4,7 +4,7 @@ use num::traits::ToBytes;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, Serializer};
 
-use crate::common::{self, bytes_to_u128, len_to_const_arr, veprintln};
+use crate::common::{self, bytes_to_u128, len_to_const_arr};
 
 use super::cipher::ghash;
 use super::ffield::element::FieldElement;
@@ -191,14 +191,13 @@ pub fn crack(
 ) -> Result<GcmSolution> {
     let p1 = m1.get_magic_p();
     let p2 = m2.get_magic_p();
-    let mut pdiff = p1 ^ p2;
+    let pdiff = p1 ^ p2;
 
     let pdiff_sff = pdiff.make_monic().factor_sff();
     let mut pdiff_ddf: Vec<_> = Vec::with_capacity(pdiff_sff.len() * 3);
     for factor in pdiff_sff.iter().map(|f| &f.factor) {
         pdiff_ddf.extend(factor.factor_ddf());
     }
-    veprintln("pdiff_ddf", format_args!("{pdiff_ddf:#02x?}"));
     let mut pdiff_edf: Vec<_> = Vec::with_capacity(1);
     for factor in pdiff_ddf
         .iter()
@@ -215,7 +214,6 @@ pub fn crack(
     if pdiff_edf.is_empty() {
         panic!("edf returned no candidates with deg 1");
     }
-    veprintln("pdiff_edf", format_args!("{pdiff_edf:#02x?}"));
 
     let mut m3_tag: [u8; 16];
     let mut h_candidate: FieldElement = FieldElement::ZERO;
@@ -225,7 +223,6 @@ pub fn crack(
     // will run at least once because we panic early if pdiff_edf is empty
     for candidate in pdiff_edf {
         h_candidate = candidate.coefficients[0];
-        // veprintln("h", format_args!("{h_candidate:x?}"));
         hashes[0] = hash_msg(h_candidate, m1);
 
         eky0 = xor_bytes(&m1.tag, hashes[0].to_be_bytes());
@@ -237,7 +234,6 @@ pub fn crack(
             break;
         }
     }
-    veprintln("h", format_args!("{h_candidate:#02x?}"));
 
     hashes[2] = hash_msg(h_candidate, forgery);
     let tag = xor_bytes(&eky0, hashes[2].to_be_bytes());
