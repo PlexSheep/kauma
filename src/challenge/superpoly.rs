@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use base64::prelude::*;
 use num::pow::Pow;
 use num::traits::ToBytes;
+use num::{BigUint, FromPrimitive, One, Zero};
 use serde::{Serialize, Serializer};
 
 use crate::common::interface::{get_any, maybe_hex};
@@ -163,19 +164,23 @@ impl SuperPoly {
 
     /// Compute modular exponentiation: self^k mod m
     /// Uses the square-and-multiply algorithm to handle large exponents efficiently
-    pub fn powmod(&self, k: u128, m: &Self) -> Self {
+    pub fn powmod<T>(&self, k: T, m: &Self) -> Self
+    where
+        BigUint: From<T>,
+    {
+        let k: BigUint = BigUint::from(k);
         // the order of these checks is important
         if m.is_zero() {
             panic!("modulus cannot be zero");
         } else if *self == Self::zero() {
             return Self::zero();
-        } else if k == 0 {
+        } else if k == BigUint::ZERO {
             return Self::one();
         } else if self == m {
             return Self::zero();
         } else if *self == Self::one() || *m == Self::one() {
             return Self::one();
-        } else if k == 1 {
+        } else if k == BigUint::one() {
             return self % m;
         }
 
@@ -184,17 +189,21 @@ impl SuperPoly {
         let mut exp = k;
 
         // Square and multiply algorithm with modular reduction at each step
-        while exp > 0 {
-            if exp & 1 == 1 {
+        while exp > BigUint::zero() {
+            if &exp & BigUint::one() == BigUint::one() {
                 result = &(&result * &base) % m;
                 if result.is_zero() {
                     return Self::zero();
                 }
             }
-            if exp > 1 {
+            if exp > BigUint::one() {
                 base = &(&base * &base) % m;
                 if base.is_zero() {
-                    return if exp & 1 == 1 { result } else { Self::zero() };
+                    return if exp & BigUint::one() == BigUint::one() {
+                        result
+                    } else {
+                        Self::zero()
+                    };
                 }
             }
             exp >>= 1;
@@ -1359,7 +1368,7 @@ mod test {
         ]);
         let modu =
             create_poly_from_base64(&["KryptoanalyseAAAAAAAAA==", "DHBWMannheimAAAAAAAAAA=="]);
-        let k = 1000;
+        let k: u32 = 1000;
         let res = base.powmod(k, &modu);
         assert_poly(
             &res,
@@ -1381,7 +1390,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 1;
+        let k: u32 = 1;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &base);
     }
@@ -1400,7 +1409,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 0;
+        let k: u32 = 0;
         let res = base.powmod(k, &modu);
         assert_poly(&res, &SuperPoly::one());
     }
@@ -1415,7 +1424,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        for i in 0..100_000 {
+        for i in 0usize..100_000 {
             assert!(base.powmod(i, &modu).is_zero())
         }
     }
@@ -1430,7 +1439,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        for i in 0..100_000 {
+        for i in 0usize..100_000 {
             assert!(base.powmod(i, &modu) == SuperPoly::one())
         }
     }
@@ -1442,7 +1451,7 @@ mod test {
             "wAAAAAAAAAAAAAAAAAAAAA==",
             "ACAAAAAAAAAAAAAAAAAAAA==",
         ]);
-        let k = 1000;
+        let k: u32 = 1000;
         let res = base.powmod(k, &base);
         assert_poly(&res, &SuperPoly::zero());
     }
@@ -1467,7 +1476,7 @@ mod test {
     #[test]
     fn test_spoly_powmod_same_but_k0() {
         let a = create_poly_from_base64(&["NeverGonnaGiveYouUpAAA=="]);
-        let k = 0;
+        let k: u32 = 0;
         let res = a.powmod(k, &a);
         // k=0 is stronger than the same module
         assert_poly(&res, &SuperPoly::one());
