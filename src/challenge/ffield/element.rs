@@ -34,6 +34,11 @@ impl FieldElement {
         }
     }
 
+    pub fn from_gcm_convert_to_xex(raw: u128) -> Self {
+        let a = Self::const_from_raw_gcm(raw);
+        a.change_semantic(Semantic::Gcm, Semantic::Xex)
+    }
+
     #[inline]
     pub const fn const_from_raw_xex(inner: u128) -> Self {
         Self {

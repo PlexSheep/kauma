@@ -781,6 +781,7 @@ impl std::fmt::Debug for SuperPoly {
                 "b64_repr =>",
                 &serde_json::to_value(self).expect("could not serialize SuperPoly"),
             )
+            .field("hex_repr =>", &self.coefficients)
             .finish_non_exhaustive()
     }
 }

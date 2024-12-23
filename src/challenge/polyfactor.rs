@@ -10,14 +10,14 @@ use super::superpoly::{get_spoly, SuperPoly};
 use super::{Action, Testcase};
 
 /// For the [GfpolyFactorSff](Action::GfpolyFactorSff) action
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct FactorExp {
     pub factor: SuperPoly,
     pub exponent: u32,
 }
 
 /// For the [GfpolyFactorDdf](Action::GfpolyFactorDdf) action
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct FactorDeg {
     pub factor: SuperPoly,
     pub degree: usize,

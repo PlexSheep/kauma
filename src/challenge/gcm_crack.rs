@@ -1,13 +1,10 @@
-use core::hash;
-use std::arch::x86_64::_SIDD_CMP_EQUAL_ANY;
-
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use base64::prelude::*;
 use num::traits::ToBytes;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, Serializer};
 
-use crate::common::{self, bytes_to_u128, len_to_const_arr};
+use crate::common::{self, bytes_to_u128, len_to_const_arr, veprintln};
 
 use super::cipher::ghash;
 use super::ffield::element::FieldElement;
@@ -57,20 +54,21 @@ impl GcmData for GcmForgery {
 }
 
 impl GcmMessage {
-    pub fn get_ghash(&self) -> Result<FieldElement> {
-        let (hash, _) = ghash(&[0; 16], &self.associated_data, &self.ciphertext, false);
-        Ok(FieldElement::const_from_raw_gcm(bytes_to_u128(&hash)))
-    }
-
     pub fn length(&self) -> u128 {
         ((self.associated_data.len() as u128 * 8) << 64) | (self.ciphertext.len() as u128 * 8)
     }
 
-    pub fn get_magic_polynom_repr(&self) -> SuperPoly {
+    pub fn get_magic_p(&self) -> SuperPoly {
+        // WARN: DO NOT TOUCH
+        /////////////////////////////////////////////////////////////////////
+        ///// UNDER NO CIRCUMSTANCES TOUCH THIS IF IT WORKS
+        ///// ADD YOUR MARK IF YOU DESPAIRED: I
+        /////////////////////////////////////////////////////////////////////
         let length: u128 = self.length();
 
         let mut ad = self.associated_data.clone();
         let mut ct = self.ciphertext.clone();
+
         if ad.len() % 16 != 0 || ad.is_empty() {
             ad.append(vec![0u8; 16 - (ad.len() % 16)].as_mut());
         }
@@ -79,30 +77,37 @@ impl GcmMessage {
         }
         let ad_chunks: Vec<FieldElement> = ad
             .chunks(16)
+            .rev()
             .map(|chunk| {
-                FieldElement::from(bytes_to_u128(
+                FieldElement::from_gcm_convert_to_xex(bytes_to_u128(
                     &len_to_const_arr::<16>(chunk).expect("is not len 16"),
                 ))
             })
             .collect();
         let ct_chunks: Vec<FieldElement> = ct
             .chunks(16)
+            .rev()
             .map(|chunk| {
-                FieldElement::from(bytes_to_u128(
+                FieldElement::from_gcm_convert_to_xex(bytes_to_u128(
                     &len_to_const_arr::<16>(chunk).expect("is not len 16"),
                 ))
             })
+            .rev()
             .collect();
 
         let mut raw: Vec<FieldElement> = Vec::with_capacity(
             (self.associated_data.len() / 16) + (self.ciphertext.len() / 16) + 1 + 1,
         );
-        raw.push(FieldElement::const_from_raw_gcm(bytes_to_u128(&self.tag)));
-        raw.push(FieldElement::const_from_raw_gcm(length));
+        raw.push(FieldElement::from_gcm_convert_to_xex(bytes_to_u128(
+            &self.tag,
+        )));
+        raw.push(FieldElement::from_gcm_convert_to_xex(length));
         raw.extend(ct_chunks);
         raw.extend(ad_chunks);
 
-        SuperPoly::from(raw.as_slice())
+        let a = SuperPoly::from(raw.as_slice());
+        veprintln("magic_p", format_args!("{a:#x?}"));
+        a
     }
 }
 
@@ -187,11 +192,12 @@ pub fn crack(
     m3: &GcmMessage,
     forgery: &GcmForgery,
 ) -> Result<GcmSolution> {
-    let p1 = m1.get_magic_polynom_repr();
-    let p2 = m2.get_magic_polynom_repr();
+    let p1 = m1.get_magic_p();
+    let p2 = m2.get_magic_p();
     let pdiff = p1 ^ p2;
 
     let pdiff_sff = pdiff.make_monic().factor_sff();
+    // veprintln("sff", format_args!("{pdiff_sff:#x?}"));
     let mut pdiff_ddf: Vec<_> = Vec::with_capacity(pdiff_sff.len() * 3);
     for factor in pdiff_sff.iter().map(|f| &f.factor) {
         pdiff_ddf.extend(factor.factor_ddf());
@@ -221,6 +227,8 @@ pub fn crack(
     // will run at least once because we panic early if pdiff_edf is empty
     for candidate in pdiff_edf {
         h_candidate = candidate.coefficients[0];
+        h_candidate = h_candidate.change_semantic(h_candidate.sem(), super::ffield::Semantic::Gcm);
+        // veprintln("h", format_args!("{h_candidate:x?}"));
         hashes[0] = hash_msg(h_candidate, m1);
 
         eky0 = xor_bytes(&m1.tag, hashes[0].to_be_bytes());
