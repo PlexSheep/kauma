@@ -2,7 +2,7 @@
 rust-version = "1.75"
 name = "kauma-analyzer"
 default-run = "kauma"
-version = "0.1.0"
+version = "0.4.0"
 edition = "2021"
 publish = false
 authors = ["Christoph J. Scherr <software@cscherr.de>"]
@@ -21,13 +21,21 @@ openssl = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 threadpool = "1.8"
+bint-easy = { path = "./crates/bint-easy/" }
+num = "0.4"
+rand = "0.8"
+num_cpus = "1.16.0"
+
+[profile.profiling]
+inherits = "release"
+debug = true
 
 [[bin]]
 name = "kauma"
 path = "src/main.rs"
 
-[source.crates-io]
-replace-with = "vendored-sources"
+[workspace]
+members = ["./crates/bint-easy/", ".", "crates/padsim"]
 
-[source.vendored-sources]
-directory = "vendor"
+[dev-dependencies]
+padsim = { path = "crates/padsim" }

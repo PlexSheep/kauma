@@ -4,6 +4,7 @@ use std::fmt::Write;
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
+use serde::Deserialize;
 
 ///  Hex encoded [String] to [byte](u8) slice
 ///
@@ -33,59 +34,72 @@ pub fn encode_hex(bytes: &[u8]) -> String {
     s
 }
 
+/// Convert a base64 or hex string to a [`Vec<u8>`].
+///
+/// Input will be assumed to be encoded in base64 strings. Only if the prefix `0x!` is prepended,
+/// the following input will be interpreted as hexadecimal.
+pub fn maybe_hex(encoded: &str) -> Result<Vec<u8>> {
+    if let Some(s) = encoded.strip_prefix("0x!") {
+        Ok(decode_hex(s).map_err(|e| {
+            eprintln!("! could not decode hex string: {e}");
+            e
+        })?)
+    } else {
+        Ok(BASE64_STANDARD.decode(encoded)?)
+    }
+}
+
 /// Convert the base64 or hex string of the JSON challenge definition to a [`Vec<u8>`].
 ///
 /// Input will be assumed to be encoded in base64 strings. Only if the prefix `0x!` is prepended,
 /// the following input will be interpreted as hexadecimal.
 pub fn get_bytes_maybe_hex(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
-    let bytes: Vec<u8> = if args[key].is_string() {
+    if args[key].is_string() {
         let v: String = serde_json::from_value(args[key].clone()).map_err(|e| {
             eprintln!("! something went wrong when serializing {key}: {e}");
             e
         })?;
 
-        if let Some(s) = v.strip_prefix("0x!") {
-            decode_hex(s).map_err(|e| {
-                eprintln!("! could not decode hex string: {e}");
-                e
-            })?
-        } else {
-            get_bytes_base64(args, key)?
-        }
+        maybe_hex(&v)
     } else {
-        return Err(anyhow!("{key} is not a string"));
-    };
-    Ok(bytes)
+        Err(anyhow!("{key} is not a string"))
+    }
 }
 
 /// Convert the base64 string of the JSON challenge definition to a [`Vec<u8>`].
 ///
 /// All binary data is encoded in base64 strings.
 pub fn get_bytes_base64(args: &serde_json::Value, key: &str) -> Result<Vec<u8>> {
-    let bytes: Vec<u8> = if args[key].is_string() {
+    if args[key].is_string() {
         let v: String = serde_json::from_value(args[key].clone()).map_err(|e| {
             eprintln!("! something went wrong when serializing {key}: {e}");
             e
         })?;
-        BASE64_STANDARD.decode(v).map_err(|e| {
-            eprintln!("! error while converting Base64 string to bytes: {e}");
-            e
-        })?
+        Ok(BASE64_STANDARD.decode(v)?)
     } else {
-        return Err(anyhow!("{key} is not a string"));
-    };
-    Ok(bytes)
+        Err(anyhow!("{key} is not a string"))
+    }
 }
 
 /// Convert from [`Vec<u8>`] to a [serde_json::Value] with a [base64] string encoding that data.
 #[inline]
-pub fn put_bytes(data: &Vec<u8>) -> Result<serde_json::Value> {
+pub fn put_bytes(data: &[u8]) -> Result<serde_json::Value> {
     Ok(BASE64_STANDARD.encode(data).into())
+}
+
+/// Ger a `T` from some json args
+#[inline]
+pub fn get_any<T: for<'a> Deserialize<'a>>(args: &serde_json::Value, key: &str) -> Result<T> {
+    let v: T = serde_json::from_value(args[key].clone()).map_err(|e| {
+        eprintln!("! something went wrong when serializing {key}: {e}");
+        e
+    })?;
+    Ok(v)
 }
 
 #[cfg(test)]
 mod test {
-    use crate::common::interface::{decode_hex, encode_hex};
+    use crate::common::interface::{decode_hex, encode_hex, maybe_hex};
 
     #[test]
     fn test_decode_hex() {
@@ -127,5 +141,18 @@ mod test {
                 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
             ])
         );
+    }
+
+    #[test]
+    fn test_maybe_hex() {
+        assert_eq!(maybe_hex("0x!3_37").unwrap(), &[0x03, 0x37]);
+        assert_eq!(maybe_hex("0x!1337").unwrap(), &[0x13, 0x37]);
+        assert_eq!(maybe_hex("0x!337").unwrap(), &[0x03, 0x37]);
+        assert_eq!(maybe_hex("0x!0337").unwrap(), &[0x03, 0x37]);
+        assert_eq!(
+            maybe_hex("ARIAAAAAAAAAAAAAAAAAgA==").unwrap(),
+            &[0x01, 0x12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80]
+        );
+        assert_eq!(maybe_hex("Ew==").unwrap(), &[0x13]);
     }
 }

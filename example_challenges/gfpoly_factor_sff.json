@@ -1,0 +1,28 @@
+{
+  "testcases": {
+    "gfpoly_factor_sff": {
+      "action": "gfpoly_factor_sff",
+      "arguments": {
+        "F": [
+          "vL77UwAAAAAAAAAAAAAAAA==",
+          "mEHchYAAAAAAAAAAAAAAAA==",
+          "9WJa0MAAAAAAAAAAAAAAAA==",
+          "akHfwWAAAAAAAAAAAAAAAA==",
+          "E12o/QAAAAAAAAAAAAAAAA==",
+          "vKJ/FgAAAAAAAAAAAAAAAA==",
+          "yctWwAAAAAAAAAAAAAAAAA==",
+          "c1BXYAAAAAAAAAAAAAAAAA==",
+          "o0AtAAAAAAAAAAAAAAAAAA==",
+          "AbP2AAAAAAAAAAAAAAAAAA==",
+          "k2YAAAAAAAAAAAAAAAAAAA==",
+          "vBYAAAAAAAAAAAAAAAAAAA==",
+          "dSAAAAAAAAAAAAAAAAAAAA==",
+          "69gAAAAAAAAAAAAAAAAAAA==",
+          "VkAAAAAAAAAAAAAAAAAAAA==",
+          "a4AAAAAAAAAAAAAAAAAAAA==",
+          "gAAAAAAAAAAAAAAAAAAAAA=="
+        ]
+      }
+    }
+  }
+}

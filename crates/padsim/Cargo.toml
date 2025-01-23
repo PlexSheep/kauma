@@ -1,0 +1,13 @@
+[package]
+name = "padsim"
+version = "0.4.0"
+edition = "2021"
+publish = false
+authors = ["Christoph J. Scherr <software@cscherr.de>"]
+license = "MIT"
+description = "Simulates a server with a padding oracle side channel vulnerability"
+repository = "https://github.com/PlexSheep/kauma"
+
+[dependencies]
+anyhow = "1.0.93"
+getopts = "0.2"

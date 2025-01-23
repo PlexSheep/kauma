@@ -1,11 +1,67 @@
 {
   "testcases": {
-    "gfmul": {
+    "gfmul_zero": {
       "action": "gfmul",
       "arguments": {
         "semantic": "xex",
-        "a": "ARIAAAAAAAAAAAAAAAAAgA==",
-        "b": "AgAAAAAAAAAAAAAAAAAAAA=="
+        "a": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "b": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "gfmul_identity": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "xex",
+        "a": "AQAAAAAAAAAAAAAAAAAAAA==",
+        "b": "AQAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "gfmul_large": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "xex",
+        "a": "////////AAAAAAAAAAA==",
+        "b": "////////AAAAAAAAAAA=="
+      }
+    },
+    "gfmul_gcm_zero": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "gcm",
+        "a": "AAAAAAAAAAAAAAAAAAAAAA==",
+        "b": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "gfmul_gcm_identity": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "gcm",
+        "a": "AQAAAAAAAAAAAAAAAAAAAA==",
+        "b": "AQAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "gfmul_gcm_large": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "gcm",
+        "a": "/////////////////////w==",
+        "b": "/////////////////////w=="
+      }
+    },
+    "gfmul_mixed": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "xex",
+        "a": "AWFhYWFhYWFhYWFhYWE=",
+        "b": "AnZ2dnZ2dnZ2dnZ2dnY="
+      }
+    },
+    "gfmul_gcm_mixed": {
+      "action": "gfmul",
+      "arguments": {
+        "semantic": "gcm",
+        "a": "AWFhYWFhYWFhYWFhYWE=",
+        "b": "AnZ2dnZ2dnZ2dnZ2dnY="
       }
     }
   }

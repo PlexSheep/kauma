@@ -18,3 +18,8 @@ target/
 vendor
 **/Cargo.lock
 Cargo.lock
+flamegraph.svg
+perf.data
+perf.data.old
+profile.svg
+profile.json
