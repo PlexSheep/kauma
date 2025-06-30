@@ -3,7 +3,6 @@ use num::{BigUint, FromPrimitive, One};
 use serde::Serialize;
 
 use crate::common::interface::get_any;
-use crate::common::veprintln;
 use crate::settings::Settings;
 
 use super::ffield::element::FieldElement;
