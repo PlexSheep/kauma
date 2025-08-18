@@ -38,7 +38,7 @@ pub fn bytes_to_u128_unknown_size(bytes: &[u8]) -> Result<u128> {
 /// Combine a 16 [u8] into a [u128]
 #[inline]
 pub fn bytes_to_u128(bytes: &[u8; 16]) -> u128 {
-    unsafe { std::mem::transmute::<[u8; 16], u128>(*bytes).swap_bytes() }
+    unsafe { u128::from_ne_bytes(*bytes).swap_bytes() }
 }
 
 /// Wraps a value in an object with some title

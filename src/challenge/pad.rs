@@ -103,7 +103,7 @@ fn verify_candidate(
     } else if responses[1] == 1 {
         Ok(candidates[1])
     } else {
-        return Err(anyhow!("Server says none of the candidates were correct"));
+        Err(anyhow!("Server says none of the candidates were correct"))
     }
 }
 
