@@ -13,7 +13,7 @@ jobs:
     name: Check requirements
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: build script may be present for compiling code
         id: check-build
         run: |
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: get repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Pull labwork-docker image
         run: |
           docker pull ghcr.io/johndoe31415/labwork-docker:master
