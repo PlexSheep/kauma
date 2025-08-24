@@ -21,7 +21,7 @@ jobs:
       contents: write
     steps:
       - name: get repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: install rust
         uses: dtolnay/rust-toolchain@stable
       - name: install additional rust things
@@ -48,7 +48,7 @@ jobs:
     name: cargo CI Tests
     steps:
       - name: get repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: install rust
         uses: dtolnay/rust-toolchain@stable
       - name: cargo vendor
